@@ -16,6 +16,9 @@ namespace ChessV1
 
 		public Label tf_Turn;
 
+		Chessboard _Chessboard;
+		public Button UndoButton;
+
 		public Form1()
 		{
 			self = this;
@@ -27,6 +30,15 @@ namespace ChessV1
 			tf_Turn.Location = new Point(1040, 150);
 			tf_Turn.Text = "Current Turn: white";
 			Controls.Add(tf_Turn);
+
+			UndoButton = new Button();
+			UndoButton.Font = new Font(tf_Turn.Font.FontFamily, 15f);
+			UndoButton.AutoSize = true;
+			UndoButton.Location = new Point(1040, 550);
+			UndoButton.Text = "Undo Last Move";
+			UndoButton.Enabled = false;
+			UndoButton.Click += (s, e) => { UndoButton.Enabled = _Chessboard.UndoLastMove(); };
+			Controls.Add(UndoButton);
 		}
 
 		public void newTurn(Turn turn)
@@ -36,7 +48,8 @@ namespace ChessV1
 
 		private void Form1_Load(object sender, EventArgs e)
 		{
-			this.Controls.Add(new Chessboard(1000));
+			_Chessboard = new Chessboard(1000);
+			this.Controls.Add(_Chessboard);
 		}
 	}
 }

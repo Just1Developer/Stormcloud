@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Net;
@@ -8,31 +11,26 @@ namespace ChessV1
 {
 	internal class Chessboard : Panel
 	{
-		// TODO Undo -> Buggy (Should do normal moves just fine, but messes up in Atomic, castleing, en passant, etc.
-		// Nvm it hella buggy; Imma leave it in but its hella buggy fr fr
+		// TODO Undo
 
 		Turn Turn = Turn.White;
 		ChessMode ChessMode = ChessMode.Normal;
 
-		private bool _const_EnableFlipBoard = true;
-		public bool LegalMovesEnabled = true, ScanForChecks = false, AllowSelfTakes = false;
-		public bool EnableFlipBoard { get => _const_EnableFlipBoard; set { if (_const_EnableFlipBoard && Turn == Turn.Black) FlipBoard(); _const_EnableFlipBoard = value; } }	// Flip the board if its still on black when we change the settings
+		public bool LegalMovesEnabled = true, ScanForChecks = false, AllowSelfTakes = false, EnableFlipBoard = true;
 
 		// 8x8 board
 		Brush LightColor, DarkColor, HighlightColor, LastMoveHighlight, LegalMoveColor;
 
+		// Keep, we can just use .Value and stuff
 		int[] lastMove = { -1, -1 };
 
 		public int DisplaySize;
-		private int SelectedField = -1;
-		private List<int> LegalMoves = new List<int>();   // Notice if throwable (occupied)
+		private BoardPosition SelectedField = BoardPosition.None;
+		private List<BoardPosition> LegalMoves = new List<BoardPosition>();   // Notice if throwable (occupied)
 
 		private bool holding = false;
 
-		Dictionary<int, PieceType> Pieces;
-		List<int> EnPassantWhite = new List<int>();// Rows of pawns that are en passant susceptible
-		List<int> EnPassantBlack = new List<int>();
-		Dictionary<Turn, CastleOptions> CastleAvailability = new Dictionary<Turn, CastleOptions>();
+		Dictionary<BoardPosition, PieceType> Pieces;
 
 		public Chessboard(int DisplaySize, bool IsWhite = true) // 0 = white, 1 = black
 		{
@@ -48,17 +46,15 @@ namespace ChessV1
 			this.HighlightColor = Brushes.LightYellow;
 			this.LastMoveHighlight = Brushes.Yellow;
 			this.LegalMoveColor = Brushes.DimGray;
-			this.Pieces = new Dictionary<int, PieceType>();
-			ResetBoard(IsWhite);
+			this.Pieces = new Dictionary<BoardPosition, PieceType>();
+			//ResetBoard(IsWhite);
 
-			//Pieces.Add(35, PieceType.QUEEN);
-			//Pieces.Add(28, PieceType.knight);
-			//Pieces.Add(27, PieceType.knight);
+			Pieces.Add(new BoardPosition(5, 5), PieceType.KNIGHT);
+			Pieces.Add(new BoardPosition(4, 6), PieceType.queen);
 
 			this.MouseDown += OnMouseDown;
 			this.MouseUp += OnMouseUp;
 			this.MouseMove += OnMouseMove;
-			this.LostFocus += (s, e) => { if (holding) { holding = false; Refresh(); } };
 
 			this.ResumeLayout();
 		}
@@ -66,43 +62,37 @@ namespace ChessV1
 		public void ResetBoard(bool IsWhite)
 		{
 			// Kings
-			Pieces.Add(4, IsWhite ? PieceType.king : PieceType.KING);
-			Pieces.Add(60, IsWhite ? PieceType.KING : PieceType.king);
+			Pieces.Add(new BoardPosition(4), IsWhite ? PieceType.king : PieceType.KING);
+			Pieces.Add(new BoardPosition(60), IsWhite ? PieceType.KING : PieceType.king);
 			// Queens
-			Pieces.Add(3, IsWhite ? PieceType.queen : PieceType.QUEEN);
-			Pieces.Add(59, IsWhite ? PieceType.QUEEN : PieceType.queen);
+			Pieces.Add(new BoardPosition(3), IsWhite ? PieceType.queen : PieceType.QUEEN);
+			Pieces.Add(new BoardPosition(59), IsWhite ? PieceType.QUEEN : PieceType.queen);
 			// Bishops
-			Pieces.Add(2, IsWhite ? PieceType.bishop : PieceType.BISHOP);
-			Pieces.Add(5, IsWhite ? PieceType.bishop : PieceType.BISHOP);
-			Pieces.Add(58, IsWhite ? PieceType.BISHOP : PieceType.bishop);
-			Pieces.Add(61, IsWhite ? PieceType.BISHOP : PieceType.bishop);
+			Pieces.Add(new BoardPosition(2), IsWhite ? PieceType.bishop : PieceType.BISHOP);
+			Pieces.Add(new BoardPosition(5), IsWhite ? PieceType.bishop : PieceType.BISHOP);
+			Pieces.Add(new BoardPosition(58), IsWhite ? PieceType.BISHOP : PieceType.bishop);
+			Pieces.Add(new BoardPosition(61), IsWhite ? PieceType.BISHOP : PieceType.bishop);
 			// Rooks
-			Pieces.Add(0, IsWhite ? PieceType.rook : PieceType.ROOK);
-			Pieces.Add(7, IsWhite ? PieceType.rook : PieceType.ROOK);
-			Pieces.Add(56, IsWhite ? PieceType.ROOK : PieceType.rook);
-			Pieces.Add(63, IsWhite ? PieceType.ROOK : PieceType.rook);
+			Pieces.Add(new BoardPosition(0), IsWhite ? PieceType.rook : PieceType.ROOK);
+			Pieces.Add(new BoardPosition(7), IsWhite ? PieceType.rook : PieceType.ROOK);
+			Pieces.Add(new BoardPosition(56), IsWhite ? PieceType.ROOK : PieceType.rook);
+			Pieces.Add(new BoardPosition(63), IsWhite ? PieceType.ROOK : PieceType.rook);
 			// Knights
-			Pieces.Add(1, IsWhite ? PieceType.knight : PieceType.KNIGHT);
-			Pieces.Add(6, IsWhite ? PieceType.knight : PieceType.KNIGHT);
-			Pieces.Add(57, IsWhite ? PieceType.KNIGHT : PieceType.knight);
-			Pieces.Add(62, IsWhite ? PieceType.KNIGHT : PieceType.knight);
+			Pieces.Add(new BoardPosition(1), IsWhite ? PieceType.knight : PieceType.KNIGHT);
+			Pieces.Add(new BoardPosition(6), IsWhite ? PieceType.knight : PieceType.KNIGHT);
+			Pieces.Add(new BoardPosition(57), IsWhite ? PieceType.KNIGHT : PieceType.knight);
+			Pieces.Add(new BoardPosition(62), IsWhite ? PieceType.KNIGHT : PieceType.knight);
 			// Pawns
 			if (IsWhite)
 			{
-				for (int field = 8; field < 16; field++) Pieces.Add(field, PieceType.pawn);
-				for (int field = 48; field < 56; field++) Pieces.Add(field, PieceType.PAWN);
+				for (int field = 8; field < 16; field++) Pieces.Add(new BoardPosition(field), PieceType.pawn);
+				for (int field = 48; field < 56; field++) Pieces.Add(new BoardPosition(field), PieceType.PAWN);
 			}
 			else
 			{
-				for (int field = 8; field < 16; field++) Pieces.Add(field, PieceType.PAWN);
-				for (int field = 48; field < 56; field++) Pieces.Add(field, PieceType.pawn);
+				for (int field = 8; field < 16; field++) Pieces.Add(new BoardPosition(field), PieceType.PAWN);
+				for (int field = 48; field < 56; field++) Pieces.Add(new BoardPosition(field), PieceType.pawn);
 			}
-			EnPassantWhite.Clear();
-			EnPassantBlack.Clear();
-			Moves.Clear();
-			CastleAvailability.Clear();
-			CastleAvailability.Add(Turn.White, CastleOptions.Both);
-			CastleAvailability.Add(Turn.Black, CastleOptions.Both);
 		}
 
 		public void Checkmate()
@@ -126,31 +116,31 @@ namespace ChessV1
 			int delta = DisplaySize / 8;
 
 			// 0-7 for each row
-			for(int field = 0; field < 64; field++)
+			for(int _field = 0; _field < 64; _field++)
 			{
-
+				BoardPosition field = new BoardPosition(_field);
 				Rectangle rect = new Rectangle(current, new Size(delta, delta));
 
 				// Draw Square
-				if (field == SelectedField) g.FillRectangle(HighlightColor, rect);
-				else if (lastMove[0] == field || lastMove[1] == field) g.FillRectangle(LastMoveHighlight, rect);
-				else g.FillRectangle((field + field / 8) % 2 == 0 ? DarkColor : LightColor, rect);
+				if (field.Equals(SelectedField)) g.FillRectangle(HighlightColor, rect);
+				else if (lastMove[0] == _field || lastMove[1] == _field) g.FillRectangle(LastMoveHighlight, rect);
+				else g.FillRectangle((_field + _field / 8) % 2 == 0 ? DarkColor : LightColor, rect);
 
-				if (Pieces.ContainsKey(field) && (SelectedField != field || !holding))
+				if (Pieces.ContainsKey(field) && (!SelectedField.Equals(field) || !holding))
 					g.DrawImage(PieceImages[Pieces[field]], new RectangleF(current, new Size(delta, delta)));
 
 				if (LegalMoves != null && LegalMoves.Contains(field))
 					if (IsOpponentPiece(field)) g.DrawEllipse(new Pen(LegalMoveColor, delta / 12), new Rectangle(new Point(current.X + delta / 2 - delta / 4, current.Y + delta / 2 - delta / 4), new Size(delta / 2, delta / 2)));
 					else g.FillEllipse(LegalMoveColor, new Rectangle(new Point(current.X + delta / 2 - delta / 8, current.Y + delta / 2 - delta / 8), new Size(delta / 4, delta / 4)));
 
-				if (field % 8 == 7) current = new Point(0, delta * ((field+1) / 8));	// 8 = next row: 8/8 = 1 threshold
+				if (field.Col == 7) current = new Point(0, delta * ((_field+1) / 8));	// 8 = next row: 8/8 = 1 threshold
 				else current = new Point(current.X + delta, current.Y);
 			}
 
 			if (Pieces.ContainsKey(SelectedField) && holding) g.DrawImage(PieceImages[Pieces[SelectedField]], new RectangleF(new Point(CurrentMousePosition.X - delta / 2, CurrentMousePosition.Y - delta / 2), new Size(delta, delta)));
 		}
 
-		public void NextTurn(bool immediateBoardFlip = false)
+		public void NextTurn()
 		{
 			if (Turn == Turn.White) Turn = Turn.Black;
 			else if(Turn == Turn.Black) Turn = Turn.White;  // Also when starting a new game
@@ -160,39 +150,22 @@ namespace ChessV1
 				Turn = Turn.White;
 			}
 			Form1.self.newTurn(Turn);
-			FlipBoard(immediateBoardFlip);
+			FlipBoard();
 		}
 
-		public void FlipBoard(bool immediateFlip = false)
+		public void FlipBoard()
 		{
 			if (!EnableFlipBoard) return;
 
-			if (!immediateFlip)
-			{
-				Refresh();
-				Sleep(200);
-			}
+			Refresh();
+			Sleep(200);
 
-			Dictionary<int, PieceType> newPieces = new Dictionary<int, PieceType>();
-			foreach (int i in Pieces.Keys)
+			Dictionary<BoardPosition, PieceType> newPieces = new Dictionary<BoardPosition, PieceType>();
+			foreach (BoardPosition i in Pieces.Keys)
 			{
 				// Swap 0 with 63
-				newPieces.Add(63 - i, Pieces[i]);
+				newPieces.Add(new BoardPosition(63 - i.Value), Pieces[i]);
 			}
-			
-			List<int> newEnPassantWhite = new List<int>();
-			foreach (int i in EnPassantWhite)
-			{
-				newEnPassantWhite.Add(63 - i);
-			}
-			EnPassantWhite = newEnPassantWhite;
-
-			List<int> newEnPassantBlack = new List<int>();
-			foreach (int i in EnPassantBlack)
-			{
-				newEnPassantBlack.Add(63 - i);
-			}
-			EnPassantBlack = newEnPassantBlack;
 			lastMove[0] = 63 - lastMove[0];
 			lastMove[1] = 63 - lastMove[1];
 			Pieces = newPieces;
@@ -209,7 +182,7 @@ namespace ChessV1
 			Refresh();
 		}
 
-		private void SelectPiece(int field)
+		private void SelectPiece(BoardPosition field)
 		{
 			SelectedField = field;
 			CurrentMousePosition = GetFieldPositionCenter(field);
@@ -239,65 +212,40 @@ namespace ChessV1
 			if (field >= 0 && field < 64 && !(IsOwnPiece(field) && !AllowSelfTakes)) CurrentLegalMoves.Add(field);
 			return CurrentLegalMoves;
 		}
-		private List<int> AddLegalMove(List<int> CurrentLegalMoves, BoardPosition BoardPosition, BoardPosition DeltaBoardPosition)
-		{
-			BoardPosition.Add(DeltaBoardPosition);
-			if (!BoardPosition.Illegal && !(IsOwnPiece(BoardPosition.Value) && !AllowSelfTakes)) CurrentLegalMoves.Add(BoardPosition.Value);
-			return CurrentLegalMoves;
-		}
-		private List<int> AddLegalMove(List<int> CurrentLegalMoves, BoardPosition NewBoardPosition)
-		{
-			if (!NewBoardPosition.Illegal && !(IsOwnPiece(NewBoardPosition.Value) && !AllowSelfTakes)) CurrentLegalMoves.Add(NewBoardPosition.Value);
-			return CurrentLegalMoves;
-		}
 
 		private List<int> AddLegalMovesInDirection(List<int> Moves, int currentField, int delta)
-			=> AddLegalMovesInDirection(Moves, currentField, new BoardPosition(delta));
-		private List<int> AddLegalMovesInDirection(List<int> Moves, int currentField, BoardPosition deltaPos)
 		{
-			BoardPosition currentPosition = new BoardPosition(currentField);
-
 			while (currentField > 0 && currentField < 64)
 			{
-				// First next field
-				currentPosition.Add(deltaPos);
-				// Check if it's legal, if not cancel the loop
-				if (IsOwnPiece(currentPosition.Value) || currentPosition.Illegal) break;
-				// Now add the move
-				Moves = AddLegalMove(Moves, currentPosition.Value, move => !IsOwnPiece(move));
-				// If there is an opponent piece on there, cancel now
-				if (IsOpponentPiece(currentPosition.Value)) break;
+				Moves = AddLegalMove(Moves, currentField + delta, move => !IsOwnPiece(move));
+				currentField += delta;	// Go to next field
+				if (IsOwnPiece(currentField) || IsOpponentPiece(currentField) || currentField >= 64) currentField = -10; // Added it, but now stop
 			}
 			return Moves;
 		}
 
-		private List<int> GetLegalMovesNormal(int field)
+		private List<BoardPosition> GetLegalMovesNormal(BoardPosition field)
 		{
-			List<int> Moves = new List<int>();
+			List<BoardPosition> Moves = new List<BoardPosition>();
 			if(!Pieces.ContainsKey(SelectedField) || !LegalMovesEnabled) return Moves;
 
 			PieceType Piece = Pieces[SelectedField];
 			string piecetype = Piece.ToString().ToLower();
 
-			bool invert = !EnableFlipBoard && Turn == Turn.Black;
-			int Up = invert ? 8 : -8;
-			int Down = invert ? -8 : 8;
-			//int UpLeft = invert ? 9 : -9;
-			BoardPosition UpLeft = invert ? new BoardPosition(1, 1) : new BoardPosition(-1, -1);
-			//int UpRight = invert ? 7 : -7;
-			BoardPosition UpRight = invert ? new BoardPosition(1, -1) : new BoardPosition(-1, 1);
-			//int DownLeft = invert ? -7 : 7;
-			BoardPosition DownLeft = invert ? new BoardPosition(-1, 1) : new BoardPosition(1, -1);
-			//int DownRight = invert ? -9 : 9;
-			BoardPosition DownRight = invert ? new BoardPosition(-1, -1) : new BoardPosition(1, 1);
-			int Left = invert ? 1 : -1;
-			int Right = invert ? -1 : 1;
+			BoardPosition Up = !EnableFlipBoard && Turn == Turn.Black ? 8 : -8;
+			BoardPosition Down = !EnableFlipBoard && Turn == Turn.Black ? -8 : 8;
+			BoardPosition UpLeft = !EnableFlipBoard && Turn == Turn.Black ? 9 : -9;
+			BoardPosition UpRight = !EnableFlipBoard && Turn == Turn.Black ? 7 : -7;
+			BoardPosition DownLeft = !EnableFlipBoard && Turn == Turn.Black ? -9 : 9;
+			BoardPosition DownRight = !EnableFlipBoard && Turn == Turn.Black ? -7 : 7;
+			BoardPosition Left = !EnableFlipBoard && Turn == Turn.Black ? -1 : 1;
+			BoardPosition Right = !EnableFlipBoard && Turn == Turn.Black ? 1 : -1;
 
 			if (piecetype == "pawn")  // TODO pawns can queen
 			{       // TODO en passant
 				Moves = AddLegalMove(Moves, field + Up, move => GetPieceType(move) == PieceType.Empty);
-				Moves = AddLegalMove(Moves, field + UpLeft.Value, move => IsOpponentPiece(move) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(move));
-				Moves = AddLegalMove(Moves, field + UpRight.Value, move => IsOpponentPiece(move) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(move));
+				Moves = AddLegalMove(Moves, field + UpLeft, move => IsOpponentPiece(move));
+				Moves = AddLegalMove(Moves, field + UpRight, move => IsOpponentPiece(move));
 
 				Moves = AddLegalMove(Moves, field + Up + Up, move => { return GetPieceType(move + Down) == PieceType.Empty && GetPieceType(move) == PieceType.Empty && /*Pawn not moved*/((!EnableFlipBoard && Turn == Turn.Black && field / 8 == 1) || field / 8 == 6); });
 			}
@@ -305,22 +253,14 @@ namespace ChessV1
 			{
 				Func<int, bool> Condition = move => { return (IsOpponentPiece(move) && ChessMode != ChessMode.Atomic) || GetPieceType(move) == PieceType.Empty; };
 
-				Moves = AddLegalMove(Moves, field + UpLeft.Value, Condition);
+				Moves = AddLegalMove(Moves, field + UpLeft, Condition);
 				Moves = AddLegalMove(Moves, field + Up, Condition);
-				Moves = AddLegalMove(Moves, field + UpRight.Value, Condition);
+				Moves = AddLegalMove(Moves, field + UpRight, Condition);
 				Moves = AddLegalMove(Moves, field + Left, Condition);
 				Moves = AddLegalMove(Moves, field + Right, Condition);
-				Moves = AddLegalMove(Moves, field + DownLeft.Value, Condition);
+				Moves = AddLegalMove(Moves, field + DownLeft, Condition);
 				Moves = AddLegalMove(Moves, field + Down, Condition);
-				Moves = AddLegalMove(Moves, field + DownRight.Value, Condition);
-
-				int CastleShort = Turn == Turn.White ? Right : Left;
-				if ((CastleAvailability[Turn] == CastleOptions.Short || CastleAvailability[Turn] == CastleOptions.Both) &&
-					GetPieceType(field + CastleShort) == PieceType.Empty && GetPieceType(field + CastleShort * 2) == PieceType.Empty) Moves = AddLegalMove(Moves, field + CastleShort * 2);
-				// CastleLong = -CastleShort
-				if ((CastleAvailability[Turn] == CastleOptions.Long || CastleAvailability[Turn] == CastleOptions.Both) &&
-					GetPieceType(field - CastleShort) == PieceType.Empty && GetPieceType(field - CastleShort * 2) == PieceType.Empty && GetPieceType(field - CastleShort * 3) == PieceType.Empty)
-					Moves = AddLegalMove(Moves, field - CastleShort * 2);
+				Moves = AddLegalMove(Moves, field + DownRight, Condition);
 			}
 			else if (piecetype == "rook")
 			{
@@ -338,26 +278,25 @@ namespace ChessV1
 			}
 			else if (piecetype == "queen")
 			{
-				Moves = AddLegalMovesInDirection(Moves, field, Up);
-				Moves = AddLegalMovesInDirection(Moves, field, Down);
+				//Moves = AddLegalMovesInDirection(Moves, field, Up);
+				//Moves = AddLegalMovesInDirection(Moves, field, Down);
 				Moves = AddLegalMovesInDirection(Moves, field, Left);
-				Moves = AddLegalMovesInDirection(Moves, field, Right);
-				Moves = AddLegalMovesInDirection(Moves, field, UpLeft);
-				Moves = AddLegalMovesInDirection(Moves, field, UpRight);	// Upright = Special
-				Moves = AddLegalMovesInDirection(Moves, field, DownLeft);
-				Moves = AddLegalMovesInDirection(Moves, field, DownRight);
+				//Moves = AddLegalMovesInDirection(Moves, field, Right);
+				//Moves = AddLegalMovesInDirection(Moves, field, UpLeft);
+				//Moves = AddLegalMovesInDirection(Moves, field, UpRight);
+				//Moves = AddLegalMovesInDirection(Moves, field, DownLeft);
+				//Moves = AddLegalMovesInDirection(Moves, field, DownRight);
 			}
 			else if (piecetype == "knight")
 			{
-				BoardPosition current = new BoardPosition(field);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-2, 1));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-2, -1));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(2, 1));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(2, -1));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(1, 2));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(1, -2));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-1, 2));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-1, -2));
+				Moves = AddLegalMove(Moves, field + Up + UpLeft);
+				Moves = AddLegalMove(Moves, field + Up + UpRight);
+				Moves = AddLegalMove(Moves, field + Right + UpRight);
+				Moves = AddLegalMove(Moves, field + Right + DownRight);
+				Moves = AddLegalMove(Moves, field + Down + DownRight);
+				Moves = AddLegalMove(Moves, field + Down + DownLeft);
+				Moves = AddLegalMove(Moves, field + Left + DownLeft);
+				Moves = AddLegalMove(Moves, field + Left + UpLeft);
 			}
 
 			// TODO Legal Moves
@@ -406,13 +345,13 @@ namespace ChessV1
 			else if (piecetype == "queen")
 			{
 				Moves = AddLegalMovesInDirection(Moves, field, Up);
-				Moves = AddLegalMovesInDirection(Moves, field, Down);
-				Moves = AddLegalMovesInDirection(Moves, field, Left);
-				Moves = AddLegalMovesInDirection(Moves, field, Right);
-				Moves = AddLegalMovesInDirection(Moves, field, UpLeft);
-				Moves = AddLegalMovesInDirection(Moves, field, UpRight);
-				Moves = AddLegalMovesInDirection(Moves, field, DownLeft);
-				Moves = AddLegalMovesInDirection(Moves, field, DownRight);
+				//Moves = AddLegalMovesInDirection(Moves, field, Down);
+				//Moves = AddLegalMovesInDirection(Moves, field, Left);
+				//Moves = AddLegalMovesInDirection(Moves, field, Right);
+				//Moves = AddLegalMovesInDirection(Moves, field, UpLeft);
+				//Moves = AddLegalMovesInDirection(Moves, field, UpRight);
+				//Moves = AddLegalMovesInDirection(Moves, field, DownLeft);
+				//Moves = AddLegalMovesInDirection(Moves, field, DownRight);
 			}
 			else if (piecetype == "knight")
 			{
@@ -476,7 +415,6 @@ namespace ChessV1
 			if (LegalMovesEnabled && !LegalMoves.Contains(field))
 			{
 				if(holding) holding = false;
-				Refresh();
 				return;
 			}
 
@@ -496,62 +434,15 @@ namespace ChessV1
 			return 0;
 		}
 
-		private void MoveEnPassant(int from, int to)
-		{
-			int Down = !EnableFlipBoard && Turn == Turn.Black ? -8 : 8; // Down for calculating from "to" to the pawn square to remove
-			Pieces.Remove(to + Down);
-			Pieces[to] = Pieces[from];
-			Pieces.Remove(from);
-
-			PlaySound(SoundType.Capture);
-			if (Pieces.Count == 1) { Checkmate(); return; }
-			// Check for Draw
-			if (Pieces.Count <= 2) { Draw(); return; }
-		}
-		public void MovePiece(int from, int to, bool AddMoveToList = true)
+		public void MovePiece(int from, int to)
 		{
 			if (from == -1) return; // Spawns happen with from=-2, this is simply missing selection
 
 			bool EmptyField = IsFieldEmpty(to);
 
-			if (AddMoveToList) AddMove(new Move(new BoardPosition(from), new BoardPosition(to), this));
-
 			LegalMoves.Clear();
 			lastMove[0] = from;
 			lastMove[1] = to;
-
-			// En Passant
-			if (Turn == Turn.White && EnPassantBlack.Contains(to)) { MoveEnPassant(from, to); EnPassantBlack.Clear(); return; }
-			if (Turn == Turn.Black && EnPassantWhite.Contains(to)) { MoveEnPassant(from, to); EnPassantWhite.Clear(); return; }
-
-			// Remove old EnPassant options
-			if (Turn == Turn.White) EnPassantWhite.Clear();
-			else if (Turn == Turn.Black) EnPassantBlack.Clear();
-
-			// Add En Passant
-			if (GetPieceType(from).ToString().ToLower() == "pawn" && Math.Abs(from - to) == 16 /* => moved 2 rows*/)
-				if (Turn == Turn.White) EnPassantWhite.Add((from + to) / 2);    // Add field in between (where the pawn would have been)
-				else if (Turn == Turn.Black) EnPassantBlack.Add((from + to) / 2);    // Add field in between (where the pawn would have been)
-
-			if (GetPieceType(from).ToString().ToLower() == "king") CastleAvailability[Turn] = CastleOptions.None;
-			if (GetPieceType(from).ToString().ToLower() == "rook")
-				if (from == 7 || from == 63 /*short corners*/) CastleAvailability[Turn] = CastleAvailability[Turn] == CastleOptions.Both ? CastleOptions.Long : CastleOptions.None;
-				else if (from == 0 || from == 56 /*long corners*/) CastleAvailability[Turn] = CastleAvailability[Turn] == CastleOptions.Both ? CastleOptions.Short : CastleOptions.None;
-
-			// Castleing: Passive move so we don't need a WinCheck
-			if (GetPieceType(from).ToString().ToLower() == "king" && Math.Abs(from - to) == 2)	// Castle, diagonal is >= 7 and L/R is 1
-			{
-				int rookplace = (from + to) / 2;    // Average of both positions is the field in between here
-				int oldRookPlace = to == 2 ? 0 : to == 6 ? 7 : to == 58 ? 56 : 63;
-				Pieces.Remove(oldRookPlace);
-				Pieces[rookplace] = Turn == Turn.White ? PieceType.ROOK : PieceType.rook;
-				Pieces[to] = Pieces[from];
-				Pieces.Remove(from);
-
-				PlaySound(SoundType.Castle);
-				NextTurn();
-				return;
-			}
 
 			// If Atomic Take
 			if (GetPieceType(to) != PieceType.Empty && ChessMode == ChessMode.Atomic)
@@ -573,6 +464,8 @@ namespace ChessV1
 				mate += RemoveIfNotPawnAtomic(to + 8);
 				mate += RemoveIfNotPawnAtomic(to + 9);
 
+
+
 				if (mate > 0) { Checkmate(); return; }
 
 				PlaySound(EmptyField ? SoundType.Move : SoundType.Capture);
@@ -587,10 +480,7 @@ namespace ChessV1
 				Pieces[to] = Pieces[from];
 				Pieces.Remove(from);
 			}
-
-			if (is_mate || Pieces.Count == 1) { Checkmate(); return; }
-			// Check for Draw
-			if (Pieces.Count <= 2) { Draw(); return; }
+			if (is_mate) { Checkmate(); return; }
 
 			PlaySound(EmptyField ? SoundType.Move : SoundType.Capture);
 
@@ -599,69 +489,6 @@ namespace ChessV1
 			if (!ScanForChecks) { return; }
 
 			// TODO Check Scans
-		}
-
-		public void AddMove(Move move)
-		{
-			// Form1 Access
-			Form1.self.UndoButton.Enabled = true;
-
-			MovesIndex++;
-			// Remove all possible redos (new chain of events)
-			if(Moves.Count >= MovesIndex) Moves.RemoveRange(MovesIndex, Moves.Count - MovesIndex);
-
-			Moves.Add(move);
-		}
-
-		public int MovesIndex;
-		public List<Move> Moves = new List<Move>();
-		public bool UndoLastMove()
-		{
-			if (MovesIndex == 0) return false;
-			MovesIndex--;
-			UndoMove(Moves[MovesIndex]);
-			return true;
-		}
-		public bool RedoLastMove()
-		{
-			if (Moves.Count == MovesIndex + 1) return false;    // max number reached
-
-			MovesIndex++;
-			Move move = Moves[MovesIndex];
-			MovePiece(move.FromPosition.Value, move.ToPosition.Value, false);
-
-			return true;
-		}
-
-		// TODO Undo doesn't remember En Passant or Castle
-
-		// Reverts a given move (to -> from)
-		public void UndoMove(Move move)
-		{
-			// Before the flip
-			if (MovesIndex > 0)
-			{
-				lastMove[0] = Moves[MovesIndex - 1].FromPosition.Value;
-				lastMove[1] = Moves[MovesIndex - 1].ToPosition.Value;
-			}
-			else
-			{
-				lastMove[0] = -1;
-				lastMove[1] = -1;
-			}
-
-			if (EnableFlipBoard) NextTurn(true);
-
-			bool EmptyField = move.ToPositionPiece == PieceType.Empty;
-
-			Pieces[move.FromPosition.Value] = move.FromPositionPiece;
-			if (EmptyField) Pieces.Remove(move.ToPosition.Value);
-			else Pieces[move.ToPosition.Value] = move.ToPositionPiece;
-
-			LegalMoves.Clear();
-
-			PlaySound(EmptyField ? SoundType.Move : SoundType.Capture);
-			Refresh();
 		}
 
 		public bool IsOwnPiece(int field)
@@ -674,7 +501,8 @@ namespace ChessV1
 			return false;
 		}
 
-		public bool IsOpponentPiece(int field)
+		public bool IsOpponentPiece(int field) => IsOpponentPiece(new BoardPosition(field));
+		public bool IsOpponentPiece(BoardPosition field)
 		{
 			if (!Pieces.ContainsKey(field)) return false;
 
@@ -829,11 +657,6 @@ namespace ChessV1
 		Normal, Blitz, Rapid, Atomic, Il_Vaticano
 	}
 
-	enum CastleOptions
-	{
-		None, Long, Short, Both
-	}
-
 	struct BoardPosition
 	{
 		public static BoardPosition None { get => new BoardPosition(-1, -1); }
@@ -849,53 +672,13 @@ namespace ChessV1
 		}
 		public BoardPosition(int field)
 		{
-			bool negative = field < 0;
-			field = Math.Abs(field);
 			this.Row = field / 8; // Allow 0-7
 			this.Col = field % 8;
-
-			if (!negative) return;
-			this.Row *= -1;
-			this.Col *= -1;
 		}
 
 		public bool Equals(BoardPosition pos)
 		{
 			return this.Value == pos.Value;
-		}
-
-		public bool Illegal { get => this.Row > 7 || this.Row < 0 || this.Col > 7 || this.Col < 0; }
-
-		public void Add(BoardPosition pos)
-		{
-			Row += pos.Row;
-			Col += pos.Col;
-		}
-		public void Add(int field)
-		{
-			this.Row += field / 8; // Allow 0-7
-			this.Col += field % 8;
-		}
-	}
-
-	class Move
-	{
-		public BoardPosition FromPosition, ToPosition;
-		public PieceType FromPositionPiece, ToPositionPiece;
-
-		public Move(BoardPosition From, BoardPosition To, PieceType FromType, PieceType ToType)
-		{
-			this.FromPosition = From;
-			this.ToPosition = To;
-			this.FromPositionPiece = FromType;
-			this.ToPositionPiece = ToType;
-		}
-		public Move(BoardPosition From, BoardPosition To, Chessboard Board)
-		{
-			this.FromPosition = From;
-			this.ToPosition = To;
-			this.FromPositionPiece = Board.GetPieceType(From.Value);
-			this.ToPositionPiece = Board.GetPieceType(To.Value);
 		}
 	}
 }
