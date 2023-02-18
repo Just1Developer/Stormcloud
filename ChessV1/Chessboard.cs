@@ -30,7 +30,7 @@ namespace ChessV1
 		private bool holding = false;
 
 		Dictionary<int, PieceType> Pieces;
-		List<int> EnPassantWhite = new List<int>();// Rows of pawns that are en passant susceptible
+		List<int> EnPassantWhite = new List<int>();
 		List<int> EnPassantBlack = new List<int>();
 		Dictionary<Turn, CastleOptions> CastleAvailability = new Dictionary<Turn, CastleOptions>();
 
@@ -140,7 +140,7 @@ namespace ChessV1
 					g.DrawImage(PieceImages[Pieces[field]], new RectangleF(current, new Size(delta, delta)));
 
 				if (LegalMoves != null && LegalMoves.Contains(field))
-					if (IsOpponentPiece(field)) g.DrawEllipse(new Pen(LegalMoveColor, delta / 12), new Rectangle(new Point(current.X + delta / 2 - delta / 4, current.Y + delta / 2 - delta / 4), new Size(delta / 2, delta / 2)));
+					if (IsOpponentPiece(field) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(field)) g.DrawEllipse(new Pen(LegalMoveColor, delta / 12), new Rectangle(new Point(current.X + delta / 2 - delta / 4, current.Y + delta / 2 - delta / 4), new Size(delta / 2, delta / 2)));
 					else g.FillEllipse(LegalMoveColor, new Rectangle(new Point(current.X + delta / 2 - delta / 8, current.Y + delta / 2 - delta / 8), new Size(delta / 4, delta / 4)));
 
 				if (field % 8 == 7) current = new Point(0, delta * ((field+1) / 8));	// 8 = next row: 8/8 = 1 threshold
@@ -507,7 +507,9 @@ namespace ChessV1
 			if (Pieces.Count == 1) { Checkmate(); return; }
 			// Check for Draw
 			if (Pieces.Count <= 2) { Draw(); return; }
+			NextTurn();
 		}
+
 		public void MovePiece(int from, int to, bool AddMoveToList = true)
 		{
 			if (from == -1) return; // Spawns happen with from=-2, this is simply missing selection
@@ -542,7 +544,7 @@ namespace ChessV1
 			if (GetPieceType(from).ToString().ToLower() == "king" && Math.Abs(from - to) == 2)	// Castle, diagonal is >= 7 and L/R is 1
 			{
 				int rookplace = (from + to) / 2;    // Average of both positions is the field in between here
-				int oldRookPlace = to == 2 ? 0 : to == 6 ? 7 : to == 58 ? 56 : 63;
+				int oldRookPlace = to == 2 ? 0 : to == 6 ? 7 : to == 57 ? 56 : 63;
 				Pieces.Remove(oldRookPlace);
 				Pieces[rookplace] = Turn == Turn.White ? PieceType.ROOK : PieceType.rook;
 				Pieces[to] = Pieces[from];
