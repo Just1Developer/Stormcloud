@@ -8,31 +8,43 @@ namespace ChessV1
 {
 	internal class Chessboard : Panel
 	{
+		// TODO Black Laggs (freeze after turn switch) but white DOESN'T?!?!
+
 		// TODO Undo -> Buggy (Should do normal moves just fine, but messes up in Atomic, castleing, en passant, etc.
 		// Nvm it hella buggy; Imma leave it in but its hella buggy fr fr
 
-		Turn Turn = Turn.White;
-		ChessMode ChessMode = ChessMode.Normal;
+		private bool DisregardTurnsDebug = true;
+
+		public Turn Turn { get; private set; } = Turn.White;
+		public ChessMode ChessMode { get; set; } = ChessMode.Normal;
 
 		private bool _const_EnableFlipBoard = true;
 		public bool LegalMovesEnabled = true, ScanForChecks = false, AllowSelfTakes = false;
-		public bool EnableFlipBoard { get => _const_EnableFlipBoard; set { if (_const_EnableFlipBoard && Turn == Turn.Black) FlipBoard(); _const_EnableFlipBoard = value; } }	// Flip the board if its still on black when we change the settings
+		public bool EnableFlipBoard { get => _const_EnableFlipBoard; set { if (_const_EnableFlipBoard && Turn == Turn.Black) FlipBoard(); _const_EnableFlipBoard = value; Refresh(); } }   // Flip the board if its still on black when we change the settings
+
+		// I KNOW I can do this with a Type like Castleing but I dont WANT to
+		public int IsWhiteInCheck { get; private set; } = -1;
+		public int IsBlackInCheck { get; private set; } = -1;
+
+		public List<int> HighlightedFieldsManual = new List<int>();
 
 		// 8x8 board
-		Brush LightColor, DarkColor, HighlightColor, LastMoveHighlight, LegalMoveColor;
+		Brush LightColor, DarkColor, HighlightColor, LastMoveHighlightDark, LastMoveHighlightLight, LegalMoveColor, CheckColor, HighlightFieldColorLight, HighlightFieldColorDark;
 
 		int[] lastMove = { -1, -1 };
 
-		public int DisplaySize;
+		private int displaySize;
+		public int DisplaySize { get => displaySize; set { this.Size = new Size(value, value); displaySize = value; Refresh();
+			Form1.self.RefreshSizeButton.Location = new Point(value + 50, 50); } }
 		private int SelectedField = -1;
 		private List<int> LegalMoves = new List<int>();   // Notice if throwable (occupied)
 
 		private bool holding = false;
 
-		Dictionary<int, PieceType> Pieces;
-		List<int> EnPassantWhite = new List<int>();
-		List<int> EnPassantBlack = new List<int>();
-		Dictionary<Turn, CastleOptions> CastleAvailability = new Dictionary<Turn, CastleOptions>();
+		public Dictionary<int, PieceType> Pieces { get; private set; }
+		public List<int> EnPassantWhite { get; private set; } = new List<int>();
+		public List<int> EnPassantBlack { get; private set; } = new List<int>();
+		public Dictionary<Turn, CastleOptions> CastleAvailability { get; private set; } = new Dictionary<Turn, CastleOptions>();
 
 		public Chessboard(int DisplaySize, bool IsWhite = true) // 0 = white, 1 = black
 		{
@@ -42,12 +54,15 @@ namespace ChessV1
 			this.Location = new Point(0, 0);
 			this.SuspendLayout();
 			this.DisplaySize = DisplaySize;
-			this.Size = new Size(DisplaySize, DisplaySize);
 			this.LightColor = Brushes.SandyBrown;
 			this.DarkColor = Brushes.SaddleBrown;
-			this.HighlightColor = Brushes.LightYellow;
-			this.LastMoveHighlight = Brushes.Yellow;
+			this.HighlightColor = Brushes.LightYellow;	// Peru, I like PowderBlue
+			this.LastMoveHighlightLight = Brushes.Yellow;
+			this.LastMoveHighlightDark = Brushes.Gold;
 			this.LegalMoveColor = Brushes.DimGray;
+			this.HighlightFieldColorLight = Brushes.PowderBlue;
+			this.HighlightFieldColorDark = Brushes.Turquoise;
+			this.CheckColor = Brushes.Red;
 			this.Pieces = new Dictionary<int, PieceType>();
 			ResetBoard(IsWhite);
 
@@ -63,52 +78,88 @@ namespace ChessV1
 			this.ResumeLayout();
 		}
 
-		public void ResetBoard(bool IsWhite)
+		public void Reset()
 		{
+			Turn = Turn.Pregame;
+			NextTurn(true);
+		}
+
+		public void ResetBoard(bool IsWhite = true)
+		{
+			// For King's Knight Swap Puzzle
+			Form1.self.UndoButton.Enabled = false;
+			Form1.self.tf_Result.Text = "";
+			Form1.self.tf_Turn.Text = $"Current Turn: " + (IsWhite ? "White" : "Black");
+
+			Pieces[19] = PieceType.KNIGHT;
+			Pieces[36] = PieceType.KNIGHT;
+			Pieces[42] = PieceType.knight;
+			Pieces[44] = PieceType.knight;
+
+			for(int i = 0; i < 64; i++)
+			{
+				if (i != 19 && i != 27 && i != 28 && i != 35 && i != 36 && i != 37 && i != 42 && i != 43 && i != 44 && i != 45) HighlightedFieldsManual.Add(i);
+			}
+
+			/** /
+
+
+
+			HighlightedFieldsManual.Clear();
+			Form1.self.UndoButton.Enabled = false;
+			Form1.self.tf_Result.Text = "";
+			Form1.self.tf_Turn.Text = $"Current Turn: " + (IsWhite ? "White" : "Black");
+			Pieces.Clear();
 			// Kings
-			Pieces.Add(4, IsWhite ? PieceType.king : PieceType.KING);
-			Pieces.Add(60, IsWhite ? PieceType.KING : PieceType.king);
+			Pieces[4] = IsWhite ? PieceType.king : PieceType.KING;
+			Pieces[60] = IsWhite ? PieceType.KING : PieceType.king;
 			// Queens
-			Pieces.Add(3, IsWhite ? PieceType.queen : PieceType.QUEEN);
-			Pieces.Add(59, IsWhite ? PieceType.QUEEN : PieceType.queen);
+			Pieces[3] = IsWhite ? PieceType.queen : PieceType.QUEEN;
+			Pieces[59] = IsWhite ? PieceType.QUEEN : PieceType.queen;
 			// Bishops
-			Pieces.Add(2, IsWhite ? PieceType.bishop : PieceType.BISHOP);
-			Pieces.Add(5, IsWhite ? PieceType.bishop : PieceType.BISHOP);
-			Pieces.Add(58, IsWhite ? PieceType.BISHOP : PieceType.bishop);
-			Pieces.Add(61, IsWhite ? PieceType.BISHOP : PieceType.bishop);
+			Pieces[2] = IsWhite ? PieceType.bishop : PieceType.BISHOP;
+			Pieces[5] = IsWhite ? PieceType.bishop : PieceType.BISHOP;
+			Pieces[58] = IsWhite ? PieceType.BISHOP : PieceType.bishop;
+			Pieces[61] = IsWhite ? PieceType.BISHOP : PieceType.bishop;
 			// Rooks
-			Pieces.Add(0, IsWhite ? PieceType.rook : PieceType.ROOK);
-			Pieces.Add(7, IsWhite ? PieceType.rook : PieceType.ROOK);
-			Pieces.Add(56, IsWhite ? PieceType.ROOK : PieceType.rook);
-			Pieces.Add(63, IsWhite ? PieceType.ROOK : PieceType.rook);
+			Pieces[0] = IsWhite ? PieceType.rook : PieceType.ROOK;
+			Pieces[7] = IsWhite ? PieceType.rook : PieceType.ROOK;
+			Pieces[56] = IsWhite ? PieceType.ROOK : PieceType.rook;
+			Pieces[63] = IsWhite ? PieceType.ROOK : PieceType.rook;
 			// Knights
-			Pieces.Add(1, IsWhite ? PieceType.knight : PieceType.KNIGHT);
-			Pieces.Add(6, IsWhite ? PieceType.knight : PieceType.KNIGHT);
-			Pieces.Add(57, IsWhite ? PieceType.KNIGHT : PieceType.knight);
-			Pieces.Add(62, IsWhite ? PieceType.KNIGHT : PieceType.knight);
+			Pieces[1] = IsWhite ? PieceType.knight : PieceType.KNIGHT;
+			Pieces[6] = IsWhite ? PieceType.knight : PieceType.KNIGHT;
+			Pieces[57] = IsWhite ? PieceType.KNIGHT : PieceType.knight;
+			Pieces[62] = IsWhite ? PieceType.KNIGHT : PieceType.knight;
 			// Pawns
 			if (IsWhite)
 			{
-				for (int field = 8; field < 16; field++) Pieces.Add(field, PieceType.pawn);
-				for (int field = 48; field < 56; field++) Pieces.Add(field, PieceType.PAWN);
+				for (int field = 8; field < 16; field++) Pieces[field] = PieceType.pawn;
+				for (int field = 48; field < 56; field++) Pieces[field] = PieceType.PAWN;
 			}
 			else
 			{
-				for (int field = 8; field < 16; field++) Pieces.Add(field, PieceType.PAWN);
-				for (int field = 48; field < 56; field++) Pieces.Add(field, PieceType.pawn);
+				for (int field = 8; field < 16; field++) Pieces[field] = PieceType.PAWN;
+				for (int field = 48; field < 56; field++) Pieces[field] = PieceType.pawn;
 			}
+			lastMove[0] = -1;
+			lastMove[1] = -1;
 			EnPassantWhite.Clear();
 			EnPassantBlack.Clear();
 			Moves.Clear();
+			MovesIndex = -1;
 			CastleAvailability.Clear();
 			CastleAvailability.Add(Turn.White, CastleOptions.Both);
-			CastleAvailability.Add(Turn.Black, CastleOptions.Both);
+			CastleAvailability.Add(Turn.Black, CastleOptions.Both);//*/
+
+			Refresh();
 		}
 
 		public void Checkmate()
 		{
 			PlaySound(SoundType.MateWin);
 			Form1.self.tf_Turn.Text = $"Checkmate: {Turn} wins";
+			Form1.self.tf_Result.Text = $"Checkmate: {Turn} wins";
 			Turn = Turn.Postgame;
 		}
 
@@ -116,6 +167,7 @@ namespace ChessV1
 		{
 			PlaySound(SoundType.Draw);
 			Form1.self.tf_Turn.Text = $"It's a Draw!";
+			Form1.self.tf_Result.Text = $"It's a Draw!";
 			Turn = Turn.Postgame;
 		}
 
@@ -133,8 +185,12 @@ namespace ChessV1
 
 				// Draw Square
 				if (field == SelectedField) g.FillRectangle(HighlightColor, rect);
-				else if (lastMove[0] == field || lastMove[1] == field) g.FillRectangle(LastMoveHighlight, rect);
-				else g.FillRectangle((field + field / 8) % 2 == 0 ? DarkColor : LightColor, rect);
+				else if (HighlightedFieldsManual.Contains(field)) g.FillRectangle((field + field / 8) % 2 == 0 ? HighlightFieldColorLight : HighlightFieldColorDark, rect);
+				else if (IsWhiteInCheck == field) g.FillRectangle(CheckColor, rect);
+				else if (IsBlackInCheck == field) g.FillRectangle(CheckColor, rect);
+				else if (lastMove[0] == field || lastMove[1] == field)
+					g.FillRectangle((field + field / 8) % 2 == 0 ? LastMoveHighlightLight : LastMoveHighlightDark, rect);
+				else g.FillRectangle((field + field / 8) % 2 == 0 ? LightColor : DarkColor, rect);
 
 				if (Pieces.ContainsKey(field) && (SelectedField != field || !holding))
 					g.DrawImage(PieceImages[Pieces[field]], new RectangleF(current, new Size(delta, delta)));
@@ -152,15 +208,41 @@ namespace ChessV1
 
 		public void NextTurn(bool immediateBoardFlip = false)
 		{
-			if (Turn == Turn.White) Turn = Turn.Black;
-			else if(Turn == Turn.Black) Turn = Turn.White;  // Also when starting a new game
+
+			/*
+			Turn CheckColor = Turn == Turn.White ? Turn.Black : Turn.White;
+			// 1. Is he (who is about to be able to play) in Check? 2. If so, check all moves and check if they are in check
+			if (CheckColor == Turn.Black && IsBlackInCheck >= 0 || CheckColor == Turn.White && IsWhiteInCheck >= 0)
+			{
+				int AllLegalMoves = 0;
+				foreach (int pieceField in Pieces.Keys)
+				{
+					if (GetPieceColor(pieceField) != CheckColor) continue;
+					AllLegalMoves += GetLegalMovesNormal(pieceField).Count;
+					// Collect Amount of all legal moves
+				}
+				if(AllLegalMoves == 0)
+				{
+					Checkmate();	// Same as if he just took the King, so before the Color Change
+					return;
+				}
+			}*/
+			if (Turn == Turn.White)
+			{
+				Turn = Turn.Black;
+				FlipBoard(immediateBoardFlip);
+			}
+			else if (Turn == Turn.Black)
+			{
+				Turn = Turn.White;
+				FlipBoard(immediateBoardFlip);
+			}
 			else
 			{
 				ResetBoard(true);
 				Turn = Turn.White;
 			}
 			Form1.self.newTurn(Turn);
-			FlipBoard(immediateBoardFlip);
 		}
 
 		public void FlipBoard(bool immediateFlip = false)
@@ -193,8 +275,18 @@ namespace ChessV1
 				newEnPassantBlack.Add(63 - i);
 			}
 			EnPassantBlack = newEnPassantBlack;
+
+			List<int> newHighlightedFields = new List<int>();
+			foreach (int i in HighlightedFieldsManual)
+			{
+				newHighlightedFields.Add(63 - i);
+			}
+			HighlightedFieldsManual = newHighlightedFields;
+
 			lastMove[0] = 63 - lastMove[0];
 			lastMove[1] = 63 - lastMove[1];
+			if(IsWhiteInCheck >= 0) IsWhiteInCheck = 63 - IsWhiteInCheck;
+			if(IsBlackInCheck >= 0) IsBlackInCheck = 63 - IsBlackInCheck;
 			Pieces = newPieces;
 		}
 
@@ -219,7 +311,7 @@ namespace ChessV1
 			switch(ChessMode)
 			{
 				case ChessMode.Atomic:
-					LegalMoves = GetLegalMovesAtomic(field);
+					LegalMoves = GetLegalMovesNormal(field);	// TODO Make atomic again
 					break;
 				default:
 					LegalMoves = GetLegalMovesNormal(field);
@@ -274,9 +366,9 @@ namespace ChessV1
 		private List<int> GetLegalMovesNormal(int field)
 		{
 			List<int> Moves = new List<int>();
-			if(!Pieces.ContainsKey(SelectedField) || !LegalMovesEnabled) return Moves;
+			if(!Pieces.ContainsKey(field) || !LegalMovesEnabled) return Moves;
 
-			PieceType Piece = Pieces[SelectedField];
+			PieceType Piece = Pieces[field];
 			string piecetype = Piece.ToString().ToLower();
 
 			bool invert = !EnableFlipBoard && Turn == Turn.Black;
@@ -360,7 +452,20 @@ namespace ChessV1
 				Moves = AddLegalMove(Moves, current, new BoardPosition(-1, -2));
 			}
 
-			// TODO Legal Moves
+			if(ScanForChecks)
+			{
+				// If he is in Check and has no moves that dont result in a check, its mate because the other can then take
+				// (nvm this is just for this piece)
+				// Checkmate check gonna be it's own thing
+				// Oh and of course remove moves that result in a Check
+				foreach (int move in Moves)
+				{
+					if (Catfish.LookForChecks(CloneWithMove(field, move), Turn) >= 0)
+						// If there is a Check after this move is played, don't allow it
+						Moves.Remove(move);
+				}
+			}
+
 			return Moves;
 		}
 
@@ -426,7 +531,20 @@ namespace ChessV1
 				Moves = AddLegalMove(Moves, field + Left + UpLeft);
 			}
 
-			// TODO Legal Moves
+			if (ScanForChecks)
+			{
+				// If he is in Check and has no moves that dont result in a check, its mate because the other can then take
+				// (nvm this is just for this piece)
+				// Checkmate check gonna be it's own thing
+				// Oh and of course remove moves that result in a Check
+				foreach (int move in Moves)
+				{
+					if (Catfish.LookForChecks(CloneWithMove(field, move), Turn) >= 0)
+						// If there is a Check after this move is played, don't allow it
+						Moves.Remove(move);
+				}
+			}
+
 			return Moves;
 		}
 
@@ -437,7 +555,7 @@ namespace ChessV1
 			if (e.Button != MouseButtons.Left) return;	// Maybe add arrows later
 
 			int field = GetField(e.X, e.Y);
-			if (!IsOwnPiece(field)) return;
+			if (!IsOwnPiece(field) && !DisregardTurnsDebug) return;
 
 			// Clear Selection
 			if (SelectedField == field)
@@ -463,6 +581,16 @@ namespace ChessV1
 		public void OnMouseUp(object sender, MouseEventArgs e)
 		{
 			int field = GetField(e.X, e.Y);
+			if (e.Button == MouseButtons.Right)
+			{
+				// Highlight Fields
+				if(field < 0) return;
+				if(HighlightedFieldsManual.Contains(field)) HighlightedFieldsManual.Remove(field);
+				else HighlightedFieldsManual.Add(field);
+				Refresh();
+				return;
+			}  // Maybe add arrows later
+			if (e.Button != MouseButtons.Left) return;  // Maybe add arrows later
 
 			if(SelectedField == field)
 			{
@@ -489,6 +617,12 @@ namespace ChessV1
 		private int RemoveIfNotPawnAtomic(int field)
 		{
 			int type = (int)GetPieceType(field);
+
+			// Removed Castle Bug | Geht nich, scheiß egal lol
+			if (GetPieceValue(field) == 5)
+				if (field == 7 || field == 63 /*short corners*/) CastleAvailability[Turn] = CastleAvailability[Turn] == CastleOptions.Both ? CastleOptions.Long : CastleOptions.None;
+				else if (field == 0 || field == 56 /*long corners*/) CastleAvailability[Turn] = CastleAvailability[Turn] == CastleOptions.Both ? CastleOptions.Short : CastleOptions.None;
+			
 			// Remove if not a pawn
 			if (type > 1 && type != 11) Pieces.Remove(field);
 			
@@ -519,6 +653,7 @@ namespace ChessV1
 			if (AddMoveToList) AddMove(new Move(new BoardPosition(from), new BoardPosition(to), this));
 
 			LegalMoves.Clear();
+			// TODO HighlightedFieldsManual.Clear();
 			lastMove[0] = from;
 			lastMove[1] = to;
 
@@ -577,7 +712,12 @@ namespace ChessV1
 
 				if (mate > 0) { Checkmate(); return; }
 
-				PlaySound(EmptyField ? SoundType.Move : SoundType.Capture);
+				IsWhiteInCheck = Catfish.LookForChecks(this, Turn.White);
+				IsBlackInCheck = Catfish.LookForChecks(this, Turn.Black);
+
+				bool isInCheck = Turn == Turn.White && IsWhiteInCheck >= 0 || Turn == Turn.Black && IsBlackInCheck >= 0;
+
+				PlaySound(isInCheck ? SoundType.Check : EmptyField ? SoundType.Move : SoundType.Capture);
 				NextTurn();
 				return;
 			}
@@ -594,13 +734,15 @@ namespace ChessV1
 			// Check for Draw
 			if (Pieces.Count <= 2) { Draw(); return; }
 
-			PlaySound(EmptyField ? SoundType.Move : SoundType.Capture);
+			// Check for Checks
+			IsWhiteInCheck = Catfish.LookForChecks(this, Turn.White);
+			IsBlackInCheck = Catfish.LookForChecks(this, Turn.Black);
+
+			bool _isInCheck = Turn == Turn.White && IsWhiteInCheck >= 0 || Turn == Turn.Black && IsBlackInCheck >= 0;
+
+			PlaySound(_isInCheck ? SoundType.Check : EmptyField ? SoundType.Move : SoundType.Capture);
 
 			NextTurn();
-
-			if (!ScanForChecks) { return; }
-
-			// TODO Check Scans
 		}
 
 		public void AddMove(Move move)
@@ -619,7 +761,7 @@ namespace ChessV1
 		public List<Move> Moves = new List<Move>();
 		public bool UndoLastMove()
 		{
-			if (MovesIndex == 0) return false;
+			if (MovesIndex <= 0 || Moves.Count == 0) return false;
 			MovesIndex--;
 			UndoMove(Moves[MovesIndex]);
 			return true;
@@ -737,6 +879,45 @@ namespace ChessV1
 			return new Point(Location.X + pos.X, Location.Y + pos.Y);
 		}
 
+		public Chessboard Clone()
+		{
+			Chessboard board = new Chessboard(DisplaySize) { Turn = Turn.White };
+			if (this.Turn == Turn.Black) board.NextTurn();
+			board.Pieces.Clear();
+			foreach (int i in Pieces.Keys)
+			{
+				board.Pieces.Add(i, Pieces[i]);
+			}
+			board.ChessMode = ChessMode;
+			board.EnableFlipBoard = EnableFlipBoard;
+			board.LegalMovesEnabled = LegalMovesEnabled;
+			board.AllowSelfTakes = AllowSelfTakes;
+			board.IsWhiteInCheck = IsWhiteInCheck;
+			board.IsBlackInCheck = IsBlackInCheck;
+			board.CastleAvailability = CastleAvailability;
+			board.EnPassantBlack = EnPassantBlack;
+			board.EnPassantWhite = EnPassantWhite;
+			board.ScanForChecks = ScanForChecks;
+			return board;
+		}
+
+		public Chessboard CloneWithMove(Move m)
+		{
+			Chessboard clone = Clone();
+			clone.Pieces[m.ToPosition.Value] = m.FromPositionPiece;
+			clone.Pieces.Remove(m.FromPosition.Value);
+			return clone;
+		}
+		public Chessboard CloneWithMove(int from, int to)
+		{
+			Chessboard clone = Clone();
+			if (!clone.Pieces.ContainsKey(from)) return clone;
+
+			clone.Pieces[to] = clone.Pieces[from];
+			clone.Pieces.Remove(from);
+			return clone;
+		}
+
 		public static Dictionary<PieceType, Image> PieceImages = new Dictionary<PieceType, Image>();
 
 		public static void Init()
@@ -808,12 +989,27 @@ namespace ChessV1
 			System.Media.SoundPlayer Player = new System.Media.SoundPlayer(name);
 			Player.Play();
 		}
-	}
 
-	enum PieceType
-	{
-		KING = 10, QUEEN = 9, BISHOP = 3, ROOK = 5, KNIGHT = 2 /* treat as 3 */, PAWN = 1, Empty = 0,
-		king = 20, queen = 19, bishop = 13, rook = 15, knight = 12, pawn = 11	// Black pieces, use values from white
+		public int GetPieceValue(int field)
+		{
+			return GetPieceValue(GetPieceType(field));
+		}
+
+		public static int GetPieceValue(PieceType Piece)
+		{
+			int value = (int)Piece;
+			if (value > 10) value -= 10;
+			return value == 2 ? 3 : value;
+		}
+
+		public bool IsTypeOf(int field, PieceType Type)
+		{
+			return GetPieceType(field).ToString().ToLower() == Type.ToString().ToLower();
+		}
+		public static bool IsTypeOf(PieceType PieceType, PieceType Type)
+		{
+			return PieceType.ToString().ToLower() == Type.ToString().ToLower();
+		}
 	}
 
 	public enum Turn
@@ -877,6 +1073,19 @@ namespace ChessV1
 		{
 			this.Row += field / 8; // Allow 0-7
 			this.Col += field % 8;
+		}
+
+		public void Invert()
+		{
+			this.Row = 8 - Row;
+			this.Col = 8 - Col;
+		}
+
+		public BoardPosition GetInverted()
+		{
+			BoardPosition clone = new BoardPosition(this.Row, this.Col);
+			clone.Invert();
+			return clone;
 		}
 	}
 
