@@ -86,6 +86,7 @@ namespace ChessV1
 
 		public void ResetBoard(bool IsWhite = true)
 		{
+			/*
 			// For King's Knight Swap Puzzle
 			Form1.self.UndoButton.Enabled = false;
 			Form1.self.tf_Result.Text = "";
@@ -101,9 +102,48 @@ namespace ChessV1
 				if (i != 19 && i != 27 && i != 28 && i != 35 && i != 36 && i != 37 && i != 42 && i != 43 && i != 44 && i != 45) HighlightedFieldsManual.Add(i);
 			}
 
+			/**/
+
+			// Hikaru Atomic Missed Checkmate Position
+			// Normal Stuff Copy Paste
+			HighlightedFieldsManual.Clear();
+			Form1.self.UndoButton.Enabled = false;
+			Form1.self.tf_Result.Text = "";
+			Form1.self.tf_Turn.Text = $"Current Turn: " + (IsWhite ? "White" : "Black");
+			Pieces.Clear();
+			// Settings
+			EnableFlipBoard = false;
+			ChessMode = ChessMode.Atomic;
+			//Position
+			Pieces[2] = PieceType.king;
+			Pieces[6] = PieceType.rook;
+			Pieces[8] = PieceType.pawn;
+			Pieces[15] = PieceType.pawn;
+			Pieces[17] = PieceType.pawn;
+			Pieces[18] = PieceType.pawn;
+			Pieces[20] = PieceType.pawn;
+			Pieces[27] = PieceType.pawn;
+
+			Pieces[14] = PieceType.ROOK;
+			Pieces[44] = PieceType.PAWN;
+			Pieces[45] = PieceType.PAWN;
+			Pieces[48] = PieceType.PAWN;
+			Pieces[49] = PieceType.PAWN;
+			Pieces[51] = PieceType.PAWN;
+			Pieces[55] = PieceType.PAWN;
+			Pieces[60] = PieceType.KING;
+			// Normal Stuff Copy Paste
+			lastMove[0] = -1;
+			lastMove[1] = -1;
+			EnPassantWhite.Clear();
+			EnPassantBlack.Clear();
+			Moves.Clear();
+			MovesIndex = -1;
+			CastleAvailability.Clear();
+			CastleAvailability.Add(Turn.White, CastleOptions.Both);
+			CastleAvailability.Add(Turn.Black, CastleOptions.Both);
+
 			/** /
-
-
 
 			HighlightedFieldsManual.Clear();
 			Form1.self.UndoButton.Enabled = false;
@@ -331,23 +371,23 @@ namespace ChessV1
 			if (field >= 0 && field < 64 && !(IsOwnPiece(field) && !AllowSelfTakes)) CurrentLegalMoves.Add(field);
 			return CurrentLegalMoves;
 		}
-		private List<int> AddLegalMove(List<int> CurrentLegalMoves, BoardPosition BoardPosition, BoardPosition DeltaBoardPosition)
+		private List<int> AddLegalMove(List<int> CurrentLegalMoves, BoardLocation BoardPosition, BoardLocation DeltaBoardPosition)
 		{
 			BoardPosition.Add(DeltaBoardPosition);
 			if (!BoardPosition.Illegal && !(IsOwnPiece(BoardPosition.Value) && !AllowSelfTakes)) CurrentLegalMoves.Add(BoardPosition.Value);
 			return CurrentLegalMoves;
 		}
-		private List<int> AddLegalMove(List<int> CurrentLegalMoves, BoardPosition NewBoardPosition)
+		private List<int> AddLegalMove(List<int> CurrentLegalMoves, BoardLocation NewBoardPosition)
 		{
 			if (!NewBoardPosition.Illegal && !(IsOwnPiece(NewBoardPosition.Value) && !AllowSelfTakes)) CurrentLegalMoves.Add(NewBoardPosition.Value);
 			return CurrentLegalMoves;
 		}
 
 		private List<int> AddLegalMovesInDirection(List<int> Moves, int currentField, int delta)
-			=> AddLegalMovesInDirection(Moves, currentField, new BoardPosition(delta));
-		private List<int> AddLegalMovesInDirection(List<int> Moves, int currentField, BoardPosition deltaPos)
+			=> AddLegalMovesInDirection(Moves, currentField, new BoardLocation(delta));
+		private List<int> AddLegalMovesInDirection(List<int> Moves, int currentField, BoardLocation deltaPos)
 		{
-			BoardPosition currentPosition = new BoardPosition(currentField);
+			BoardLocation currentPosition = new BoardLocation(currentField);
 
 			while (currentField > 0 && currentField < 64)
 			{
@@ -375,13 +415,13 @@ namespace ChessV1
 			int Up = invert ? 8 : -8;
 			int Down = invert ? -8 : 8;
 			//int UpLeft = invert ? 9 : -9;
-			BoardPosition UpLeft = invert ? new BoardPosition(1, 1) : new BoardPosition(-1, -1);
+			BoardLocation UpLeft = invert ? new BoardLocation(1, 1) : new BoardLocation(-1, -1);
 			//int UpRight = invert ? 7 : -7;
-			BoardPosition UpRight = invert ? new BoardPosition(1, -1) : new BoardPosition(-1, 1);
+			BoardLocation UpRight = invert ? new BoardLocation(1, -1) : new BoardLocation(-1, 1);
 			//int DownLeft = invert ? -7 : 7;
-			BoardPosition DownLeft = invert ? new BoardPosition(-1, 1) : new BoardPosition(1, -1);
+			BoardLocation DownLeft = invert ? new BoardLocation(-1, 1) : new BoardLocation(1, -1);
 			//int DownRight = invert ? -9 : 9;
-			BoardPosition DownRight = invert ? new BoardPosition(-1, -1) : new BoardPosition(1, 1);
+			BoardLocation DownRight = invert ? new BoardLocation(-1, -1) : new BoardLocation(1, 1);
 			int Left = invert ? 1 : -1;
 			int Right = invert ? -1 : 1;
 
@@ -441,15 +481,15 @@ namespace ChessV1
 			}
 			else if (piecetype == "knight")
 			{
-				BoardPosition current = new BoardPosition(field);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-2, 1));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-2, -1));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(2, 1));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(2, -1));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(1, 2));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(1, -2));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-1, 2));
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-1, -2));
+				BoardLocation current = new BoardLocation(field);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(-2, 1));
+				Moves = AddLegalMove(Moves, current, new BoardLocation(-2, -1));
+				Moves = AddLegalMove(Moves, current, new BoardLocation(2, 1));
+				Moves = AddLegalMove(Moves, current, new BoardLocation(2, -1));
+				Moves = AddLegalMove(Moves, current, new BoardLocation(1, 2));
+				Moves = AddLegalMove(Moves, current, new BoardLocation(1, -2));
+				Moves = AddLegalMove(Moves, current, new BoardLocation(-1, 2));
+				Moves = AddLegalMove(Moves, current, new BoardLocation(-1, -2));
 			}
 
 			if(ScanForChecks)
@@ -650,7 +690,7 @@ namespace ChessV1
 
 			bool EmptyField = IsFieldEmpty(to);
 
-			if (AddMoveToList) AddMove(new Move(new BoardPosition(from), new BoardPosition(to), this));
+			if (AddMoveToList) AddMove(new Move(new BoardLocation(from), new BoardLocation(to), this));
 
 			LegalMoves.Clear();
 			// TODO HighlightedFieldsManual.Clear();
@@ -1032,20 +1072,20 @@ namespace ChessV1
 		None, Long, Short, Both
 	}
 
-	struct BoardPosition
+	struct BoardLocation
 	{
-		public static BoardPosition None { get => new BoardPosition(-1, -1); }
+		public static BoardLocation None { get => new BoardLocation(-1, -1); }
 
 		public int Row, Col;    // Row 1-2-3-4-..., Column a-b-c-d-...
 
 		public int Value { get => Row * 8 + Col; }
 
-		public BoardPosition(int row, int col)
+		public BoardLocation(int row, int col)
 		{
 			this.Row = row % 8; // Allow 0-7
 			this.Col = col % 8;
 		}
-		public BoardPosition(int field)
+		public BoardLocation(int field)
 		{
 			bool negative = field < 0;
 			field = Math.Abs(field);
@@ -1057,14 +1097,14 @@ namespace ChessV1
 			this.Col *= -1;
 		}
 
-		public bool Equals(BoardPosition pos)
+		public bool Equals(BoardLocation pos)
 		{
 			return this.Value == pos.Value;
 		}
 
 		public bool Illegal { get => this.Row > 7 || this.Row < 0 || this.Col > 7 || this.Col < 0; }
 
-		public void Add(BoardPosition pos)
+		public void Add(BoardLocation pos)
 		{
 			Row += pos.Row;
 			Col += pos.Col;
@@ -1081,9 +1121,9 @@ namespace ChessV1
 			this.Col = 8 - Col;
 		}
 
-		public BoardPosition GetInverted()
+		public BoardLocation GetInverted()
 		{
-			BoardPosition clone = new BoardPosition(this.Row, this.Col);
+			BoardLocation clone = new BoardLocation(this.Row, this.Col);
 			clone.Invert();
 			return clone;
 		}
@@ -1091,17 +1131,17 @@ namespace ChessV1
 
 	class Move
 	{
-		public BoardPosition FromPosition, ToPosition;
+		public BoardLocation FromPosition, ToPosition;
 		public PieceType FromPositionPiece, ToPositionPiece;
 
-		public Move(BoardPosition From, BoardPosition To, PieceType FromType, PieceType ToType)
+		public Move(BoardLocation From, BoardLocation To, PieceType FromType, PieceType ToType)
 		{
 			this.FromPosition = From;
 			this.ToPosition = To;
 			this.FromPositionPiece = FromType;
 			this.ToPositionPiece = ToType;
 		}
-		public Move(BoardPosition From, BoardPosition To, Chessboard Board)
+		public Move(BoardLocation From, BoardLocation To, Chessboard Board)
 		{
 			this.FromPosition = From;
 			this.ToPosition = To;

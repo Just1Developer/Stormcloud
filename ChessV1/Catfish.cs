@@ -50,7 +50,7 @@ namespace ChessV1
 			if (field >= 0 && field < 64 && !(Chessboard.IsOwnPiece(field) && !Chessboard.AllowSelfTakes)) CurrentLegalMoves.Add(field);
 			return CurrentLegalMoves;
 		}
-		private static List<int> AddLegalMove(List<int> CurrentLegalMoves, BoardPosition BoardPosition, BoardPosition DeltaBoardPosition, Chessboard Chessboard)
+		private static List<int> AddLegalMove(List<int> CurrentLegalMoves, BoardLocation BoardPosition, BoardLocation DeltaBoardPosition, Chessboard Chessboard)
 		{
 			BoardPosition.Add(DeltaBoardPosition);
 			if (!BoardPosition.Illegal && !(Chessboard.IsOwnPiece(BoardPosition.Value) && !Chessboard.AllowSelfTakes)) CurrentLegalMoves.Add(BoardPosition.Value);
@@ -58,10 +58,10 @@ namespace ChessV1
 		}
 
 		private static List<int> AddLegalMovesInDirection(List<int> Moves, int currentField, int delta, Chessboard Chessboard)
-			=> AddLegalMovesInDirection(Moves, currentField, new BoardPosition(delta), Chessboard);
-		private static List<int> AddLegalMovesInDirection(List<int> Moves, int currentField, BoardPosition deltaPos, Chessboard Chessboard)
+			=> AddLegalMovesInDirection(Moves, currentField, new BoardLocation(delta), Chessboard);
+		private static List<int> AddLegalMovesInDirection(List<int> Moves, int currentField, BoardLocation deltaPos, Chessboard Chessboard)
 		{
-			BoardPosition currentPosition = new BoardPosition(currentField);
+			BoardLocation currentPosition = new BoardLocation(currentField);
 
 			while (currentField > 0 && currentField < 64)
 			{
@@ -93,13 +93,13 @@ namespace ChessV1
 			int Up = invert ? 8 : -8;
 			int Down = invert ? -8 : 8;
 			//int UpLeft = invert ? 9 : -9;
-			BoardPosition UpLeft = invert ? new BoardPosition(1, 1) : new BoardPosition(-1, -1);
+			BoardLocation UpLeft = invert ? new BoardLocation(1, 1) : new BoardLocation(-1, -1);
 			//int UpRight = invert ? 7 : -7;
-			BoardPosition UpRight = invert ? new BoardPosition(1, -1) : new BoardPosition(-1, 1);
+			BoardLocation UpRight = invert ? new BoardLocation(1, -1) : new BoardLocation(-1, 1);
 			//int DownLeft = invert ? -7 : 7;
-			BoardPosition DownLeft = invert ? new BoardPosition(-1, 1) : new BoardPosition(1, -1);
+			BoardLocation DownLeft = invert ? new BoardLocation(-1, 1) : new BoardLocation(1, -1);
 			//int DownRight = invert ? -9 : 9;
-			BoardPosition DownRight = invert ? new BoardPosition(-1, -1) : new BoardPosition(1, 1);
+			BoardLocation DownRight = invert ? new BoardLocation(-1, -1) : new BoardLocation(1, 1);
 			int Left = invert ? 1 : -1;
 			int Right = invert ? -1 : 1;
 
@@ -159,15 +159,15 @@ namespace ChessV1
 			}
 			else if (piecetype == "knight")
 			{
-				BoardPosition current = new BoardPosition(field);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-2, 1), Chessboard);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-2, -1), Chessboard);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(2, 1), Chessboard);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(2, -1), Chessboard);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(1, 2), Chessboard);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(1, -2), Chessboard);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-1, 2), Chessboard);
-				Moves = AddLegalMove(Moves, current, new BoardPosition(-1, -2), Chessboard);
+				BoardLocation current = new BoardLocation(field);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(-2, 1), Chessboard);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(-2, -1), Chessboard);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(2, 1), Chessboard);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(2, -1), Chessboard);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(1, 2), Chessboard);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(1, -2), Chessboard);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(-1, 2), Chessboard);
+				Moves = AddLegalMove(Moves, current, new BoardLocation(-1, -2), Chessboard);
 			}
 
 			// TODO Legal Moves

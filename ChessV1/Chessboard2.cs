@@ -33,4 +33,39 @@ namespace ChessV1
 			this.CheckColor = Brushes.Red;
 		}
 	}
+
+	public class BoardPosition
+	{
+		internal Dictionary<int, Piece> Pieces = new Dictionary<int, Piece>();
+
+		public int Value { get {
+				return -999;	// Placeholder
+			} }
+
+		public int GetDirectValue(Turn PieceColor)
+		{
+			int val = 0;
+			foreach (var piece in Pieces)
+				if (piece.Value.PieceColor == PieceColor) val += piece.Value.PieceValue;
+				else val -= piece.Value.PieceValue;
+			return val;
+		}
+
+		public override string ToString()
+		{
+			return base.ToString();
+		}
+	}
+
+	public class Calculation
+	{
+		// Every Pair of Type and Position (eg. Bishop E5) has it's legal moves calculated once(!) per calculation and stored
+		// Not stored forever because well... ram
+		internal Dictionary<Piece, int[]> LegalMovesDB = new Dictionary<Piece, int[]>();
+
+		public void Dispose()
+		{
+			LegalMovesDB.Clear();
+		}
+	}
 }

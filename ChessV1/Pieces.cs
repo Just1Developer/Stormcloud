@@ -16,25 +16,27 @@ namespace ChessV1
 
 	internal interface Piece
 	{
-		BoardPosition Position { get; set; }
+		BoardLocation Position { get; set; }
 		PieceType PieceType { get; }
 		Turn PieceColor { get; set; }
+		int PieceValue { get; }
 
-		void Move(BoardPosition delta);
+		void Move(BoardLocation delta);
 	}
 
 	internal class Pawn : Piece
 	{
-		public BoardPosition Position { get; set; }
+		public BoardLocation Position { get; set; }
 		public PieceType PieceType { get; set; }
 		public Turn PieceColor { get; set; }
+		public int PieceValue { get => 1; }
 
-		internal Pawn(BoardPosition InitialPosition)
+		internal Pawn(BoardLocation InitialPosition)
 		{
 			Position = InitialPosition;
 		}
 
-		public void Move(BoardPosition delta)
+		public void Move(BoardLocation delta)
 		{
 
 		}
@@ -43,17 +45,17 @@ namespace ChessV1
 	public class Pawn2
 	{
 		internal Chessboard2 Chessboard;
-		internal BoardPosition Position;
+		internal BoardLocation Position;
 		bool moved = false;
 
-		internal Pawn2(Chessboard2 Chessboard, BoardPosition Position)
+		internal Pawn2(Chessboard2 Chessboard, BoardLocation Position)
 		{
 			this.Chessboard = Chessboard;
 		}
 
-		internal List<BoardPosition> LegalMoves()
+		internal List<BoardLocation> LegalMoves()
 		{
-			List<BoardPosition> m = new List<BoardPosition>();
+			List<BoardLocation> m = new List<BoardLocation>();
 			
 			return m;
 		}
