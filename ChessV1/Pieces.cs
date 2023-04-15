@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Drawing;
 
 namespace ChessV1
 {
@@ -20,6 +17,7 @@ namespace ChessV1
 		PieceType PieceType { get; }
 		Turn PieceColor { get; set; }
 		int PieceValue { get; }
+		Image PieceImage { get; }
 
 		void Move(BoardLocation delta);
 	}
@@ -27,13 +25,87 @@ namespace ChessV1
 	internal class Pawn : Piece
 	{
 		public BoardLocation Position { get; set; }
-		public PieceType PieceType { get; set; }
-		public Turn PieceColor { get; set; }
+		public PieceType PieceType { get => PieceColor == Turn.White ? PieceType.PAWN : PieceType.pawn; }
+		public Turn PieceColor { get; set; } = Turn.White;
 		public int PieceValue { get => 1; }
+		public Image PieceImage { get => Chessboard.PieceImages.ContainsKey(PieceType) ? Chessboard.PieceImages[PieceType] : null; }
+
+		/*
+		public List<int[,]> AllPossibleMovesOld { get; } =
+                new List<int[,]>
+                {
+                    new int[,] { { -1 }, { -1 } },
+                    new int[,] { { -1 }, { 0 } },
+                    new int[,] { { -1 }, { 1 } },
+                    new int[,] { { -2 }, { 0 } },
+                };
+
+		public List<int[,]> AllPossibleMovesOldInverted { get; private set; }
+		*/
+
+
+		public List<BoardLocation> AllPossibleMoves { get; } =
+				new List<BoardLocation>
+				{
+
+				};
+		public List<BoardLocation> AllPossibleMovesInverted { get; private set; }
+
 
 		internal Pawn(BoardLocation InitialPosition)
 		{
 			Position = InitialPosition;
+
+			// Set Inverted Moves
+			AllPossibleMovesInverted = new List<BoardLocation>();
+			foreach (BoardLocation old in AllPossibleMoves)
+				AllPossibleMovesInverted.Add(old.Mirror());
+		}
+
+		public void Move(BoardLocation delta)
+		{
+
+		}
+	}
+
+	internal class Bishop : Piece
+	{
+		public BoardLocation Position { get; set; }
+		public PieceType PieceType { get => PieceColor == Turn.White ? PieceType.PAWN : PieceType.pawn; }
+		public Turn PieceColor { get; set; } = Turn.White;
+		public int PieceValue { get => 1; }
+		public Image PieceImage { get => Chessboard.PieceImages.ContainsKey(PieceType) ? Chessboard.PieceImages[PieceType] : null; }
+
+		/*
+		public List<int[,]> AllPossibleMovesOld { get; } =
+                new List<int[,]>
+                {
+                    new int[,] { { -1 }, { -1 } },
+                    new int[,] { { -1 }, { 0 } },
+                    new int[,] { { -1 }, { 1 } },
+                    new int[,] { { -2 }, { 0 } },
+                };
+
+		public List<int[,]> AllPossibleMovesOldInverted { get; private set; }
+		*/
+
+
+		public List<BoardLocation> AllPossibleMoves { get; } =
+				new List<BoardLocation>
+				{
+
+				};
+		public List<BoardLocation> AllPossibleMovesInverted { get; private set; }
+
+
+		internal Bishop(BoardLocation InitialPosition)
+		{
+			Position = InitialPosition;
+
+			// Set Inverted Moves
+			AllPossibleMovesInverted = new List<BoardLocation>();
+			foreach (BoardLocation old in AllPossibleMoves)
+				AllPossibleMovesInverted.Add(old.Mirror());
 		}
 
 		public void Move(BoardLocation delta)
@@ -56,7 +128,7 @@ namespace ChessV1
 		internal List<BoardLocation> LegalMoves()
 		{
 			List<BoardLocation> m = new List<BoardLocation>();
-			
+
 			return m;
 		}
 
@@ -73,4 +145,14 @@ namespace ChessV1
 	}
 
 	// TODO Split Turn in Turn and Gamestate
+
+	public interface Test1
+	{
+
+	}
+
+	public struct Test2 : Test1
+	{
+
+	}
 }

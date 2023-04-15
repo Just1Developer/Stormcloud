@@ -28,7 +28,7 @@ namespace ChessV1
 				// Check Legal moves of opponents
 				if (Chessboard.GetPieceColor(field) == Color) continue;
 				if (Chessboard.IsTypeOf(field, PieceType.QUEEN))
-					if (GetLegalMoves(field, Chessboard).Contains(KingSquare)) 
+					if (GetLegalMoves(field, Chessboard).Contains(KingSquare))
 						return KingSquare;
 			}
 

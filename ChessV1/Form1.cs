@@ -17,7 +17,7 @@ namespace ChessV1
 		public Label tf_Turn, tf_Result, l_GameMode, l_LegalMovesEnabled, l_SearchForChecks, l_AllowSelfTakes, l_FlipBoard;
 		public CheckBox cb_LegalMovesEnabled, cb_SearchForChecks, cb_AllowSelfTakes, cb_FlipBoard;
 
-		Chessboard _Chessboard;
+		IChessboard _Chessboard;
 		public Button UndoButton, ResetButton, RefreshSizeButton;
 		public ComboBox GameMode;
 
@@ -121,7 +121,7 @@ namespace ChessV1
 			GameMode.SelectedIndex = 0;
 			GameMode.SelectedIndexChanged += (s, e) =>
 			{
-				switch(GameMode.SelectedIndex)
+				switch (GameMode.SelectedIndex)
 				{
 					case 0: _Chessboard.ChessMode = ChessMode.Normal; _Chessboard.Reset(); break;
 					case 1: _Chessboard.ChessMode = ChessMode.Blitz; _Chessboard.Reset(); break;
@@ -154,7 +154,7 @@ namespace ChessV1
 			RefreshSizeButton.Font = new Font(tf_Turn.Font.FontFamily, 13f);
 			RefreshSizeButton.AutoSize = true;
 			RefreshSizeButton.Text = "Adjust Boardsize";
-			RefreshSizeButton.Click += (s, e) => { _Chessboard.DisplaySize = (int) Math.Min(this.Width * 0.9, this.Height * 0.9); };
+			RefreshSizeButton.Click += (s, e) => { _Chessboard.DisplaySize = (int)Math.Min(this.Width * 0.9, this.Height * 0.9); };
 			Controls.Add(RefreshSizeButton);
 		}
 
@@ -165,8 +165,9 @@ namespace ChessV1
 
 		private void Form1_Load(object sender, EventArgs e)
 		{
-			_Chessboard = new Chessboard(1000);
-			this.Controls.Add(_Chessboard);
+			_Chessboard = new Chessboard2(1000);
+			this.Controls.Add((Chessboard2) _Chessboard);
+			RefreshSizeButton.PerformClick();
 		}
 	}
 }

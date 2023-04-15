@@ -6,7 +6,7 @@ using System.Net;
 
 namespace ChessV1
 {
-	internal class Chessboard : Panel
+	internal class Chessboard : Panel, IChessboard
 	{
 		// TODO Black Laggs (freeze after turn switch) but white DOESN'T?!?!
 
@@ -19,7 +19,9 @@ namespace ChessV1
 		public ChessMode ChessMode { get; set; } = ChessMode.Normal;
 
 		private bool _const_EnableFlipBoard = true;
-		public bool LegalMovesEnabled = true, ScanForChecks = false, AllowSelfTakes = false;
+		public bool LegalMovesEnabled { get; set; } = true;
+		public bool ScanForChecks { get; set; } = false;
+		public bool AllowSelfTakes { get; set; } = false;
 		public bool EnableFlipBoard { get => _const_EnableFlipBoard; set { if (_const_EnableFlipBoard && Turn == Turn.Black) FlipBoard(); _const_EnableFlipBoard = value; Refresh(); } }   // Flip the board if its still on black when we change the settings
 
 		// I KNOW I can do this with a Type like Castleing but I dont WANT to
@@ -34,8 +36,14 @@ namespace ChessV1
 		int[] lastMove = { -1, -1 };
 
 		private int displaySize;
-		public int DisplaySize { get => displaySize; set { this.Size = new Size(value, value); displaySize = value; Refresh();
-			Form1.self.RefreshSizeButton.Location = new Point(value + 50, 50); } }
+		public int DisplaySize
+		{
+			get => displaySize; set
+			{
+				this.Size = new Size(value, value); displaySize = value; Refresh();
+				Form1.self.RefreshSizeButton.Location = new Point(value + 50, 50);
+			}
+		}
 		private int SelectedField = -1;
 		private List<int> LegalMoves = new List<int>();   // Notice if throwable (occupied)
 
@@ -56,7 +64,7 @@ namespace ChessV1
 			this.DisplaySize = DisplaySize;
 			this.LightColor = Brushes.SandyBrown;
 			this.DarkColor = Brushes.SaddleBrown;
-			this.HighlightColor = Brushes.LightYellow;	// Peru, I like PowderBlue
+			this.HighlightColor = Brushes.LightYellow;  // Peru, I like PowderBlue
 			this.LastMoveHighlightLight = Brushes.Yellow;
 			this.LastMoveHighlightDark = Brushes.Gold;
 			this.LegalMoveColor = Brushes.DimGray;
@@ -218,7 +226,7 @@ namespace ChessV1
 			int delta = DisplaySize / 8;
 
 			// 0-7 for each row
-			for(int field = 0; field < 64; field++)
+			for (int field = 0; field < 64; field++)
 			{
 
 				Rectangle rect = new Rectangle(current, new Size(delta, delta));
@@ -239,11 +247,12 @@ namespace ChessV1
 					if (IsOpponentPiece(field) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(field)) g.DrawEllipse(new Pen(LegalMoveColor, delta / 12), new Rectangle(new Point(current.X + delta / 2 - delta / 4, current.Y + delta / 2 - delta / 4), new Size(delta / 2, delta / 2)));
 					else g.FillEllipse(LegalMoveColor, new Rectangle(new Point(current.X + delta / 2 - delta / 8, current.Y + delta / 2 - delta / 8), new Size(delta / 4, delta / 4)));
 
-				if (field % 8 == 7) current = new Point(0, delta * ((field+1) / 8));	// 8 = next row: 8/8 = 1 threshold
+				if (field % 8 == 7) current = new Point(0, delta * ((field + 1) / 8));  // 8 = next row: 8/8 = 1 threshold
 				else current = new Point(current.X + delta, current.Y);
 			}
 
-			if (Pieces.ContainsKey(SelectedField) && holding) g.DrawImage(PieceImages[Pieces[SelectedField]], new RectangleF(new Point(CurrentMousePosition.X - delta / 2, CurrentMousePosition.Y - delta / 2), new Size(delta, delta)));
+			if (Pieces.ContainsKey(SelectedField) && holding)
+				g.DrawImage(PieceImages[Pieces[SelectedField]], new RectangleF(new Point(CurrentMousePosition.X - delta / 2, CurrentMousePosition.Y - delta / 2), new Size(delta, delta)));
 		}
 
 		public void NextTurn(bool immediateBoardFlip = false)
@@ -301,7 +310,7 @@ namespace ChessV1
 				// Swap 0 with 63
 				newPieces.Add(63 - i, Pieces[i]);
 			}
-			
+
 			List<int> newEnPassantWhite = new List<int>();
 			foreach (int i in EnPassantWhite)
 			{
@@ -325,8 +334,8 @@ namespace ChessV1
 
 			lastMove[0] = 63 - lastMove[0];
 			lastMove[1] = 63 - lastMove[1];
-			if(IsWhiteInCheck >= 0) IsWhiteInCheck = 63 - IsWhiteInCheck;
-			if(IsBlackInCheck >= 0) IsBlackInCheck = 63 - IsBlackInCheck;
+			if (IsWhiteInCheck >= 0) IsWhiteInCheck = 63 - IsWhiteInCheck;
+			if (IsBlackInCheck >= 0) IsBlackInCheck = 63 - IsBlackInCheck;
 			Pieces = newPieces;
 		}
 
@@ -348,22 +357,22 @@ namespace ChessV1
 			holding = true;
 
 			LegalMoves.Clear();
-			switch(ChessMode)
+			switch (ChessMode)
 			{
 				case ChessMode.Atomic:
-					LegalMoves = GetLegalMovesNormal(field);	// TODO Make atomic again
+					LegalMoves = GetLegalMovesNormal(field);    // TODO Make atomic again
 					break;
 				default:
 					LegalMoves = GetLegalMovesNormal(field);
 					break;
 			}
-			
+
 		}
 
 		// Adds the move under a given a condition but only when it's in bounds; Covers Self-Taking
 		private List<int> AddLegalMove(List<int> CurrentLegalMoves, int field, Func<int, bool> Condition)
 		{
-			if(Condition(field) && field >= 0 && field < 64 && !(IsOwnPiece(field) && !AllowSelfTakes)) CurrentLegalMoves.Add(field);
+			if (Condition(field) && field >= 0 && field < 64 && !(IsOwnPiece(field) && !AllowSelfTakes)) CurrentLegalMoves.Add(field);
 			return CurrentLegalMoves;
 		}
 		private List<int> AddLegalMove(List<int> CurrentLegalMoves, int field)
@@ -406,7 +415,7 @@ namespace ChessV1
 		private List<int> GetLegalMovesNormal(int field)
 		{
 			List<int> Moves = new List<int>();
-			if(!Pieces.ContainsKey(field) || !LegalMovesEnabled) return Moves;
+			if (!Pieces.ContainsKey(field) || !LegalMovesEnabled) return Moves;
 
 			PieceType Piece = Pieces[field];
 			string piecetype = Piece.ToString().ToLower();
@@ -475,7 +484,7 @@ namespace ChessV1
 				Moves = AddLegalMovesInDirection(Moves, field, Left);
 				Moves = AddLegalMovesInDirection(Moves, field, Right);
 				Moves = AddLegalMovesInDirection(Moves, field, UpLeft);
-				Moves = AddLegalMovesInDirection(Moves, field, UpRight);	// Upright = Special
+				Moves = AddLegalMovesInDirection(Moves, field, UpRight);    // Upright = Special
 				Moves = AddLegalMovesInDirection(Moves, field, DownLeft);
 				Moves = AddLegalMovesInDirection(Moves, field, DownRight);
 			}
@@ -492,7 +501,7 @@ namespace ChessV1
 				Moves = AddLegalMove(Moves, current, new BoardLocation(-1, -2));
 			}
 
-			if(ScanForChecks)
+			if (ScanForChecks)
 			{
 				// If he is in Check and has no moves that dont result in a check, its mate because the other can then take
 				// (nvm this is just for this piece)
@@ -592,7 +601,7 @@ namespace ChessV1
 		// Press
 		public void OnMouseDown(object sender, MouseEventArgs e)
 		{
-			if (e.Button != MouseButtons.Left) return;	// Maybe add arrows later
+			if (e.Button != MouseButtons.Left) return;  // Maybe add arrows later
 
 			int field = GetField(e.X, e.Y);
 			if (!IsOwnPiece(field) && !DisregardTurnsDebug) return;
@@ -624,26 +633,26 @@ namespace ChessV1
 			if (e.Button == MouseButtons.Right)
 			{
 				// Highlight Fields
-				if(field < 0) return;
-				if(HighlightedFieldsManual.Contains(field)) HighlightedFieldsManual.Remove(field);
+				if (field < 0) return;
+				if (HighlightedFieldsManual.Contains(field)) HighlightedFieldsManual.Remove(field);
 				else HighlightedFieldsManual.Add(field);
 				Refresh();
 				return;
 			}  // Maybe add arrows later
 			if (e.Button != MouseButtons.Left) return;  // Maybe add arrows later
 
-			if(SelectedField == field)
+			if (SelectedField == field)
 			{
-				if(holding) holding = false;
+				if (holding) holding = false;
 				else SelectedField = -1;    // Remove Selection if not holding the piece currently, unnecessary as of now bcs its always "holding = true"
 				Refresh();
 				return;
 			}
 			// Different Field
-			if(IsOwnPiece(field) && holding && !AllowSelfTakes) holding = false;    // If dragged onto my piece let go
+			if (IsOwnPiece(field) && holding && !AllowSelfTakes) holding = false;    // If dragged onto my piece let go
 			if (LegalMovesEnabled && !LegalMoves.Contains(field))
 			{
-				if(holding) holding = false;
+				if (holding) holding = false;
 				Refresh();
 				return;
 			}
@@ -662,10 +671,10 @@ namespace ChessV1
 			if (GetPieceValue(field) == 5)
 				if (field == 7 || field == 63 /*short corners*/) CastleAvailability[Turn] = CastleAvailability[Turn] == CastleOptions.Both ? CastleOptions.Long : CastleOptions.None;
 				else if (field == 0 || field == 56 /*long corners*/) CastleAvailability[Turn] = CastleAvailability[Turn] == CastleOptions.Both ? CastleOptions.Short : CastleOptions.None;
-			
+
 			// Remove if not a pawn
 			if (type > 1 && type != 11) Pieces.Remove(field);
-			
+
 			if (type == 10 || type == 20) return 1;
 			return 0;
 		}
@@ -715,8 +724,8 @@ namespace ChessV1
 				if (from == 7 || from == 63 /*short corners*/) CastleAvailability[Turn] = CastleAvailability[Turn] == CastleOptions.Both ? CastleOptions.Long : CastleOptions.None;
 				else if (from == 0 || from == 56 /*long corners*/) CastleAvailability[Turn] = CastleAvailability[Turn] == CastleOptions.Both ? CastleOptions.Short : CastleOptions.None;
 
-			// Castleing: Passive move so we don't need a WinCheck
-			if (GetPieceType(from).ToString().ToLower() == "king" && Math.Abs(from - to) == 2)	// Castle, diagonal is >= 7 and L/R is 1
+			// Castleing: Passive move so we don't need a WinCheck ==> Wrong, Bring the rook for mate is possible
+			if (GetPieceType(from).ToString().ToLower() == "king" && Math.Abs(from - to) == 2)  // Castle, diagonal is >= 7 and L/R is 1
 			{
 				int rookplace = (from + to) / 2;    // Average of both positions is the field in between here
 				int oldRookPlace = to == 2 ? 0 : to == 6 ? 7 : to == 57 ? 56 : 63;
@@ -764,7 +773,7 @@ namespace ChessV1
 
 			bool is_mate = GetPieceType(to).ToString().ToLower() == "king";
 
-			if(from >= 0)
+			if (from >= 0)
 			{
 				Pieces[to] = Pieces[from];
 				Pieces.Remove(from);
@@ -792,7 +801,7 @@ namespace ChessV1
 
 			MovesIndex++;
 			// Remove all possible redos (new chain of events)
-			if(Moves.Count >= MovesIndex) Moves.RemoveRange(MovesIndex, Moves.Count - MovesIndex);
+			if (Moves.Count >= MovesIndex) Moves.RemoveRange(MovesIndex, Moves.Count - MovesIndex);
 
 			Moves.Add(move);
 		}
@@ -919,6 +928,7 @@ namespace ChessV1
 			return new Point(Location.X + pos.X, Location.Y + pos.Y);
 		}
 
+		// Todo Cloning the black board triggers flip method and manual delay, thats why it's lagging
 		public Chessboard Clone()
 		{
 			Chessboard board = new Chessboard(DisplaySize) { Turn = Turn.White };
@@ -1102,6 +1112,16 @@ namespace ChessV1
 			return this.Value == pos.Value;
 		}
 
+		public bool Equals(int[] RowColInt)
+		{
+			return this.Row == RowColInt[0] && this.Col == RowColInt[1];
+		}
+
+		public bool Equals(int FieldValue)
+		{
+			return this.Value == FieldValue;
+		}
+
 		public bool Illegal { get => this.Row > 7 || this.Row < 0 || this.Col > 7 || this.Col < 0; }
 
 		public void Add(BoardLocation pos)
@@ -1115,10 +1135,23 @@ namespace ChessV1
 			this.Col += field % 8;
 		}
 
+		/// <summary>
+		/// For absolute positions.
+		/// </summary>
 		public void Invert()
 		{
 			this.Row = 8 - Row;
 			this.Col = 8 - Col;
+		}
+
+		/// <summary>
+		/// For relative positions. <br/>
+		/// Does not edit this location but instead returns a new, mirrored BoardLocation.
+		/// </summary>
+		/// <returns> The new relative position. </returns>
+		public BoardLocation Mirror()
+		{
+			return new BoardLocation(-Row, -Col);
 		}
 
 		public BoardLocation GetInverted()
