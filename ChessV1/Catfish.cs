@@ -105,15 +105,15 @@ namespace ChessV1
 
 			if (piecetype == "pawn")  // TODO pawns can queen
 			{       // TODO en passant
-				Moves = AddLegalMove(Moves, field + Up, move => Chessboard.GetPieceType(move) == PieceType.Empty, Chessboard);
+				Moves = AddLegalMove(Moves, field + Up, move => Chessboard.GetPieceType(move) == PieceType.None, Chessboard);
 				Moves = AddLegalMove(Moves, field + UpLeft.Value, move => Chessboard.IsOpponentPiece(move) || (Chessboard.Turn == Turn.White ? Chessboard.EnPassantBlack : Chessboard.EnPassantWhite).Contains(move), Chessboard);
 				Moves = AddLegalMove(Moves, field + UpRight.Value, move => Chessboard.IsOpponentPiece(move) || (Chessboard.Turn == Turn.White ? Chessboard.EnPassantBlack : Chessboard.EnPassantWhite).Contains(move), Chessboard);
 
-				Moves = AddLegalMove(Moves, field + Up + Up, move => { return Chessboard.GetPieceType(move + Down) == PieceType.Empty && Chessboard.GetPieceType(move) == PieceType.Empty && /*Pawn not moved*/((!Chessboard.EnableFlipBoard && Chessboard.Turn == Turn.Black && field / 8 == 1) || field / 8 == 6); }, Chessboard);
+				Moves = AddLegalMove(Moves, field + Up + Up, move => { return Chessboard.GetPieceType(move + Down) == PieceType.None && Chessboard.GetPieceType(move) == PieceType.None && /*Pawn not moved*/((!Chessboard.EnableFlipBoard && Chessboard.Turn == Turn.Black && field / 8 == 1) || field / 8 == 6); }, Chessboard);
 			}
 			else if (piecetype == "king")   // Todo get if king is in check, castle
 			{
-				Func<int, bool> Condition = move => { return (Chessboard.IsOpponentPiece(move) && Chessboard.ChessMode != ChessMode.Atomic) || Chessboard.GetPieceType(move) == PieceType.Empty; };
+				Func<int, bool> Condition = move => { return (Chessboard.IsOpponentPiece(move) && Chessboard.ChessMode != ChessMode.Atomic) || Chessboard.GetPieceType(move) == PieceType.None; };
 
 				Moves = AddLegalMove(Moves, field + UpLeft.Value, Condition, Chessboard);
 				Moves = AddLegalMove(Moves, field + Up, Condition, Chessboard);
@@ -126,10 +126,10 @@ namespace ChessV1
 
 				int CastleShort = Chessboard.Turn == Turn.White ? Right : Left;
 				if ((Chessboard.CastleAvailability[Chessboard.Turn] == CastleOptions.Short || Chessboard.CastleAvailability[Chessboard.Turn] == CastleOptions.Both) &&
-					Chessboard.GetPieceType(field + CastleShort) == PieceType.Empty && Chessboard.GetPieceType(field + CastleShort * 2) == PieceType.Empty) Moves = AddLegalMove(Moves, field + CastleShort * 2, Chessboard);
+					Chessboard.GetPieceType(field + CastleShort) == PieceType.None && Chessboard.GetPieceType(field + CastleShort * 2) == PieceType.None) Moves = AddLegalMove(Moves, field + CastleShort * 2, Chessboard);
 				// CastleLong = -CastleShort
 				if ((Chessboard.CastleAvailability[Chessboard.Turn] == CastleOptions.Long || Chessboard.CastleAvailability[Chessboard.Turn] == CastleOptions.Both) &&
-					Chessboard.GetPieceType(field - CastleShort) == PieceType.Empty && Chessboard.GetPieceType(field - CastleShort * 2) == PieceType.Empty && Chessboard.GetPieceType(field - CastleShort * 3) == PieceType.Empty)
+					Chessboard.GetPieceType(field - CastleShort) == PieceType.None && Chessboard.GetPieceType(field - CastleShort * 2) == PieceType.None && Chessboard.GetPieceType(field - CastleShort * 3) == PieceType.None)
 					Moves = AddLegalMove(Moves, field - CastleShort * 2, Chessboard);
 			}
 			else if (piecetype == "rook")

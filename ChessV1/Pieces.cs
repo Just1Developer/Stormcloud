@@ -138,12 +138,6 @@ namespace ChessV1
 		}
 	}
 
-	enum PieceType
-	{
-		KING = 10, QUEEN = 9, BISHOP = 3, ROOK = 5, KNIGHT = 2 /* treat as 3 */, PAWN = 1, Empty = 0,
-		king = 20, queen = 19, bishop = 13, rook = 15, knight = 12, pawn = 11   // Black pieces, use values from white
-	}
-
 	// TODO Split Turn in Turn and Gamestate
 
 	public interface Test1

@@ -24,7 +24,8 @@ namespace ChessV1
 		public Form1()
 		{
 			self = this;
-			Chessboard.Init();
+			//Chessboard.Init();
+			ChessGraphics.Init();
 			InitializeComponent();
 			tf_Turn = new Label();
 			tf_Turn.Font = new Font(tf_Turn.Font.FontFamily, 15f);

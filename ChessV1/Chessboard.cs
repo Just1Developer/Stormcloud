@@ -436,15 +436,15 @@ namespace ChessV1
 
 			if (piecetype == "pawn")  // TODO pawns can queen
 			{       // TODO en passant
-				Moves = AddLegalMove(Moves, field + Up, move => GetPieceType(move) == PieceType.Empty);
+				Moves = AddLegalMove(Moves, field + Up, move => GetPieceType(move) == PieceType.None);
 				Moves = AddLegalMove(Moves, field + UpLeft.Value, move => IsOpponentPiece(move) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(move));
 				Moves = AddLegalMove(Moves, field + UpRight.Value, move => IsOpponentPiece(move) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(move));
 
-				Moves = AddLegalMove(Moves, field + Up + Up, move => { return GetPieceType(move + Down) == PieceType.Empty && GetPieceType(move) == PieceType.Empty && /*Pawn not moved*/((!EnableFlipBoard && Turn == Turn.Black && field / 8 == 1) || field / 8 == 6); });
+				Moves = AddLegalMove(Moves, field + Up + Up, move => { return GetPieceType(move + Down) == PieceType.None && GetPieceType(move) == PieceType.None && /*Pawn not moved*/((!EnableFlipBoard && Turn == Turn.Black && field / 8 == 1) || field / 8 == 6); });
 			}
 			else if (piecetype == "king")   // Todo get if king is in check, castle
 			{
-				Func<int, bool> Condition = move => { return (IsOpponentPiece(move) && ChessMode != ChessMode.Atomic) || GetPieceType(move) == PieceType.Empty; };
+				Func<int, bool> Condition = move => { return (IsOpponentPiece(move) && ChessMode != ChessMode.Atomic) || GetPieceType(move) == PieceType.None; };
 
 				Moves = AddLegalMove(Moves, field + UpLeft.Value, Condition);
 				Moves = AddLegalMove(Moves, field + Up, Condition);
@@ -457,10 +457,10 @@ namespace ChessV1
 
 				int CastleShort = Turn == Turn.White ? Right : Left;
 				if ((CastleAvailability[Turn] == CastleOptions.Short || CastleAvailability[Turn] == CastleOptions.Both) &&
-					GetPieceType(field + CastleShort) == PieceType.Empty && GetPieceType(field + CastleShort * 2) == PieceType.Empty) Moves = AddLegalMove(Moves, field + CastleShort * 2);
+					GetPieceType(field + CastleShort) == PieceType.None && GetPieceType(field + CastleShort * 2) == PieceType.None) Moves = AddLegalMove(Moves, field + CastleShort * 2);
 				// CastleLong = -CastleShort
 				if ((CastleAvailability[Turn] == CastleOptions.Long || CastleAvailability[Turn] == CastleOptions.Both) &&
-					GetPieceType(field - CastleShort) == PieceType.Empty && GetPieceType(field - CastleShort * 2) == PieceType.Empty && GetPieceType(field - CastleShort * 3) == PieceType.Empty)
+					GetPieceType(field - CastleShort) == PieceType.None && GetPieceType(field - CastleShort * 2) == PieceType.None && GetPieceType(field - CastleShort * 3) == PieceType.None)
 					Moves = AddLegalMove(Moves, field - CastleShort * 2);
 			}
 			else if (piecetype == "rook")
@@ -537,11 +537,11 @@ namespace ChessV1
 
 			if (piecetype == "pawn")  // TODO pawns can queen
 			{       // TODO en passant
-				Moves = AddLegalMove(Moves, field + Up, move => GetPieceType(move) == PieceType.Empty);
+				Moves = AddLegalMove(Moves, field + Up, move => GetPieceType(move) == PieceType.None);
 				Moves = AddLegalMove(Moves, field + UpLeft, move => IsOpponentPiece(move));
 				Moves = AddLegalMove(Moves, field + UpRight, move => IsOpponentPiece(move));
 
-				Moves = AddLegalMove(Moves, field + Up + Up, move => { return GetPieceType(move + Down) == PieceType.Empty && GetPieceType(move) == PieceType.Empty && /*Pawn not moved*/((!EnableFlipBoard && Turn == Turn.Black && field / 8 == 1) || field / 8 == 6); });
+				Moves = AddLegalMove(Moves, field + Up + Up, move => { return GetPieceType(move + Down) == PieceType.None && GetPieceType(move) == PieceType.None && /*Pawn not moved*/((!EnableFlipBoard && Turn == Turn.Black && field / 8 == 1) || field / 8 == 6); });
 			}
 			else if (piecetype == "rook")
 			{
@@ -740,7 +740,7 @@ namespace ChessV1
 			}
 
 			// If Atomic Take
-			if (GetPieceType(to) != PieceType.Empty && ChessMode == ChessMode.Atomic)
+			if (GetPieceType(to) != PieceType.None && ChessMode == ChessMode.Atomic)
 			{
 
 				int type = (int)GetPieceType(to);
@@ -845,7 +845,7 @@ namespace ChessV1
 
 			if (EnableFlipBoard) NextTurn(true);
 
-			bool EmptyField = move.ToPositionPiece == PieceType.Empty;
+			bool EmptyField = move.ToPositionPiece == PieceType.None;
 
 			Pieces[move.FromPosition.Value] = move.FromPositionPiece;
 			if (EmptyField) Pieces.Remove(move.ToPosition.Value);
@@ -888,12 +888,12 @@ namespace ChessV1
 
 		public PieceType GetPieceType(int field)
 		{
-			if (!Pieces.ContainsKey(field)) return PieceType.Empty;
+			if (!Pieces.ContainsKey(field)) return PieceType.None;
 			return Pieces[field];
 		}
 
 		public bool IsFieldEmpty(int field)
-			=> GetPieceType(field) == PieceType.Empty;
+			=> GetPieceType(field) == PieceType.None;
 
 		public int GetField(float X, float Y)
 		{
