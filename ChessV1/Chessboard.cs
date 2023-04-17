@@ -13,7 +13,7 @@ namespace ChessV1
 		// TODO Undo -> Buggy (Should do normal moves just fine, but messes up in Atomic, castleing, en passant, etc.
 		// Nvm it hella buggy; Imma leave it in but its hella buggy fr fr
 
-		private bool DisregardTurnsDebug = true;
+		private bool DisregardTurnsDebug = false;
 
 		public Turn Turn { get; private set; } = Turn.White;
 		public ChessMode ChessMode { get; set; } = ChessMode.Normal;
@@ -110,7 +110,7 @@ namespace ChessV1
 				if (i != 19 && i != 27 && i != 28 && i != 35 && i != 36 && i != 37 && i != 42 && i != 43 && i != 44 && i != 45) HighlightedFieldsManual.Add(i);
 			}
 
-			/**/
+			/** /
 
 			// Hikaru Atomic Missed Checkmate Position
 			// Normal Stuff Copy Paste
@@ -151,7 +151,7 @@ namespace ChessV1
 			CastleAvailability.Add(Turn.White, CastleOptions.Both);
 			CastleAvailability.Add(Turn.Black, CastleOptions.Both);
 
-			/** /
+			/**/
 
 			HighlightedFieldsManual.Clear();
 			Form1.self.UndoButton.Enabled = false;
@@ -1072,12 +1072,12 @@ namespace ChessV1
 		GameStart, Draw, MateWin, MateLoss, Move, Castle, Capture, Check
 	}
 
-	enum ChessMode
+	public enum ChessMode
 	{
 		Normal, Blitz, Rapid, Atomic, Il_Vaticano
 	}
 
-	enum CastleOptions
+	public enum CastleOptions
 	{
 		None, Long, Short, Both
 	}

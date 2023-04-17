@@ -24,7 +24,7 @@ namespace ChessV1
 		public Form1()
 		{
 			self = this;
-			//Chessboard.Init();
+			Chessboard.Init();
 			ChessGraphics.Init();
 			InitializeComponent();
 			tf_Turn = new Label();
@@ -166,9 +166,11 @@ namespace ChessV1
 
 		private void Form1_Load(object sender, EventArgs e)
 		{
-			_Chessboard = new Chessboard2(1000);
-			this.Controls.Add((Chessboard2) _Chessboard);
+			_Chessboard = new Chessboard(1000);
+			this.Controls.Add((Chessboard) _Chessboard);
 			RefreshSizeButton.PerformClick();
+
+			new UnitTest();
 		}
 	}
 }
