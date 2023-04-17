@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Net;
 using System.Windows.Forms;
+using System.Linq;
 
 namespace ChessV1
 {
@@ -136,6 +137,7 @@ namespace ChessV1
 				g.FillRectangle(BackColor, PieceRectangleField);
 			}
 
+			// Piece is KeyValuePair<int[] position, PieceType piecetype>
 			foreach (var Piece in CurrentPosition)
 			{
 				Image _pieceImage = ChessGraphics.GetImage(Piece.Value);
@@ -248,9 +250,9 @@ namespace ChessV1
 		private Dictionary<int[], PieceType> Position;	// Initial position; does not change
 		private Turn TurnColor;
 		private int Depth;
-		public int BestScore { get; private set; } = 0;
+		public double BestScore { get; private set; } = 0;
 		public KeyValuePair<int[], int[]> BestMove { get; private set; } = new KeyValuePair<int[], int[]>(new int[2] { -1, -1 }, new int[2] { -1, -1 });
-		private Dictionary<KeyValuePair<int[], int[]>, int> Scores;
+		private Dictionary<KeyValuePair<int[], int[]>, double> Scores;
 
 		public DateTime StartTime;
 		public static int defaultMaxTimeMS = 10000;
@@ -284,7 +286,7 @@ namespace ChessV1
 			StartTime = DateTime.Now;
 			if (UpUntilPositionHistory == null) UpUntilPositionHistory = new MoveHistory();
 
-			Scores = new Dictionary<KeyValuePair<int[], int[]>, int>();
+			Scores = new Dictionary<KeyValuePair<int[], int[]>, double>();
 
 			var allLegalMoves = GetAllLegalMoves(Position, turnColor, UpUntilPositionHistory);  // GetAllLegalMoves is Buggy, returns a list of size 0
 			var lines = new List<MoveHistory>();
@@ -296,7 +298,7 @@ namespace ChessV1
 
 			// A Dictionary<int[], PieceType> Defines a BoardPosition
 			// I don't like this, this way we are storing all the positions. I would like to only store the moves and thus a List<MoveHistory> for the lines instead, but that would not work with the legal moves method
-			CalculateBestMove( /*new List<List<Dictionary<int[], PieceType>>>() { new List<Dictionary<int[], PieceType>>() { Position } }, */ lines, TurnColor, 0);
+			OldCalculateBestMove( /*new List<List<Dictionary<int[], PieceType>>>() { new List<Dictionary<int[], PieceType>>() { Position } }, */ lines, TurnColor, 0);
 		}
 
 		private void Finish(double Depth)
@@ -318,7 +320,143 @@ namespace ChessV1
 			Chessboard2.Log($"Calculation Complete: Time {FinalTimeMS} ms, Final Depth: {FinalDepth}. Best Move: " + MoveToString(Position, BestMove, 'n'));
 		}
 
-		private void CalculateBestMove(List<MoveHistory> currentLines, Turn turnColor, double currentDepth)  // List<List<Dictionary<int[], PieceType>>> currentLines
+
+
+
+		// GPT-4 Implementation for efficiency and StackOverflow prevention
+
+		/// <summary>
+		/// This defines the SearchNode class, which represents a node in the search tree. It contains a MoveHistory, the current Turn, the search Depth, and a list of Scores for the current line.
+		/// </summary>
+		private class SearchNode
+		{
+			public MoveHistory History;
+			public Turn TurnColor;
+			public double Depth;
+			public List<double> Scores;
+
+			public SearchNode(MoveHistory history, Turn turnColor, double depth, List<double> scores)
+			{
+				History = history;
+				TurnColor = turnColor;
+				Depth = depth;
+				Scores = scores;
+			}
+		}
+
+		/// <summary>
+		/// 
+		/// Documentation provided by GPT-4. <br/> <br/>
+		/// 
+		/// The CalculateBestMove method iteratively explores the search tree, updates the scores for each line, and <br/>
+		/// stores the aggregated scores for each line in the Scores dictionary to determine the best move.
+		/// 
+		/// </summary>
+		/// <param name="initialHistory">The initial History of the position. </param>
+		/// <param name="initialTurnColor"> Who's Turn it is. </param>
+		/// <param name="initialDepth"> The initial depth. </param>
+		private void CalculateBestMove(MoveHistory initialHistory, Turn initialTurnColor, double initialDepth)
+		{
+			/**
+			 This segment defines the CalculateBestMove method and sets up the lineScores dictionary to store the scores of each line,
+			a stack called searchStack to store the search nodes, and then pushes the initial node onto the stack.
+			 */
+			Dictionary<KeyValuePair<int[], int[]>, List<double>> lineScores = new Dictionary<KeyValuePair<int[], int[]>, List<double>>();
+			Stack<SearchNode> searchStack = new Stack<SearchNode>();
+			searchStack.Push(new SearchNode(initialHistory, initialTurnColor, initialDepth, null));
+
+			/**
+			 * This while loop iterates until the search stack is empty. It processes each node in the search tree.
+			 */
+			while (searchStack.Count > 0)
+			{
+				/**
+				 * This segment pops a node from the stack, retrieves the depth, turn color, move history, and scores for the current line.
+				 */
+				SearchNode currentNode = searchStack.Pop();
+				double currentDepth = currentNode.Depth;
+				Turn currentTurnColor = currentNode.TurnColor;
+				MoveHistory currentHistory = currentNode.History;
+				List<double> currentScores = currentNode.Scores;
+
+				/**
+				 * Check if the maximum depth has been reached, if it's reached, the method calls Finish and returns.
+				 */
+				if (currentDepth > Depth)
+				{
+					Finish(currentDepth);
+					return;
+				}
+
+				/**
+				 * This segment calculates the current position, gets all legal moves, and then processes each move in a loop.
+				 */
+				var pos = currentHistory.CalculatePosition();
+				var allLegalMoves = GetAllLegalMoves(Position, currentTurnColor, currentHistory);
+				foreach (var move in allLegalMoves)
+				{
+					/**
+					 * This part initializes a new list of scores for the current line, updates the scores using your custom score function,
+					 * creates a new MoveHistory object by branching the current history with the move, and pushes a new node onto the search
+					 * stack with the updated information.
+					 */
+					List<double> newScores;
+					if (currentScores == null)
+					{
+						newScores = new List<double>();
+						lineScores.Add(move.Key, newScores);
+					}
+					else
+					{
+						newScores = new List<double>(currentScores);
+					}
+
+					double MoveScore = GetScoreOf(move, currentHistory);
+					if (currentTurnColor != initialTurnColor) MoveScore *= -1;
+					// Update scores for the current line
+					newScores.Add(MoveScore);
+
+					MoveHistory newHistory = currentHistory.Branch(move);
+					searchStack.Push(new SearchNode(newHistory, InvertColor(currentTurnColor), currentDepth + 0.5, newScores));
+				}
+			}
+
+			/**
+			 * This segment iterates through the lineScores dictionary, aggregates the scores for each line using the Sum function,
+			 * and updates the Scores dictionary with the aggregated scores.
+			 */
+			// Aggregate the scores for each line and update the Scores dictionary
+			foreach (var entry in lineScores)
+			{
+				KeyValuePair<int[], int[]> moveKey = entry.Key;
+				List<double> scoresList = entry.Value;
+				double aggregatedScore = scoresList.Sum();
+				Scores.Add(moveKey, aggregatedScore);
+			}
+		}
+
+
+		private double GetScoreOf(KeyValuePair<KeyValuePair<int[], int[]>, char> move, MoveHistory currentHistory)
+		{
+			Dictionary<int[], PieceType> Position = currentHistory.CalculatePosition();
+			// First, just evaluate the capture of the piece
+			double scoreOfPiececapture = Position.ContainsKey(move.Key.Value) ? GetPieceValue(Position[move.Key.Value]) : 0;
+			double PieceCaptureWeight = 1.0;
+			double ActivityWeight = 0.1;	// Row activity on the opponents side
+
+			double score = (scoreOfPiececapture * PieceCaptureWeight);
+			// Activity
+			if(move.Key.Value[0] > 3) score += move.Key.Value[0] - 3 * ActivityWeight;
+
+			return score;
+		}
+
+
+
+
+
+
+		private void OldCalculateBestMove(List<MoveHistory> currentLines, Turn turnColor, double currentDepth)  // List<List<Dictionary<int[], PieceType>>> currentLines
 		{
 			if (currentDepth > Depth || currentLines.Count == 0) { Finish(currentDepth); return; }	// Calculation complete
 
@@ -337,10 +475,10 @@ namespace ChessV1
 				}
 			}
 
-			CalculateBestMove(currentLines, InvertColor(turnColor), currentDepth + 0.5);
+			OldCalculateBestMove(currentLines, InvertColor(turnColor), currentDepth + 0.5);
 		}
 
-		public Turn InvertColor(Turn Turn)
+		public static Turn InvertColor(Turn Turn)
 		{
 			return Turn == Turn.White ? Turn.Black : Turn.White;
 		}
@@ -802,6 +940,13 @@ namespace ChessV1
 			else if (calc.IsCheck) move += '+';
 
 			return move;
+		}
+
+		public static int GetPieceValue(PieceType Piece)
+		{
+			int value = (int)Piece;
+			if (value > 10) value -= 10;
+			return value == 2 ? 3 : value;
 		}
 	}
 

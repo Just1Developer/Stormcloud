@@ -28,6 +28,9 @@ namespace ChessV1
 			TestBoardPosition.Add(new int[2] { 6, 5 }, PieceType.KING);
 			TestBoardPosition.Add(new int[2] { 7, 4 }, PieceType.ROOK);
 
+			int[] i = new int[2] { 4, 9 }; TestBoardPosition.Add(i, PieceType.ROOK); bool c2 = TestBoardPosition.ContainsKey(i); bool c3 = TestBoardPosition.ContainsKey(new int[2] { 4, 9 });
+			// c2 is true, c3 is false, GPT-4 is right; ContainsKey compares pointers not value
+
 			MoveHistory moveHistory = new MoveHistory(TestBoardPosition);
 			moveHistory.BlackCastleOptions = CastleOptions.None;
 			moveHistory.WhiteCastleOptions = CastleOptions.None;
