@@ -19,7 +19,7 @@ namespace ChessV1
 			TestBoardPosition.Add(new Coordinate(3, 6), PieceType.PAWN);
 			TestBoardPosition.Add(new Coordinate(3, 7), PieceType.PAWN);
 			TestBoardPosition.Add(new Coordinate(4, 0), PieceType.rook);
-			TestBoardPosition.Add(new Coordinate(4, 4), PieceType.pawn);
+			TestBoardPosition.Add(new Coordinate(5, 4), PieceType.pawn);
 			TestBoardPosition.Add(new Coordinate(4, 5), PieceType.PAWN);
 			TestBoardPosition.Add(new Coordinate(4, 7), PieceType.pawn);
 			TestBoardPosition.Add(new Coordinate(5, 1), PieceType.PAWN);
@@ -36,8 +36,8 @@ namespace ChessV1
 			moveHistory.WhiteCastleOptions = CastleOptions.None;
 
 			Chessboard2.Log("Starting Calculation...");
-			Calculation calc = new Calculation(moveHistory, 50, Turn.White);    // Something is wrong, Depth 50: 145ms, Kf1 (not even in the top 3 according to stockfish)
-			Chessboard2.Log($"InCheck: {calc.IsCheck}, IsCheckmate: {calc.IsCheckmate}, IsStalemate: {calc.IsStalemate}");
+			//Calculation calc = new Calculation(moveHistory, 50, Turn.White);    // Something is wrong, Depth 50: 145ms, Kf1 (not even in the top 3 according to stockfish)
+			//Chessboard2.Log($"InCheck: {calc.IsCheck}, IsCheckmate: {calc.IsCheckmate}, IsStalemate: {calc.IsStalemate}");
 		}
 	}
 }

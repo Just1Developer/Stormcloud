@@ -44,18 +44,20 @@ namespace ChessV1
 		public Turn Turn { get; private set; } = Turn.White;
 		public ChessMode ChessMode { get; private set; } = ChessMode.Normal;
 		Brush LightColor, DarkColor, HighlightColor, LastMoveHighlightDark, LastMoveHighlightLight, LegalMoveColor, CheckColor, HighlightFieldColorLight, HighlightFieldColorDark;
-
-		public int CurrentlyHolding = -1;
-		public PieceType CurrentlyHoldingType;
-		public Point CurrentMousePosition;
+		//SolidBrush LightColor, DarkColor, HighlightColor, LastMoveHighlightDark, LastMoveHighlightLight, LegalMoveColor, CheckColor, HighlightFieldColorLight, HighlightFieldColorDark;
 
 		public CastleOptions CastleOptionsWhite, CastleOptionsBlack;
 
 		public Chessboard2(int DisplaySize)
 		{
 			Board = this;
+			// Prevent Flickering
 			DoubleBuffered = true;
 			SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+
+			AllLegalMoves = new List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>>();
+			SelectedLegalMoves = new List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>>();
+			HighlightedFields = new List<Coordinate>();
 
 			this.Location = new Point(0, 0);
 			this.SuspendLayout();
@@ -71,13 +73,18 @@ namespace ChessV1
 			this.HighlightFieldColorDark = Brushes.Turquoise;
 			this.CheckColor = Brushes.Red;
 
-			ResetBoard(Turn.Black);
+			ResetBoard(Turn.White);
 			EventInit();
 		}
 
 		public void ResetBoard(Turn Color)
 		{
+			// Update UI
+			DeselectCurrentField();
+			AllLegalMoves.Clear();
+
 			// Row, Col
+			MoveHistory = new MoveHistory();
 			CurrentPosition = DefaultPosition();
 			// Add pieces, Renderer works inverted
 
@@ -86,7 +93,14 @@ namespace ChessV1
 			this.CastleOptionsWhite = CastleOptions.Both;
 			this.CastleOptionsBlack = CastleOptions.Both;
 
+			AllLegalMoves.AddRange(Calculation.GetAllLegalMoves(CurrentPosition, Turn, MoveHistory));
+
 			Refresh();
+		}
+
+		public void CalculationUpdateReceived()
+		{
+
 		}
 
 		public static Dictionary<Coordinate, PieceType> DefaultPosition()
@@ -116,6 +130,26 @@ namespace ChessV1
 				BoardPosition.Add(new Coordinate(6, i), PieceType.PAWN);
 			}
 
+			/*
+			BoardPosition.Clear();
+
+			BoardPosition.Add(new Coordinate(1, 3), PieceType.rook);
+			BoardPosition.Add(new Coordinate(1, 6), PieceType.ROOK);
+			BoardPosition.Add(new Coordinate(2, 2), PieceType.king);
+			BoardPosition.Add(new Coordinate(3, 4), PieceType.bishop);
+			BoardPosition.Add(new Coordinate(3, 6), PieceType.PAWN);
+			BoardPosition.Add(new Coordinate(3, 7), PieceType.PAWN);
+			BoardPosition.Add(new Coordinate(4, 0), PieceType.rook);
+			BoardPosition.Add(new Coordinate(5, 4), PieceType.pawn);
+			BoardPosition.Add(new Coordinate(4, 5), PieceType.PAWN);
+			BoardPosition.Add(new Coordinate(4, 7), PieceType.pawn);
+			BoardPosition.Add(new Coordinate(5, 1), PieceType.PAWN);
+			BoardPosition.Add(new Coordinate(5, 2), PieceType.pawn);
+			BoardPosition.Add(new Coordinate(5, 3), PieceType.PAWN);
+			BoardPosition.Add(new Coordinate(6, 5), PieceType.KING);
+			BoardPosition.Add(new Coordinate(7, 4), PieceType.ROOK);
+			*/
+
 			return BoardPosition;
 		}
 
@@ -123,16 +157,25 @@ namespace ChessV1
 		{
 			Graphics g = e.Graphics;
 			int SquareSize = DisplaySize / 8;
-			bool White = !(Turn == Turn.Black); // Also include Gamestart and everything if no Turn Color is set
+			bool WhiteBottom = !(Turn == Turn.Black); // Also include Gamestart and everything if no Turn Color is set
 
 			// Loop goes backwards if it's blacks turn
-			for (int i = White ? 0 : 63; White && i <= 63 || !White && i >= 0; i += White ? 1 : -1)
+			for (int i = WhiteBottom ? 0 : 63; WhiteBottom && i <= 63 || !WhiteBottom && i >= 0; i += WhiteBottom ? 1 : -1)
 			{
 				int row = i / 8, col = i % 8;
 				RectangleF PieceRectangleField = new RectangleF(SquareSize * col, SquareSize * row, SquareSize, SquareSize);
-				Brush BackColor = (i + i/8) % 2 == 0 ? LightColor : DarkColor;
-				string Brush = i % 2 == 0 ? "LightColor" : "DarkColor";
-				Log($"Field: {i}, Brush: {Brush}, Rectangle pos: {PieceRectangleField.X}, {PieceRectangleField.Y} and Size: {PieceRectangleField.Width} x {PieceRectangleField.Height}");
+				Brush BackColor;
+				
+				bool IsLightSquare = (i + i / 8) % 2 == 0;
+				Coordinate _ = Turn == Turn.White ? new Coordinate(row, col) : new Coordinate(Math.Abs(7 - row), Math.Abs(7 - col)); ;
+
+				if (SelectedField == _)
+					BackColor = HighlightColor;
+				else if(HighlightedFields.Contains(_))
+							BackColor = IsLightSquare ? HighlightFieldColorLight : HighlightFieldColorDark;
+				else if(MoveHistory.LastMove.Key == _ || MoveHistory.LastMove.Value == _)
+					BackColor = IsLightSquare ? LastMoveHighlightLight : LastMoveHighlightDark;
+				else BackColor = IsLightSquare ? LightColor : DarkColor;
 
 				g.FillRectangle(BackColor, PieceRectangleField);
 			}
@@ -140,10 +183,12 @@ namespace ChessV1
 			// Piece is KeyValuePair<Coordinate position, PieceType piecetype>
 			foreach (var Piece in CurrentPosition)
 			{
+				if (Piece.Key == SelectedField && CurrentlyHolding) continue;
+
 				Image _pieceImage = ChessGraphics.GetImage(Piece.Value);
 				if (_pieceImage == null) continue;
 				int row, col;
-				if(this.Turn == Turn.White)
+				if(WhiteBottom)
 				{
 					row = Piece.Key.Row;
 					col = Piece.Key.Col;
@@ -157,11 +202,37 @@ namespace ChessV1
 				g.DrawImage(_pieceImage, PieceRectangleField);
 			}
 
+			foreach (var move in SelectedLegalMoves)
+			{
+				int row, col;
+				if (WhiteBottom)
+				{
+					row = move.Key.Value.Row;
+					col = move.Key.Value.Col;
+				}
+				else
+				{
+					row = 7 - move.Key.Value.Row;
+					col = 7 - move.Key.Value.Col;
+				}
+				RectangleF RectangleField = new RectangleF(SquareSize * col, SquareSize * row, SquareSize, SquareSize);
+				if(CurrentPosition.ContainsKey(new Coordinate(row, col)))
+				{
+					// Big circle
+					g.DrawEllipse(new Pen(LegalMoveColor, SquareSize / 11), new RectangleF((SquareSize * col) + (SquareSize / 22), (SquareSize * row) + (SquareSize / 22), SquareSize - (SquareSize / 10), SquareSize - (SquareSize / 10)));
+				}
+				else
+				{
+					// Small point, Width: SquareSize / 8
+					g.FillEllipse(LegalMoveColor, new RectangleF((SquareSize * (col+0.5f)) /*- (SquareSize / 3)*/, (SquareSize * (row+0.5f))/* - (SquareSize / 3)*/, SquareSize / 6, SquareSize / 6));
+				}
+			}
+
 			// Draw Currently Held Piece
-			if (CurrentlyHolding < 0 && CurrentMousePosition != null) return;
+			if (!CurrentlyHolding || CurrentMousePosition == null) return;
 			Image _piece = ChessGraphics.GetImage(CurrentlyHoldingType);
 			if (_piece == null) return;
-			RectangleF loc = new RectangleF(MousePosition.X - (SquareSize / 2), MousePosition.Y - (SquareSize / 2),
+			RectangleF loc = new RectangleF(CurrentMousePosition.X - (SquareSize / 2), CurrentMousePosition.Y - (SquareSize / 2),
 				SquareSize, SquareSize);
 			g.DrawImage(_piece, loc);
 		}
@@ -261,7 +332,7 @@ namespace ChessV1
 		public DateTime StartTime;
 		public static int defaultMaxTimeMS = 10000;
 		public int maxTimeMS;
-		public bool AbortCalculation { get => false; set { if (value) Depth = -1; /* Causes cancellation on the next check */ } }
+		public void AbortCalculation() => Depth = -1; /* Causes cancellation on the next check */
 		public bool IsCheck = false;
 		public bool IsCheckmate = false;
 		public bool IsStalemate = false;
@@ -297,12 +368,24 @@ namespace ChessV1
 
 		private void Finish(Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores, double Depth)
 		{
+			Report(lineScores, Depth);
 
+			// Just for debugging, the is-king-in-check-search does not need to be announced
+			if (FinalDepth < 2) return;
+
+			Chessboard2.Log($"Calculation Complete: Time {FinalTimeMS} ms, Final Depth: {FinalDepth}. Best Move: {MoveToString(UpUntilPositionHistory.CalculatePosition(), BestMove, 'n')}, Score: {BestScore}");
+		}
+
+
+
+		private void Report(Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores, double Depth)
+		{
 			/**
 			 * This segment iterates through the lineScores dictionary, aggregates the scores for each line using the Sum function,
 			 * and updates the Scores dictionary with the aggregated scores.
 			 */
 			// Aggregate the scores for each line and update the Scores dictionary
+			Scores.Clear();
 			foreach (var entry in lineScores)
 			{
 				KeyValuePair<Coordinate, Coordinate> moveKey = entry.Key;
@@ -314,20 +397,15 @@ namespace ChessV1
 			// Determine Best Move
 			foreach (var score in Scores)
 			{
-				if(score.Value > BestScore)
+				if (score.Value > BestScore)
 				{
 					BestScore = score.Value;
 					BestMove = score.Key;
 				}
 			}
 
-			FinalTimeMS = (int) (DateTime.Now - StartTime).TotalMilliseconds;
+			FinalTimeMS = (int)(DateTime.Now - StartTime).TotalMilliseconds;
 			FinalDepth = Depth;
-
-			// Just for debugging, the is-king-in-check-search does not need to be announced
-			if (FinalDepth < 2) return;
-
-			Chessboard2.Log($"Calculation Complete: Time {FinalTimeMS} ms, Final Depth: {FinalDepth}. Best Move: {MoveToString(UpUntilPositionHistory.CalculatePosition(), BestMove, 'n')}, Score: {BestScore}");
 		}
 
 
@@ -367,7 +445,7 @@ namespace ChessV1
 			/// <param name="initialHistory">The initial History of the position. </param>
 			/// <param name="initialTurnColor"> Who's Turn it is. </param>
 			Turn initialTurnColor = this.TurnColor;
-			MoveHistory initialHistory = this.UpUntilPositionHistory;
+			MoveHistory initialHistory = this.UpUntilPositionHistory.Clone();
 			double initialDepth = 0.0;	// was an argument but I figured it's probably always 0
 			/**
 			 This segment defines the CalculateBestMove method and sets up the lineScores dictionary to store the scores of each line,
@@ -400,6 +478,12 @@ namespace ChessV1
 				{
 					Finish(lineScores, currentDepth);
 					return;
+				}
+
+				// Constantly Update the final report
+				if(currentDepth+0.5 > FinalDepth)
+				{
+					Report(lineScores, currentDepth);
 				}
 
 				/**
@@ -451,12 +535,12 @@ namespace ChessV1
 						newScores = new List<double>(currentScores);
 					}
 
-					double MoveScore = GetScoreOf(move, currentHistory);
+					double MoveScore = GetScoreOf(move, pos);
 					if (currentTurnColor != initialTurnColor) MoveScore *= -1;
 					// Update scores for the current line
 					newScores.Add(MoveScore);
 
-					bool KingIsCaptured = pos.ContainsKey(move.Key.Value) ? pos[move.Key.Value].ToString().ToUpper() == "KING" /* We dont need to check which King because usually you can't take your own king so that wouldn't be in the Legal moves */ : false;
+					bool KingIsCaptured = pos.TryGetValue(move.Key.Value, out PieceType capturedPiece) && (capturedPiece == PieceType.KING || capturedPiece == PieceType.king); /* We dont need to check which King because usually you can't take your own king so that wouldn't be in the Legal moves */
 					// Also possible but not recommended: Math.Abs(MoveScore) < 999 because King capture is 999
 
 					// Only branch further if the king is captured
@@ -510,9 +594,17 @@ namespace ChessV1
 		}
 
 
-		private double GetScoreOf(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> move, MoveHistory currentHistory)
+		private double GetScoreOf(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> move, MoveHistory currentHistory, Turn turnColor = Turn.Pregame)
+			=> GetScoreOf(move, currentHistory.CalculatePosition(), turnColor == Turn.Pregame ? currentHistory.Count % 2 == 0 ? Turn.White : Turn.Black : turnColor);
+		/// <summary>
+		/// Method Call BEFORE move is made.
+		/// </summary>
+		/// <param name="move"></param>
+		/// <param name="currentHistory"></param>
+		/// <param name="position"></param>
+		/// <returns></returns>
+		private double GetScoreOf(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> move, Dictionary<Coordinate, PieceType> Position, Turn turnColor = Turn.Pregame)
 		{
-			Dictionary<Coordinate, PieceType> Position = currentHistory.CalculatePosition();
 			// First, just evaluate the capture of the piece
 			double scoreOfPiececapture = Position.ContainsKey(move.Key.Value) ? GetPieceValue(Position[move.Key.Value]) : 0;
 			double PieceCaptureWeight = 1.0;
@@ -528,10 +620,20 @@ namespace ChessV1
 				case 'K': PromotionScore = GetPieceValue(PieceType.KNIGHT) - 1; break;
 			}
 
+			double PositionMaterialAdvantage = 0;
+			if(turnColor == Turn.Pregame && Position.ContainsKey(move.Key.Value)) turnColor = GetColorOf(Position[move.Key.Key]);
+			foreach (var piece in Position)
+			{
+				if (IsPieceColor(piece.Value, turnColor)) PositionMaterialAdvantage += GetPieceValue(piece.Value);
+				else PositionMaterialAdvantage -= GetPieceValue(piece.Value);
+			}
+			double PositionMaterialAdvantageWeight = 0.65;
+
 			double score = (scoreOfPiececapture * PieceCaptureWeight);
 			// Activity
 			if(move.Key.Value.Row > 3) score += move.Key.Value.Row - 3 * ActivityWeight;
 			score += PromotionScore * PromotionWeight;
+			score += PositionMaterialAdvantage * PositionMaterialAdvantageWeight;
 
 			return score;
 		}
@@ -549,9 +651,9 @@ namespace ChessV1
 			// Is King in Check?
 			bool TurnColorKingInCheck = IsTurnColorKingInCheck(position, History, turnColor);
 
-			foreach (var piece in position)
+			foreach (var piece in position)	// piece.Key = Coordinate, piece.Value = 
 			{
-				if (IsPieceColor(piece.Value, turnColor))
+				if (IsPieceColor(piece.Value, turnColor))	// Check if the piece is one's own color
 				{
 					legalMoves.AddRange(GetPieceLegalMoves(position, History, piece.Key, piece.Value, turnColor, TurnColorKingInCheck));
 				}
@@ -606,7 +708,7 @@ namespace ChessV1
 		public CastleOptions WhiteCastleOptions, BlackCastleOptions;    // Keeps track of who (at the end) can castle
 		public CastleOptions GetCastleOptions(Turn Color) => Color == Turn.Black ? BlackCastleOptions : WhiteCastleOptions;
 
-		public KeyValuePair<Coordinate, Coordinate> LastMove { get => History.Count > 0 ? History[History.Count - 1].Key : new KeyValuePair<Coordinate, Coordinate>(new Coordinate(0, 0), new Coordinate(0, 0)); }
+		public KeyValuePair<Coordinate, Coordinate> LastMove { get => History.Count > 0 ? History[History.Count - 1].Key : new KeyValuePair<Coordinate, Coordinate>(Coordinate.NullCoord, Coordinate.NullCoord); }
 		public KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> LastMoveComplete { get => History.Count > 0 ? History[History.Count - 1] : new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>(new KeyValuePair<Coordinate, Coordinate>(new Coordinate(0, 0), new Coordinate(0, 0)), 'n'); }
 
 		public MoveHistory(Dictionary<Coordinate, PieceType> CustomSetup = null)
@@ -726,14 +828,31 @@ namespace ChessV1
 
 		public MoveHistory Branch(KeyValuePair<Coordinate, Coordinate> Move, char MoveType)
 		{
+			MoveHistory newHistory = Clone();
+			switch(MoveType)
+			{
+				case 'n':
+					AddNormalMove(Move);
+					break;
+				case 'c':
+					AddCastlesKingMove(Move);
+					break;
+				default:
+					newHistory.AddMove(Move, MoveType);
+					break;
+			}
+			return newHistory;
+		}
+		public MoveHistory Branch(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> Move) => Branch(Move.Key, Move.Value);
+
+		public MoveHistory Clone()
+		{
 			MoveHistory newHistory = new MoveHistory(CustomSetup);
 			newHistory.History = new List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>>(History);
 			newHistory.WhiteCastleOptions = WhiteCastleOptions;
 			newHistory.BlackCastleOptions = BlackCastleOptions;
-			newHistory.AddMove(Move, MoveType);
 			return newHistory;
 		}
-		public MoveHistory Branch(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> Move) => Branch(Move.Key, Move.Value);
 	}
 
 	partial class Calculation
@@ -793,9 +912,10 @@ namespace ChessV1
 			int pawnUp = turnColor == Turn.Black ? 1 : -1;
 
 			// On the first rank, pawns can move two up
-			Coordinate dest = new Coordinate(piecePos.Row + pawnUp + pawnUp, piecePos.Row);
+			Coordinate dest = new Coordinate(piecePos.Row + pawnUp, piecePos.Col);
+
 			// Since this part of the if-statement can also fail because of IsOutOfBounds(), the CheckForIfMoveLegal has to be inserted twice. When it's false we really dont want to call the method
-			if ((!CheckForIfMoveLegal && IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, LineHistory, dest, turnColor)) && !position.ContainsKey(dest) && (piecePos.Row == 1 && pawnUp == 1 || piecePos.Row == 6 && pawnUp == -1))
+			if ((!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, LineHistory, dest, turnColor)) && !position.ContainsKey(dest))
 			{
 				if(dest.Row == 0 && pawnUp == -1 || dest.Row == 7 && pawnUp == -1)
 				{
@@ -811,10 +931,17 @@ namespace ChessV1
 				}
 			}
 
-			// Pawns always move 1 up
-			dest.Row = pawnUp;
+			// Pawns always move 1 up, except on the 'first' rank
+			dest = new Coordinate(piecePos.Row + (2 * pawnUp), piecePos.Col);
 			// The move forward is only allowed if there is noone there
-			if ((!CheckForIfMoveLegal && IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, LineHistory, dest, turnColor)) && !position.ContainsKey(dest)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
+			if ((!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, LineHistory, dest, turnColor)) && !position.ContainsKey(dest)
+				 && (piecePos.Row == 1 && pawnUp == 1 || piecePos.Row == 6 && pawnUp == -1) && list.Count > 0 /* Move before possible, nothing is blocking */)
+				list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
+
+			if(dest == new Coordinate(4, -1))
+			{
+				Chessboard2.Log("wtf");
+			}
 
 			// En Passant Possible
 			bool enPassantRight = false, enPassantLeft = false;
@@ -827,10 +954,13 @@ namespace ChessV1
 			&& position.ContainsKey(EnPassantLeftDestination) && position[EnPassantLeftDestination].ToString().ToUpper() == "PAWN")
 				enPassantLeft = true;
 
+			enPassantLeft = false;
+			enPassantRight = false;
+
 			// Pawns can capture diagonally
-			dest.Col = 1;
+			dest = new Coordinate(piecePos.Row + pawnUp, piecePos.Col + 1);
 			list.AddRange(GetPawnLegalMovesDiagonalCapture(position, LineHistory, piecePos, turnColor, dest, pawnUp, enPassantRight, CheckForIfMoveLegal));
-			dest.Col = -1;
+			dest = new Coordinate(piecePos.Row + pawnUp, piecePos.Col - 1);
 			list.AddRange(GetPawnLegalMovesDiagonalCapture(position, LineHistory, piecePos, turnColor, dest, pawnUp, enPassantLeft, CheckForIfMoveLegal));
 
 
@@ -850,21 +980,21 @@ namespace ChessV1
 		private static List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>> GetKnightLegalMoves(Dictionary<Coordinate, PieceType> position, MoveHistory History, Coordinate piecePos, Turn turnColor, bool CheckForIfMoveLegal = true)
 		{
 			var list = new List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>>();
-			Coordinate dest = new Coordinate(piecePos.Row - 2, piecePos.Row + 1);
+			Coordinate dest = new Coordinate(piecePos.Row - 2, piecePos.Col + 1);
 			if (!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, History, dest, turnColor)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
-			dest = new Coordinate(piecePos.Row - 2, piecePos.Row - 1);
+			dest = new Coordinate(piecePos.Row - 2, piecePos.Col - 1);
 			if (!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, History, dest, turnColor)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
-			dest = new Coordinate(piecePos.Row + 2, piecePos.Row + 1);
+			dest = new Coordinate(piecePos.Row + 2, piecePos.Col + 1);
 			if (!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, History, dest, turnColor)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
-			dest = new Coordinate(piecePos.Row + 2, piecePos.Row - 1);
+			dest = new Coordinate(piecePos.Row + 2, piecePos.Col - 1);
 			if (!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, History, dest, turnColor)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
-			dest = new Coordinate(piecePos.Row + 1, piecePos.Row + 2);
+			dest = new Coordinate(piecePos.Row + 1, piecePos.Col + 2);
 			if (!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, History, dest, turnColor)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
-			dest = new Coordinate(piecePos.Row + 1, piecePos.Row - 2);
+			dest = new Coordinate(piecePos.Row + 1, piecePos.Col - 2);
 			if (!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, History, dest, turnColor)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
-			dest = new Coordinate(piecePos.Row - 1, piecePos.Row + 2);
+			dest = new Coordinate(piecePos.Row - 1, piecePos.Col + 2);
 			if (!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, History, dest, turnColor)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
-			dest = new Coordinate(piecePos.Row - 1, piecePos.Row - 2);
+			dest = new Coordinate(piecePos.Row - 1, piecePos.Col - 2);
 			if (!CheckForIfMoveLegal && !IsOutOfBounds(dest) || CheckForIfMoveLegal && IsLegalMove(position, History, dest, turnColor)) list.Add(new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> (new KeyValuePair<Coordinate, Coordinate>(piecePos, dest), 'n'));
 			return list;
 		}
@@ -959,6 +1089,9 @@ namespace ChessV1
 			// Check if out of bounds
 			if (IsOutOfBounds(destination)) return false;
 			// Check if None of the pieces could now take the king
+			//Chessboard2.Log($"The move that Lands on {(char)(destination.Col + 97)}{Math.Abs(8 - destination.Row)} is not out of bounds and does not capture {turnColor}'s own piece.");
+
+			/*
 			foreach (var piece in position)
 			{
 				if (GetColorOf(piece.Value) == turnColor) continue;
@@ -969,9 +1102,149 @@ namespace ChessV1
 						return false;	// When performing the given move, at least one move of the opponent can capture the King. Not a legal move.
 				}
 			}
+			*/
+			// Different Approach:
+			if (!KingSafety2_IsKingSafe_IncludeFindKing(position, turnColor)) return false;	// I know I can just return this but this is for clarity.
+
+			//Chessboard2.Log($"No piece can take the King, everything checks out. The move that Lands on {(char)(destination.Col + 97)}{Math.Abs(8 - destination.Row)} is Legal.");
 			// return true if everything checks out
 			return true;
 		}
+
+		#region King Safety 2
+
+		// TODO/Idea: Just get Knight/QueenLegalMoves with false as last parameter instead of doing this manually with KingPosition
+
+		private static bool KingSafety2_IsKingSafe_IncludeFindKing(Dictionary<Coordinate, PieceType> Position, Turn KingColor)
+		{
+			PieceType King = GetPieceOfColor(PieceType.KING, KingColor);
+			Coordinate KingCoordinate = Coordinate.NullCoord;
+			foreach (var piece in Position)
+			{
+				if(piece.Value == King)
+				{
+					KingCoordinate = piece.Key;
+					break;
+				}
+			}
+			if (KingCoordinate == Coordinate.NullCoord) return false;
+			return KingSafety2_IsKingSafe(Position, KingCoordinate, InvertColor(KingColor));
+		}
+		private static bool KingSafety2_IsKingSafe(Dictionary<Coordinate, PieceType> Position, Coordinate KingCoordinate, Turn OpponentColor)
+		{
+			if (!KingSafety2_IsKingSafe_CheckKnightMoves(Position, KingCoordinate, OpponentColor)) return false;
+			if (!KingSafety2_IsKingSafe_CheckLine(Position, KingCoordinate, OpponentColor, 1, 0)) return false;
+			if (!KingSafety2_IsKingSafe_CheckLine(Position, KingCoordinate, OpponentColor, -1, 0)) return false;
+			if (!KingSafety2_IsKingSafe_CheckLine(Position, KingCoordinate, OpponentColor, 0, 1)) return false;
+			if (!KingSafety2_IsKingSafe_CheckLine(Position, KingCoordinate, OpponentColor, 0, -1)) return false;
+			if (!KingSafety2_IsKingSafe_CheckLine(Position, KingCoordinate, OpponentColor, 1, 1)) return false;
+			if (!KingSafety2_IsKingSafe_CheckLine(Position, KingCoordinate, OpponentColor, 1, -1)) return false;
+			if (!KingSafety2_IsKingSafe_CheckLine(Position, KingCoordinate, OpponentColor, -1, 1)) return false;
+			if (!KingSafety2_IsKingSafe_CheckLine(Position, KingCoordinate, OpponentColor, -1, -1)) return false;
+			return true;
+		}
+
+		private static bool KingSafety2_IsKingSafe_CheckKnightMoves(Dictionary<Coordinate, PieceType> Position, Coordinate KingCoordinate, Turn KnightColor)
+		{
+			Coordinate dest = new Coordinate(KingCoordinate.Row + 2, KingCoordinate.Col + 1);
+			if (Position.ContainsKey(dest) && Position[dest] == GetPieceOfColor(PieceType.KNIGHT, KnightColor)) return false;
+			dest = new Coordinate(KingCoordinate.Row + 2, KingCoordinate.Col - 1);
+			if (Position.ContainsKey(dest) && Position[dest] == GetPieceOfColor(PieceType.KNIGHT, KnightColor)) return false;
+			dest = new Coordinate(KingCoordinate.Row + 1, KingCoordinate.Col + 2);
+			if (Position.ContainsKey(dest) && Position[dest] == GetPieceOfColor(PieceType.KNIGHT, KnightColor)) return false;
+			dest = new Coordinate(KingCoordinate.Row + 1, KingCoordinate.Col - 2);
+			if (Position.ContainsKey(dest) && Position[dest] == GetPieceOfColor(PieceType.KNIGHT, KnightColor)) return false;
+			dest = new Coordinate(KingCoordinate.Row - 2, KingCoordinate.Col + 1);
+			if (Position.ContainsKey(dest) && Position[dest] == GetPieceOfColor(PieceType.KNIGHT, KnightColor)) return false;
+			dest = new Coordinate(KingCoordinate.Row - 2, KingCoordinate.Col - 1);
+			if (Position.ContainsKey(dest) && Position[dest] == GetPieceOfColor(PieceType.KNIGHT, KnightColor)) return false;
+			dest = new Coordinate(KingCoordinate.Row - 1, KingCoordinate.Col + 2);
+			if (Position.ContainsKey(dest) && Position[dest] == GetPieceOfColor(PieceType.KNIGHT, KnightColor)) return false;
+			dest = new Coordinate(KingCoordinate.Row - 1, KingCoordinate.Col - 2);
+			if (Position.ContainsKey(dest) && Position[dest] == GetPieceOfColor(PieceType.KNIGHT, KnightColor)) return false;
+			return true;
+		}
+		private static bool KingSafety2_IsKingSafe_CheckLine(Dictionary<Coordinate, PieceType> Position, Coordinate KingCoordinate, Turn OpponentColor, int rowDelta, int colDelta)
+		{
+			int row = KingCoordinate.Row + rowDelta, col = KingCoordinate.Col + colDelta;
+
+			if (row == 0 && col == 0) return false;
+			bool IsRow = row == 0 ^ col == 0;	// Exclusive or symbol '^'
+
+			Coordinate coord = new Coordinate(row, col);
+			
+			while (!IsOutOfBounds(coord))
+			{
+				if (Position.ContainsKey(coord))
+				{
+					if (GetColorOf(Position[coord]) == OpponentColor) return true;
+					// Check if on the diagonal there is a Queen or, depending on diagonal or not, a bishop/rook. When we hit one of our own pieces though, its immediately return true since something is blocking it
+					if ((Position[coord] == GetPieceOfColor(PieceType.QUEEN, OpponentColor) ||
+						Position[coord] == GetPieceOfColor(IsRow ? PieceType.ROOK : PieceType.BISHOP, OpponentColor))) return false;
+				}
+				row += rowDelta;
+				col += colDelta;
+				coord = new Coordinate(row, col);
+			}
+			return true;
+		}
+		private static PieceType GetPieceOfColor(PieceType Type, Turn Color)
+		{
+			switch (Color)
+			{
+				case Turn.White:
+					switch (Type)
+					{
+						// It's also possible to just use parsing and ToUpper() and ToLower()
+						case PieceType.PAWN:
+						case PieceType.pawn:
+							return PieceType.PAWN;
+						case PieceType.ROOK:
+						case PieceType.rook:
+							return PieceType.ROOK;
+						case PieceType.KNIGHT:
+						case PieceType.knight:
+							return PieceType.KNIGHT;
+						case PieceType.BISHOP:
+						case PieceType.bishop:
+							return PieceType.BISHOP;
+						case PieceType.QUEEN:
+						case PieceType.queen:
+							return PieceType.QUEEN;
+						case PieceType.KING:
+						case PieceType.king:
+							return PieceType.KING;
+					}
+					break;
+				case Turn.Black:
+					switch (Type)
+					{
+						// It's also possible to just use parsing and ToUpper() and ToLower()
+						case PieceType.PAWN:
+						case PieceType.pawn:
+							return PieceType.pawn;
+						case PieceType.ROOK:
+						case PieceType.rook:
+							return PieceType.rook;
+						case PieceType.KNIGHT:
+						case PieceType.knight:
+							return PieceType.knight;
+						case PieceType.BISHOP:
+						case PieceType.bishop:
+							return PieceType.bishop;
+						case PieceType.QUEEN:
+						case PieceType.queen:
+							return PieceType.queen;
+						case PieceType.KING:
+						case PieceType.king:
+							return PieceType.king;
+					}
+					break;
+			}
+			return PieceType.None;
+		}
+
+		#endregion
 
 		private static bool IsOutOfBounds(Coordinate destination)
 		{
@@ -981,7 +1254,7 @@ namespace ChessV1
 
 		#endregion
 
-		public string MoveToString(Dictionary<Coordinate, PieceType> CurrentPosition, KeyValuePair<Coordinate, Coordinate> Move, char MoveType)  // No own MoveType enum because a char takes up less bit (16) than an integer (64)
+		public static string MoveToString(Dictionary<Coordinate, PieceType> CurrentPosition, KeyValuePair<Coordinate, Coordinate> Move, char MoveType)  // No own MoveType enum because a char takes up less bit (16) than an integer (64)
 		{
 			MoveHistory MoveHistory = new MoveHistory(CurrentPosition);
 			string move = "";
@@ -1051,6 +1324,14 @@ namespace ChessV1
 			if (!move.Equals("" + (char)(Move.Value.Col + 97))) move += (char)(Move.Value.Col + 97);	// TODO Col can be -1 to 8 instead of 0 to 7
 			move += Math.Abs(8 - Move.Value.Row);   // Move.Value.Row = 0 - 7 but opposite order.	7 -> 1, 6 -> 2, 5 -> 3... 0 -> 8
 
+			switch(MoveType)
+			{
+				case 'Q': move += "=Q"; break;
+				case 'R': move += "=R"; break;
+				case 'B': move += "=B"; break;
+				case 'K': move += "=N"; break;
+			}
+
 			// Add check or mate
 			//Calculation calc = new Calculation(MoveHistory.Branch(Move, MoveType), 1, GetColorOf(PieceType));
 			//if (calc.IsCheckmate) move += '#';
@@ -1068,10 +1349,68 @@ namespace ChessV1
 		}
 	}
 
-	partial class Chessboard2	// Input / UI / Mouse Event Handling
+	partial class Chessboard2   // Input / UI / Mouse Event Handling
 	{
+		public bool CurrentlyHolding = false;
+		public PieceType CurrentlyHoldingType;
+		public Point CurrentMousePosition;
+		public Calculation CurrentCalculation;
+
 		Coordinate SelectedField;
-		List<Coordinate> AllLegalMoves;
+		List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>> AllLegalMoves, SelectedLegalMoves;
+		List<Coordinate> HighlightedFields;
+
+		public int MaxEngineDepth = 50, MaxEngineTimeMS = 100000;
+
+		public const int MoveDelayMS = 200;
+
+		private string lastMove = "";
+		public void ApplyMove(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> move)
+		{
+			// Evaluate Sound
+			SoundType Sound = SoundType.Move;
+
+			switch (move.Value)
+			{
+				case 'n': MoveHistory.AddNormalMove(move.Key); break;
+				case 'e': MoveHistory.AddEnPassantMove(move.Key); break;
+				case 'c': MoveHistory.AddCastlesKingMove(move.Key); break;
+				case 'Q': MoveHistory.AddPromotionMoveQueen(move.Key); break;
+				case 'R': MoveHistory.AddPromotionMoveRook(move.Key); break;
+				case 'B': MoveHistory.AddPromotionMoveBishop(move.Key); break;
+				case 'K': MoveHistory.AddPromotionMoveKnight(move.Key); break;
+			}
+
+			AllLegalMoves.Clear();
+			Turn = Calculation.InvertColor(Turn);
+			HighlightedFields.Clear();
+			DeselectCurrentField();
+
+			CurrentPosition = MoveHistory.CalculatePosition();
+			AllLegalMoves.AddRange(Calculation.GetAllLegalMoves(CurrentPosition, Turn, MoveHistory));
+
+			if (CurrentCalculation != null) CurrentCalculation.AbortCalculation();
+			CurrentCalculation = new Calculation(MoveHistory, MaxEngineDepth, Turn) { maxTimeMS = this.MaxEngineTimeMS };
+
+			if(MoveHistory.Count > 0 && Turn == Turn.White)
+			{
+				Log($"{MoveHistory.Count % 2}. {lastMove}   {Calculation.MoveToString(CurrentPosition, move.Key, move.Value)}");
+			}
+			else if(Turn == Turn.Black)
+			{
+				lastMove = Calculation.MoveToString(CurrentPosition, move.Key, move.Value);
+			}
+			Log($"Debug-Move:{MoveHistory.Count}. {Calculation.MoveToString(CurrentPosition, move.Key, move.Value)}");
+
+			ChessGraphics.PlaySound(Sound);
+			Sleep();
+
+			Refresh();
+		}
+		public static void Sleep(int millis = MoveDelayMS)
+		{
+			System.Threading.Thread.Sleep(millis);
+		}
 
 		void EventInit()
 		{
@@ -1080,24 +1419,137 @@ namespace ChessV1
 			this.MouseUp += (s, e) => MouseUpEvent(e);
 		}
 
+		private void DeselectCurrentField()
+		{
+			CurrentlyHolding = false;
+			SelectedField = Coordinate.NullCoord;
+			SelectedLegalMoves.Clear();
+			CurrentlyHoldingType = PieceType.None;
+		}
+
 		// Update Mouse Position
 		public void OnMouseMoved(MouseEventArgs e)
 		{
-			if (CurrentlyHolding < 0) return;
-
+			if (!CurrentlyHolding) return;
+			
 			CurrentMousePosition = new Point(e.X, e.Y);
+			Refresh();
+		}
+
+		private Coordinate Event_GetFieldByMouseLocation(Point MouseLocation)
+		{
+			int DisplayFieldSize = DisplaySize / 8;
+			int Row = MouseLocation.Y / DisplayFieldSize;
+			int Col = MouseLocation.X / DisplayFieldSize;
+			// Invert when Blacks turn
+			return Turn == Turn.White ? new Coordinate(Row, Col) :
+				new Coordinate(Math.Abs(7 - Row), Math.Abs(7 - Col));
 		}
 
 		// Mouse Down
 		public void MouseDownEvent(MouseEventArgs e)
 		{
+			Coordinate field = Event_GetFieldByMouseLocation(e.Location);
 
+			if (e.Button == MouseButtons.Left)
+			{
+				if(field == SelectedField && CurrentlyHolding /* Otherwise we might be wanting to pick it up */)
+				{
+					// Deselect
+					DeselectCurrentField();
+					return;
+				}
+
+				// Get FieldType
+				PieceType FieldType;// = CurrentPosition.ContainsKey(field) ? CurrentPosition[field] : PieceType.None;
+				if (!CurrentPosition.TryGetValue(field, out FieldType)) FieldType = PieceType.None;
+
+				// If no field is selected and we click on one that isn't ours, nothing happens except possible deselect
+				if(SelectedField == Coordinate.NullCoord && !Calculation.IsPieceColor(FieldType, Turn))
+				{
+					DeselectCurrentField();
+					return;
+				}
+
+				// Clicked on Field that isnt ours
+				if (InvokeClickedOnFieldWhenSelected(field, FieldType)) return;
+
+				// Clicked on Field that is ours
+				this.CurrentMousePosition = e.Location;
+				SelectedField = field;
+				CurrentlyHoldingType = CurrentPosition[field];
+				CurrentlyHolding = true;
+				UpdateSelectedLegalMoves();
+
+				Refresh();
+			}
+		}
+
+		private void UpdateSelectedLegalMoves()
+		{
+			SelectedLegalMoves.Clear();
+			// Get all legal moves
+			foreach (var move in AllLegalMoves)
+			{
+				if (move.Key.Key == SelectedField) SelectedLegalMoves.Add(move);
+			}
+		}
+
+		/// <summary>
+		/// Invoked when clicked on a field. Also invoked when held figure is dropped on the field. <br/>
+		/// Returns false when the clicked field contains a Piece of the own color. Returns true if <br/>
+		/// the Field was not an own field, action has been taken accordingly.
+		/// </summary>
+		/// <param name="field"></param>
+		/// <returns>False, True if action has been taken.</returns>
+		public bool InvokeClickedOnFieldWhenSelected(Coordinate field, PieceType FieldType)
+		{
+			if (FieldType != PieceType.None && Calculation.GetColorOf(FieldType) == Turn)
+			{
+				Refresh();
+				return false;
+			}
+
+			// Update our legal moves
+			UpdateSelectedLegalMoves();
+
+			// Contains doenst work here
+			foreach (var move in SelectedLegalMoves)
+			{
+				if (move.Key.Value == field)
+				{
+					// Move is legal, make the move
+					ApplyMove(move);
+					Refresh();
+					return true;
+				}
+			}
+			// Not in legal moves (cant be applied)
+			DeselectCurrentField();
+			Refresh();
+			return true;
 		}
 
 		// Mouse Up
 		public void MouseUpEvent(MouseEventArgs e)
 		{
+			Coordinate field = Event_GetFieldByMouseLocation(e.Location);
 
+			if (e.Button == MouseButtons.Left)
+			{
+				if (CurrentlyHolding)
+				{
+					// Get FieldType
+					PieceType FieldType;
+					if (!CurrentPosition.TryGetValue(field, out FieldType)) FieldType = PieceType.None;
+
+					// Dropped somewhere
+					if (field == SelectedField) { CurrentlyHolding = false; Refresh(); return; }
+					if (InvokeClickedOnFieldWhenSelected(field, FieldType)) return;
+				}
+
+				Refresh();
+			}
 		}
 
 		public void SelectField(Coordinate Field)
@@ -1206,6 +1658,7 @@ namespace ChessV1
 	/// </summary>
 	public class Coordinate
 	{
+		public static Coordinate NullCoord = new Coordinate(-1, -1);
 		public int Row { get; set; }
 		public int Col { get; set; }
 
