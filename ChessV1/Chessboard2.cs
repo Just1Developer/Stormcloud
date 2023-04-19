@@ -376,150 +376,6 @@ namespace ChessV1
 			CalculateBestMove();
 		}
 
-		private void Finish(Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores, double Depth)
-		{
-			/*
-			Report(lineScores, Depth);
-
-			// ChatGPT using LINQ
-			/*var top3Moves = lineScores.OrderByDescending(x => x.Value)
-						  .Take(3)
-						  .OrderBy(x => x.Value)
-						  .ToDictionary(x => x.Key, x => x.Value);* /
-			var top3Moves = lineScores.OrderByDescending(x => x.Value.Sum())
-						  .Take(3)
-						  .OrderBy(x => x.Value.Sum())
-						  .ToDictionary(x => x.Key, x => x.Value);
-
-
-			// Just for debugging, the is-king-in-check-search does not need to be announced
-			if (FinalDepth < 2) return;
-
-			Chessboard2.Log($"Calculation Complete: Time {FinalTimeMS} ms, Final Depth: {FinalDepth}. Best Move: {MoveToString(UpUntilPositionHistory.CalculatePosition(), _BestMove, 'n')}, Score: {BestScore}");
-			int i = 1;
-			foreach (var score in lineScores)
-			{
-				Chessboard2.Log($"{i++}. Move: {MoveToString(UpUntilPositionHistory.CalculatePosition(), score.Key, 'n')} ({score.Value.Sum()})");
-			}
-			*/
-
-			//Chessboard2.Log($"Best Move: {MoveToString(UpUntilPositionHistory.CalculatePosition(), BestMove.Key, BestMove.Value)} ({BestScore})");
-
-			/**
-			 Output:
-
-			Calculation Complete: Time 301 ms, Final Depth: 50,5. Best Move: hxa4, Score: 3398,00000000001
-			1. Move: Rd8 (0)
-			2. Move: Rd6 (0)
-			3. Move: Rd5 (0)
-			4. Move: Rd4 (0)
-			5. Move: Rxd3 (0)
-			6. Move: Rc7 (0)
-			7. Move: Rb7 (0)
-			8. Move: Ra7 (0)
-			9. Move: Re7 (0)
-			10. Move: Rf7 (0)
-			11. Move: Rxg7 (0)
-			12. Move: Kb7 (0)
-			13. Move: Kc7 (0)
-			14. Move: Kb5 (0)
-			15. Move: Kc5 (0)
-			16. Move: Kd5 (0)
-			17. Move: Kb6 (0)
-			18. Move: Kd6 (0)
-			19. Move: Bd6 (0)
-			20. Move: Bc7 (0)
-			21. Move: Bb8 (0)
-			22. Move: Bf6 (0)
-			23. Move: Bxg7 (0)
-			24. Move: Bd4 (0)
-			25. Move: Bxf4 (0)
-			26. Move: Ra5 (0)
-			27. Move: Ra6 (0)
-			28. Move: Ra7 (0)
-			29. Move: Ra8 (0)
-			30. Move: Ra3 (0)
-			31. Move: Ra2 (0)
-			32. Move: Ra1 (0)
-			33. Move: Rb4 (0)
-			34. Move: Rc4 (0)
-			35. Move: Rd4 (0)
-			36. Move: Re4 (0)
-			37. Move: Rxf4 (0)
-			38. Move: e2 (0)
-			39. Move: exf2 (0)
-			40. Move: h3 (0)
-			41. Move: c2 (0)
-
-			This certainly is... interesting... but fixable, easier than you might think
-			
-			// TODO Also an Idea: Activity Eval: How many squares can pieces see -> GetPieceLegalMoves().Count;
-			 
-			 
-			 */
-		}
-
-
-
-		private void Report(Dictionary<KeyValuePair<Coordinate, Coordinate>, double> lineScores, double Depth)
-		{
-			/**
-			 * This segment iterates through the lineScores dictionary, aggregates the scores for each line using the Sum function,
-			 * and updates the Scores dictionary with the aggregated scores.
-			 */
-			// Aggregate the scores for each line and update the Scores dictionary
-			Scores.Clear();
-			foreach (var entry in lineScores)
-			{
-				KeyValuePair<Coordinate, Coordinate> moveKey = entry.Key;
-				double score = entry.Value;
-				Scores[moveKey] = score;
-			}
-
-			// Determine Best Move
-			foreach (var score in Scores)
-			{
-				if (score.Value > BestScore)
-				{
-					BestScore = score.Value;
-					_BestMove = score.Key;
-				}
-			}
-
-			FinalTimeMS = (int)(DateTime.Now - StartTime).TotalMilliseconds;
-			FinalDepth = Depth;
-		}
-		private void Report(Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores, double Depth)
-		{
-			/**
-			 * This segment iterates through the lineScores dictionary, aggregates the scores for each line using the Sum function,
-			 * and updates the Scores dictionary with the aggregated scores.
-			 */
-			// Aggregate the scores for each line and update the Scores dictionary
-			Scores.Clear();
-			foreach (var entry in lineScores)
-			{
-				KeyValuePair<Coordinate, Coordinate> moveKey = entry.Key;
-				List<double> scoresList = entry.Value;
-				double aggregatedScore = scoresList.Sum();
-				Scores.Add(moveKey, aggregatedScore);
-			}
-
-			// Determine Best Move
-			foreach (var score in Scores)
-			{
-				if (score.Value > BestScore)
-				{
-					BestScore = score.Value;
-					_BestMove = score.Key;
-				}
-			}
-
-			FinalTimeMS = (int)(DateTime.Now - StartTime).TotalMilliseconds;
-			FinalDepth = Depth;
-		}
-
-
 		private void ProcessNewDepth(Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>> initialMoveScores, double Depth)
 		{
 			// GPT-4:
@@ -527,61 +383,12 @@ namespace ChessV1
 			// Sort the initialMoveScores dictionary based on the calculated move score
 			var sortedInitialMoveScores = initialMoveScores.OrderByDescending(entry => CalculateMoveScore(entry.Value)).ToList();
 
-			//Console.WriteLine($"New Depth: {Depth}");
-			/*
-			for (int i = 0; i < sortedInitialMoveScores.Count; i++)
-			{
-				var move = sortedInitialMoveScores[i].Key;
-				var score = CalculateMoveScore(sortedInitialMoveScores[i].Value);
-				//Console.WriteLine($"{i}. Move: {move.Key.Key}{move.Key.Value} ({score})");
-			}
-			*/
-
 			// To get the move with the highest overall score, you can simply access the first element of the sorted list:
 			var bestMove = sortedInitialMoveScores.First();
 			BestMove = bestMove.Key;
 			BestScore = CalculateMoveScore(bestMove.Value);
 
 			Form1.self.SetBestMove(MoveToString(UpUntilPositionHistory.CalculatePosition(), BestMove.Key, BestMove.Value), (int) (BestScore * 100), (int) Depth);
-
-			//Console.WriteLine($"Best move: {bestMove.Key.Key}{bestMove.Key.Value} with score: {CalculateMoveScore(bestMove.Value)}");
-
-
-			// A bit wrong in the output:
-			/*
-			// Process newly reached depth
-			AllInitialMoveScores = new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores);
-			FinalDepth = Depth;
-
-			var AllScores = new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, double>();
-
-			foreach (var Score in AllInitialMoveScores)
-			{
-				// var Move = Score.Key;
-				// var Scores = Score.Value.Key;
-				// var CheckmateLines = Score.Value.Value;
-
-				AllScores.Add(Score.Key, CalculateMoveScore(Score.Value));
-			}
-
-
-			var top3Moves = AllScores.OrderByDescending(x => x.Value)
-						  .Take(3)
-						  .OrderBy(x => x.Value)
-						  .ToDictionary(x => x.Key, x => x.Value);
-
-			Chessboard2.Log($"New Depth: {Depth}");
-			for (int i = 0; i < top3Moves.Count; i++)
-			{
-				var move = top3Moves.ElementAt(i);
-				if (i == 0)
-				{
-					BestMove = move.Key;
-					BestScore = move.Value;
-				}
-				Chessboard2.Log($"{i}. Move: {MoveToString(UpUntilPositionHistory.CalculatePosition(), move.Key.Key, move.Key.Value)} ({move.Value})");
-			}
-			*/
 		}
 
 		private const double AverageScoreWeight = 0.6, HighestScoreWeight = 0.25, LowestScoreWeight = 0.15, CheckmateLinePercentageWeight = 0.4 /* How many of the lines lead to checkmate */;
@@ -614,17 +421,15 @@ namespace ChessV1
 			public MoveHistory History;
 			public Turn TurnColor;
 			public double Depth;
-			//public List<double> Scores3;
-			public KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> ParentMove;		// Scratch this maybe, maybe keep this to later print the line
+			//public KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> ParentMove;		// Scratch this maybe, maybe keep this to later print the line
 			public KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> InitialMove;
 
-			public SearchNode(MoveHistory history, Turn turnColor, double depth/*, List<double> scores*/, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> parentMove, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> initialMove)
+			public SearchNode(MoveHistory history, Turn turnColor, double depth/*, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> parentMove*/, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> initialMove)
 			{
 				History = history;
 				TurnColor = turnColor;
 				Depth = depth;
-				//Scores3 = scores;
-				ParentMove = parentMove;
+				//ParentMove = parentMove;
 				InitialMove = initialMove;
 			}
 		}
@@ -645,14 +450,15 @@ namespace ChessV1
 		{
 			Turn initialTurnColor = this.TurnColor;
 			MoveHistory initialHistory = this.UpUntilPositionHistory.Clone();
+			
 			/**
 			 This segment defines the CalculateBestMove method and sets up the lineScores dictionary to store the scores of each line,
 			a stack called searchStack to store the search nodes, and then pushes the initial node onto the stack.
 			 */
+
 			Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores = new Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>>();
 			Stack<SearchNode> searchStack = new Stack<SearchNode>();
-			//Update: searchStack.Push(new SearchNode(initialHistory, initialTurnColor, initialDepth, null));
-			searchStack.Push(new SearchNode(initialHistory, initialTurnColor, 0.0/*, null*/, EmptyMove, EmptyMove)); // Pass null as the initial InitialMoveIndex
+			searchStack.Push(new SearchNode(initialHistory, initialTurnColor, 0.0/*, EmptyMove*/, EmptyMove)); // Pass null as the initial InitialMoveIndex
 
 			// Method Restructure
 			double currentDepth = 0.0;
@@ -682,21 +488,14 @@ namespace ChessV1
 				currentDepth = currentNode.Depth;
 				Turn currentTurnColor = currentNode.TurnColor;
 				MoveHistory currentHistory = currentNode.History;
-				//List<double> currentScores = currentNode.Scores;
 
 				/**
 				 * Check if the maximum depth has been reached, if it's reached, the method calls Finish and returns.
 				 */
 				if (currentDepth > Depth /* || (DateTime.Now - StartTime).TotalMilliseconds > this.maxTimeMS*/)
 				{
-					Finish(lineScores, currentDepth);
+					ProcessNewDepth(initialMoveScores, currentNode.Depth);
 					return;
-				}
-
-				// Constantly Update the final report
-				if(currentDepth+0.5 > FinalDepth)
-				{
-					Report(lineScores, currentDepth);
 				}
 
 				/**
@@ -726,13 +525,13 @@ namespace ChessV1
 						// No legal moves. Now its either Stalemate or Checkmate
 						if (IsCheck) IsCheckmate = true;
 						else IsStalemate = true;
-						Finish(lineScores, currentDepth);
+						ProcessNewDepth(initialMoveScores, currentNode.Depth);
 						return;
 					}
 					else if(pos.Count <= 2)
 					{
 						IsDraw = true;
-						Finish(lineScores, currentDepth);
+						ProcessNewDepth(initialMoveScores, currentNode.Depth);
 						return;
 					}
 				}
@@ -768,21 +567,9 @@ namespace ChessV1
 					}
 
 					// Push the new node onto the search stack with the updated information
-					searchStack.Push(new SearchNode(newHistory, InvertColor(currentTurnColor), currentDepth + 0.5, move, currentNode.InitialMove.Key.Equals(EmptyMove.Key) ? move : currentNode.InitialMove));
-					//Chessboard2.Log($"Branched. new StackSize: {searchStack.Count}, Depth: {currentDepth}");
+					searchStack.Push(new SearchNode(newHistory, InvertColor(currentTurnColor), currentDepth + 0.5, currentNode.InitialMove.Key.Equals(EmptyMove.Key) ? move : currentNode.InitialMove));
 				}
 			}
-
-
-			/** Update the Scores dictionary with the initial move scores
-			foreach (var entry in initialMoveScores)
-			{
-				KeyValuePair<Coordinate, Coordinate> moveKey = entry.Key;
-				double score = entry.Value;
-				Scores[moveKey] = score;
-			}
-			*/
-			Finish(lineScores, currentDepth);
 		}
 
 		private static bool _IsTurnColorKingInCheck(Dictionary<Coordinate, PieceType> position, MoveHistory History, Turn turnColor)
