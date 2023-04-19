@@ -21,6 +21,8 @@ namespace ChessV1
 		public Button UndoButton, ResetButton, RefreshSizeButton;
 		public ComboBox GameMode;
 
+		public Label Catfish_UI_Title, Catfish_UI_BestMove_Title, Catfish_UI_BestMove, Catfish_UI_BestMoveScore;
+
 		public Form1()
 		{
 			self = this;
@@ -157,6 +159,43 @@ namespace ChessV1
 			RefreshSizeButton.Text = "Adjust Boardsize";
 			RefreshSizeButton.Click += (s, e) => { _Chessboard.DisplaySize = (int)Math.Min(this.Width * 0.9, this.Height * 0.9); };
 			Controls.Add(RefreshSizeButton);
+
+			// CATFISH UI
+
+			Catfish_UI_Title = new Label();
+			Catfish_UI_Title.Font = new Font(tf_Result.Font.FontFamily, 25f);
+			Catfish_UI_Title.AutoSize = true;
+			Catfish_UI_Title.Location = new Point(1020, 720);
+			Catfish_UI_Title.Text = "-={[ Catfish Engine ]}=-";
+			Controls.Add(Catfish_UI_Title);
+
+			Catfish_UI_BestMove_Title = new Label();
+			Catfish_UI_BestMove_Title.Font = new Font(tf_Result.Font.FontFamily, 19f);
+			Catfish_UI_BestMove_Title.AutoSize = true;
+			Catfish_UI_BestMove_Title.Location = new Point(1030, Catfish_UI_Title.Location.Y + Catfish_UI_Title.Height + 20);
+			Catfish_UI_BestMove_Title.Text = "Best Move: ";
+			Controls.Add(Catfish_UI_BestMove_Title);
+
+			Catfish_UI_BestMove = new Label();
+			Catfish_UI_BestMove.Font = new Font(tf_Result.Font.FontFamily, 18f, FontStyle.Bold);
+			Catfish_UI_BestMove.AutoSize = true;
+			Catfish_UI_BestMove.Location = new Point(Catfish_UI_BestMove_Title.Location.X + Catfish_UI_BestMove_Title.Width, Catfish_UI_BestMove_Title.Location.Y + ((Catfish_UI_BestMove_Title.Height - Catfish_UI_BestMove.Height) / 2));
+			Catfish_UI_BestMove.Text = "None";
+			Catfish_UI_BestMove.ForeColor = System.Drawing.Color.FromArgb(153, 197, 255);
+			Controls.Add(Catfish_UI_BestMove);
+
+			Catfish_UI_BestMoveScore = new Label();
+			Catfish_UI_BestMoveScore.Font = new Font(tf_Result.Font.FontFamily, 13f);
+			Catfish_UI_BestMoveScore.AutoSize = true;
+			Catfish_UI_BestMoveScore.Location = new Point(Catfish_UI_BestMove_Title.Location.X + Catfish_UI_BestMove_Title.Width / 4, Catfish_UI_BestMove.Location.Y + Catfish_UI_BestMove.Height + 10);
+			Catfish_UI_BestMoveScore.Text = "Score: 0";
+			Controls.Add(Catfish_UI_BestMoveScore);
+		}
+
+		public void SetBestMove(string move, int score, int Depth)
+		{
+			Catfish_UI_BestMove.Text = move;
+			Catfish_UI_BestMoveScore.Text = $"Score: {(double) (score / 100.0)}  |  Depth: {Depth}";
 		}
 
 		public void newTurn(Turn turn)
