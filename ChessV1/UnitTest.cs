@@ -36,8 +36,8 @@ namespace ChessV1
 			moveHistory.WhiteCastleOptions = CastleOptions.None;
 
 			Chessboard2.Log("Starting Calculation...");
-			Calculation calc = new Calculation(moveHistory, 22, Turn.White);    // Something is wrong, Depth 50: 145ms, Kf1 (not even in the top 3 according to stockfish)
-			Chessboard2.Log($"InCheck: {calc.IsCheck}, IsCheckmate: {calc.IsCheckmate}, IsStalemate: {calc.IsStalemate}");
+			//Calculation calc = new Calculation(moveHistory, 22, Turn.White);    // Something is wrong, Depth 50: 145ms, Kf1 (not even in the top 3 according to stockfish)
+			//Chessboard2.Log($"InCheck: {calc.IsCheck}, IsCheckmate: {calc.IsCheckmate}, IsStalemate: {calc.IsStalemate}");
 		}
 	}
 }

@@ -331,8 +331,16 @@ namespace ChessV1
 
 	public partial class Calculation
 	{
+
+		#region Static Provider
+		
+		// Separate Thread for every initialMove, and for the search in general
+		// Then, store positions not moves. seems counter-intuitive
+
+		#endregion
+
 		private Turn TurnColor;
-		private int Depth;
+		private int MaxDepth;
 		public double BestScore { get; private set; } = 0;
 		public KeyValuePair<Coordinate, Coordinate> _BestMove { get; private set; } = new KeyValuePair<Coordinate, Coordinate>(new Coordinate(-1, -1), new Coordinate(-1, -1));
 		public KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> BestMove { get; private set; } = EmptyMove;
@@ -341,7 +349,7 @@ namespace ChessV1
 		public DateTime StartTime;
 		public static int defaultMaxTimeMS = 10000;
 		public int maxTimeMS;
-		public void AbortCalculation() => Depth = -1; /* Causes cancellation on the next check */
+		public void AbortCalculation() => MaxDepth = -1; /* Causes cancellation on the next check */
 		public bool IsCheck = false;
 		public bool IsCheckmate = false;
 		public bool IsStalemate = false;
@@ -394,7 +402,7 @@ namespace ChessV1
 		public void ConstructorVoid(int depth, Turn turnColor)
 		{
 			TurnColor = turnColor;
-			Depth = depth;
+			MaxDepth = depth;
 			maxTimeMS = defaultMaxTimeMS;
 			StartTime = DateTime.Now;
 			AllInitialMoveScores = new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>();
@@ -405,8 +413,16 @@ namespace ChessV1
 
 		private void ProcessNewDepth(Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>> initialMoveScores, double Depth)
 		{
-			// GPT-4:
+			if(Depth >= 2)
+			{
+				TimeSpan Calc = DateTime.Now - StartTime;
+				int mins = (int) Calc.TotalMinutes;
+				string _mins = mins < 10 ? "0" + mins : "" + mins;
+				string time = mins >= 2 ? $"{_mins}:{Calc.Seconds}" : $"00:{(int) Calc.TotalSeconds}";
+				Chessboard2.Log($"Depth {Depth} Reached! Time: {time},{Calc.Milliseconds}s");
+			}
 
+			// GPT-4:
 			// Sort the initialMoveScores dictionary based on the calculated move score
 			var sortedInitialMoveScores = initialMoveScores.OrderByDescending(entry => CalculateMoveScore(entry.Value)).ToList();
 
@@ -438,6 +454,10 @@ namespace ChessV1
 
 			return score;
 		}
+
+		/*
+		 Auch möglich: Positionen und so werden erst ab move 3 gespeichert. Da move 1 und 2 noch keine Duplikationen hervorrufen können werden diese im OG dictionary gespeichert.
+		 */
 
 
 		// GPT-4 Implementation for efficiency and StackOverflow prevention
@@ -486,8 +506,8 @@ namespace ChessV1
 			 */
 
 			Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores = new Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>>();
-			Stack<SearchNode> searchStack = new Stack<SearchNode>();
-			searchStack.Push(new SearchNode(initialHistory, initialTurnColor, 0.0, EmptyMove)); // Pass null as the initial InitialMoveIndex
+			Queue<SearchNode> searchQueue = new Queue<SearchNode>();
+			searchQueue.Enqueue(new SearchNode(initialHistory, initialTurnColor, 0.0, EmptyMove));
 
 			// Method Restructure
 			double currentDepth = 0.0;
@@ -497,14 +517,15 @@ namespace ChessV1
 			/**
 			 * This while loop iterates until the search stack is empty. It processes each node in the search tree.
 			 */
-			while (searchStack.Count > 0)	// Übeltäter?
+			while (searchQueue.Count > 0)	// Übeltäter?
 			{
 				/**
 				 * This segment pops a node from the stack, retrieves the depth, turn color, move history, and scores for the current line.
 				 */
-				SearchNode currentNode = searchStack.Pop();
+				SearchNode currentNode = searchQueue.Dequeue();
+				//Chessboard2.Log($"Depth: {currentNode.Depth} Current Queue Size: {searchQueue.Count}");
 
-				if(currentNode.Depth > currentDepth && currentNode.Depth % 1.0 == 0.0 && initialMoveScores.Count > 0)
+				if (currentNode.Depth > currentDepth && currentNode.Depth % 1.0 == 0.0 && initialMoveScores.Count > 0)
 				{
 					if(currentDepth >= 15)
 					{
@@ -540,7 +561,7 @@ namespace ChessV1
 				/**
 				 * Check if the maximum depth has been reached, if it's reached, the method calls Finish and returns.
 				 */
-				if (currentDepth > Depth /* || (DateTime.Now - StartTime).TotalMilliseconds > this.maxTimeMS*/)
+				if (currentDepth > MaxDepth /* || (DateTime.Now - StartTime).TotalMilliseconds > this.maxTimeMS*/)
 				{
 					ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
 					return;
@@ -591,13 +612,11 @@ namespace ChessV1
 					// Calculate the move score before branching
 					double MoveScore = GetScoreOf(move, currentHistory, currentDepth);
 					if (currentTurnColor != initialTurnColor) MoveScore *= -1;
-					// GPT-4 Debugging
-					//Chessboard2.Log($"Processing move: {move.Key.Key}-{move.Key.Value}");
-					//Chessboard2.Log($"Move score: {MoveScore}");
 
 					// Branch the current history with the move
 					MoveHistory newHistory = currentHistory.Branch(move);
 
+					/*
 					if(currentDepth == 0.5)
 					{
 						Chessboard2.Log("Depth 50. Breakpoint.");
@@ -606,6 +625,7 @@ namespace ChessV1
 					{
 						Chessboard2.Log("Depth 50. Breakpoint.");
 					}
+					*/
 
 					// Score stuff
 					{
@@ -624,25 +644,24 @@ namespace ChessV1
 							{
 								initialMoveScores[initMove] = new KeyValuePair<List<double>, int>(initialMoveScores[initMove].Key, initialMoveScores[initMove].Value + 1);
 							}
-
-							// My Code:
 							/*
-							// If initial move is an actual move, add the score
-							List<double> _ = new List<double>(initialMoveScores[initMove].Key);
-							_.Add(MoveScore);
-							KeyValuePair<List<double>, int> newValue;
-
+							// by Gpt4, difference?
 							if (pos.ContainsKey(move.Key.Value) && pos[move.Key.Value].ToString().ToUpper() == "KING")
-								newValue = new KeyValuePair<List<double>, int>(_, initialMoveScores[initMove].Value + 1);
-							else
-								newValue = new KeyValuePair<List<double>, int>(_, initialMoveScores[initMove].Value);
-							initialMoveScores[initMove] = newValue;
+							{
+								if (currentDepth < MaxDepth)
+								{
+									initialMoveScores[initMove] = new KeyValuePair<List<double>, int>(initialMoveScores[initMove].Key, initialMoveScores[initMove].Value + 1);
+								}
+							}
 							*/
 						}
 					}
 
 					// Push the new node onto the search stack with the updated information
-					searchStack.Push(new SearchNode(newHistory, InvertColor(currentTurnColor), currentDepth + 0.5, currentNode.InitialMove.Key.Equals(EmptyMove.Key) ? move : currentNode.InitialMove));
+					if (currentDepth < MaxDepth)
+					{
+						searchQueue.Enqueue(new SearchNode(newHistory, InvertColor(currentTurnColor), currentDepth + 0.5, currentNode.InitialMove.Key.Equals(EmptyMove.Key) ? move : currentNode.InitialMove));
+					}
 				}
 			}
 		}
@@ -997,6 +1016,49 @@ namespace ChessV1
 			newHistory.WhiteCastleOptions = WhiteCastleOptions;
 			newHistory.BlackCastleOptions = BlackCastleOptions;
 			return newHistory;
+		}
+		public string GeneratePositionKey() => GeneratePositionKey(this, CalculatePosition());
+		public string GeneratePositionKey(Dictionary<Coordinate, PieceType> PositionTrust) => GeneratePositionKey(this, PositionTrust);
+		public static string GeneratePositionKey(MoveHistory History, Dictionary<Coordinate, PieceType> Position = null)
+		{
+			if (Position == null) Position = History.CalculatePosition();
+			string key = "";
+			int empty = 0;
+			for (int i = 0; i < 64; i++)
+			{
+				Coordinate coord = new Coordinate(i / 8, i % 8);
+				if (Position.ContainsKey(coord) && Position[coord] != PieceType.None)
+				{
+					if (empty != 0) key += empty;
+					empty = 0;
+					key += GetPieceChar(Position[coord]);
+				}
+				else empty++;
+
+				if(i % 8 == 7)
+				{
+					if (empty != 0) key += empty;
+					empty = 0;
+					key += '/';
+				}
+			}
+			return key;
+		}
+		private static string GetPieceChar(PieceType type)
+		{
+			if (type == PieceType.None) return "";
+			if (type.ToString().ToUpper() == "KNIGHT") return "" + type.ToString()[1];
+			return "" + type.ToString()[0];
+		}
+
+		/// <summary>
+		/// TODO WIP
+		/// </summary>
+		/// <param name="Key"></param>
+		/// <returns></returns>
+		public Dictionary<Coordinate, PieceType> GeneratePositionFromKey(string Key)
+		{
+			return new Dictionary<Coordinate, PieceType>();
 		}
 	}
 
