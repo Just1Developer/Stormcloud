@@ -352,6 +352,33 @@ namespace ChessV1
 
 		public MoveHistory UpUntilPositionHistory = null;
 
+
+		#region Evaluation Weights
+
+		private const double PieceCaptureWeight = 1.0;
+		private const double ActivityWeight = 0.03;    // Row activity on the opponents side
+		private const double PieceHomestuckActivityKnightWeight = 0.35;    // Row activity of Knights on the two home rows
+		private const double PieceHomestuckActivityBishopWeight = 0.15;    // Row activity of Bishops on the two home rows
+		private const double PieceHomestuckPieceBeingMovedWeight = 0.4;    // Bonus if a homestuck piece is being moved, multiplied by Knight/BishopWeight
+		private const double HomestuckDepthWeightDepthDecreaseDivider = 10;    // The higher the depth, DecreaseWeight divided by this is added to the Homestuck bonus
+		private const double DepthScoreDecreaseWeight = 0.15;    // MAXIMUM 1.0!! Row activity of Bishops on the two home rows
+		private const double DepthScoreDecreaseSteps = 5;    // Example for 5: Every 3 Depth it increases by one: ((int) depth / steps) * DecreaseWeight
+		private const double DepthScoreMaximum = 13;    // Maximum amount for Depth / DecreaseSteps
+		private const double BoardVisionActivityWeight = 0.08;    // Activity: How many Squares / Legal moves the piece has once it arrives
+		private const double PromotionWeight = 0.45;
+		private const double PositionMaterialAdvantageWeight = 0.65;
+		private const double AverageScoreWeight = 0.6;
+		private const double HighestScoreWeight = 0.25;
+		private const double LowestScoreWeight = 0.15;
+		private const double CheckmateLinePercentageWeight = 0.4; // How many of the lines lead to checkmate
+		private const double ScoreBoostViaCheckmate = 9999;
+		private const double ScoreBoostViaCheckmateSequence = 9999;
+		private const double RepeatMoveDecreaseMultiplier = 0.8;    // Score is multiplied with this, 1 means no issue, 0 is score = 0
+		private const double RepeatMoveDecreaseMultiplierHistory = 0.4;    // Going further back, this is multiplied with the repeatMoveDecreaseMultiplier and the amount were going back
+		private const double HistoryRepeatLimiter = 13;    // How many steps it may go back to check for repetition. 6 represents 3 white and 3 black moves, so 3 in total, 13 means 12 but no error in <=
+
+		#endregion
+
 		public Calculation(Dictionary<Coordinate, PieceType> position, int depth, Turn turnColor)
 		{
 			UpUntilPositionHistory = new MoveHistory(position);
@@ -383,6 +410,8 @@ namespace ChessV1
 			// Sort the initialMoveScores dictionary based on the calculated move score
 			var sortedInitialMoveScores = initialMoveScores.OrderByDescending(entry => CalculateMoveScore(entry.Value)).ToList();
 
+			if (sortedInitialMoveScores.Count == 0 || Depth < 50) return;
+
 			// To get the move with the highest overall score, you can simply access the first element of the sorted list:
 			var bestMove = sortedInitialMoveScores.First();
 			BestMove = bestMove.Key;
@@ -391,11 +420,10 @@ namespace ChessV1
 			Form1.self.SetBestMove(MoveToString(UpUntilPositionHistory.CalculatePosition(), BestMove.Key, BestMove.Value), (int) (BestScore * 100), (int) Depth);
 		}
 
-		private const double AverageScoreWeight = 0.6, HighestScoreWeight = 0.25, LowestScoreWeight = 0.15, CheckmateLinePercentageWeight = 0.4 /* How many of the lines lead to checkmate */;
 		private double CalculateMoveScore(KeyValuePair<List<double>, int> Score) => CalculateMoveScore(Score.Key, Score.Value);
 		private double CalculateMoveScore(List<double> Scores, int CheckmateLines)
 		{
-			if (Scores.Count == 0) return 0;
+			if (Scores.Count == 0) return -1;
 
 			double score = 0;
 			score += (Scores.Sum() / Scores.Count) * AverageScoreWeight;
@@ -405,6 +433,7 @@ namespace ChessV1
 			if (CheckmateLines > 0)
 			{
 				score += ((double)Scores.Count / CheckmateLines) * CheckmateLinePercentageWeight;
+				if (Scores.Count == CheckmateLines) score += ScoreBoostViaCheckmateSequence;
 			}
 
 			return score;
@@ -458,7 +487,7 @@ namespace ChessV1
 
 			Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores = new Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>>();
 			Stack<SearchNode> searchStack = new Stack<SearchNode>();
-			searchStack.Push(new SearchNode(initialHistory, initialTurnColor, 0.0/*, EmptyMove*/, EmptyMove)); // Pass null as the initial InitialMoveIndex
+			searchStack.Push(new SearchNode(initialHistory, initialTurnColor, 0.0, EmptyMove)); // Pass null as the initial InitialMoveIndex
 
 			// Method Restructure
 			double currentDepth = 0.0;
@@ -468,7 +497,7 @@ namespace ChessV1
 			/**
 			 * This while loop iterates until the search stack is empty. It processes each node in the search tree.
 			 */
-			while (searchStack.Count > 0)
+			while (searchStack.Count > 0)	// Übeltäter?
 			{
 				/**
 				 * This segment pops a node from the stack, retrieves the depth, turn color, move history, and scores for the current line.
@@ -477,12 +506,31 @@ namespace ChessV1
 
 				if(currentNode.Depth > currentDepth && currentNode.Depth % 1.0 == 0.0 && initialMoveScores.Count > 0)
 				{
-					ProcessNewDepth(initialMoveScores, currentNode.Depth);
+					if(currentDepth >= 15)
+					{
+						Chessboard2.Log("Processing Depth 50...");
+						int i = 0;
+						foreach (var move in initialMoveScores)
+						{
+							Chessboard2.Log($"Move {++i}: Total Score Amount: {move.Value.Key.Count}, Checkmate Lines: {move.Value.Value}");
+						}
+					}
+
+					ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
+
 					// Clear Checkmate line amount
-					foreach (var initialMoveSet in new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores))
+					// => No. Since Checkmate lines do not Branch further, we need to keep the score as is.
+					/*foreach (var initialMoveSet in new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores))
 					{
 						initialMoveScores[initialMoveSet.Key] = new KeyValuePair<List<double>, int>(initialMoveScores[initialMoveSet.Key].Key, 0);
 					}
+					*/
+
+					// Do we clear the lists? I think so because new depth = new Branches
+					/*foreach (var initialMoveSet in new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores))
+					{
+						initialMoveScores[initialMoveSet.Key] = new KeyValuePair<List<double>, int>(new List<double>(), initialMoveScores[initialMoveSet.Key].Value);
+					}//*/
 				}
 
 				currentDepth = currentNode.Depth;
@@ -494,7 +542,7 @@ namespace ChessV1
 				 */
 				if (currentDepth > Depth /* || (DateTime.Now - StartTime).TotalMilliseconds > this.maxTimeMS*/)
 				{
-					ProcessNewDepth(initialMoveScores, currentNode.Depth);
+					ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
 					return;
 				}
 
@@ -503,6 +551,8 @@ namespace ChessV1
 				 */
 				var pos = currentHistory.CalculatePosition();
 				var allLegalMoves = GetAllLegalMoves(pos, currentTurnColor, currentHistory);
+
+				// Bug: Only for the first legal move are all following scores calculated
 
 				// Determine Check
 				if(currentDepth == 0)
@@ -525,13 +575,13 @@ namespace ChessV1
 						// No legal moves. Now its either Stalemate or Checkmate
 						if (IsCheck) IsCheckmate = true;
 						else IsStalemate = true;
-						ProcessNewDepth(initialMoveScores, currentNode.Depth);
+						ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
 						return;
 					}
 					else if(pos.Count <= 2)
 					{
 						IsDraw = true;
-						ProcessNewDepth(initialMoveScores, currentNode.Depth);
+						ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
 						return;
 					}
 				}
@@ -539,11 +589,23 @@ namespace ChessV1
 				foreach (var move in allLegalMoves)
 				{
 					// Calculate the move score before branching
-					double MoveScore = GetScoreOf(move, currentHistory);
+					double MoveScore = GetScoreOf(move, currentHistory, currentDepth);
 					if (currentTurnColor != initialTurnColor) MoveScore *= -1;
+					// GPT-4 Debugging
+					//Chessboard2.Log($"Processing move: {move.Key.Key}-{move.Key.Value}");
+					//Chessboard2.Log($"Move score: {MoveScore}");
 
 					// Branch the current history with the move
 					MoveHistory newHistory = currentHistory.Branch(move);
+
+					if(currentDepth == 0.5)
+					{
+						Chessboard2.Log("Depth 50. Breakpoint.");
+					}
+					if (currentDepth == 0)
+					{
+						Chessboard2.Log("Depth 50. Breakpoint.");
+					}
 
 					// Score stuff
 					{
@@ -553,6 +615,18 @@ namespace ChessV1
 
 						if (!initMove.Key.Equals(EmptyMove.Key) && initialMoveScores.ContainsKey(initMove))
 						{
+							// GPT-4-Improved Code:
+							// If initial move is an actual move, add the score
+							initialMoveScores[initMove].Key.Add(MoveScore);
+
+							// Check if the move results in a checkmate
+							if (pos.ContainsKey(move.Key.Value) && pos[move.Key.Value].ToString().ToUpper() == "KING")
+							{
+								initialMoveScores[initMove] = new KeyValuePair<List<double>, int>(initialMoveScores[initMove].Key, initialMoveScores[initMove].Value + 1);
+							}
+
+							// My Code:
+							/*
 							// If initial move is an actual move, add the score
 							List<double> _ = new List<double>(initialMoveScores[initMove].Key);
 							_.Add(MoveScore);
@@ -563,6 +637,7 @@ namespace ChessV1
 							else
 								newValue = new KeyValuePair<List<double>, int>(_, initialMoveScores[initMove].Value);
 							initialMoveScores[initMove] = newValue;
+							*/
 						}
 					}
 
@@ -595,20 +670,14 @@ namespace ChessV1
 			return TurnColorKingInCheck;
 		}
 
-		// Eval Weights
-		private const double PieceCaptureWeight = 1.0;
-		private const double ActivityWeight = 0.05;    // Row activity on the opponents side
-		private const double BoardVisionActivityWeight = 0.03;    // Activity: How many Squares / Legal moves the piece has once it arrives
-		private const double PromotionWeight = 0.9;
-		private const double PositionMaterialAdvantageWeight = 0.65;
 		/// <summary>
 		/// Method Call BEFORE move is made. Evaluates a move based on Capture score, activity and general material advantage.
 		/// </summary>
 		/// <param name="move">The move to be evaluated.</param>
 		/// <param name="currentHistory">The current MoveHistory of the Position.</param>
 		/// <param name="turnColor">The Color of the current Turn.</param>
-		private double GetScoreOf(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> move, MoveHistory currentHistory, Turn turnColor = Turn.Pregame)
-			=> GetScoreOf(move, currentHistory.CalculatePosition(), turnColor == Turn.Pregame ? currentHistory.Count % 2 == 0 ? Turn.White : Turn.Black : turnColor);
+		private double GetScoreOf(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> move, MoveHistory currentHistory, double depth, Turn turnColor = Turn.Pregame)
+			=> GetScoreOf(move, currentHistory.CalculatePosition(), depth, turnColor == Turn.Pregame ? currentHistory.Count % 2 == 0 ? Turn.White : Turn.Black : turnColor, currentHistory);
 		/// <summary>
 		/// Method Call BEFORE move is made. Evaluates a move based on Capture score, activity and general material advantage.
 		/// </summary>
@@ -616,12 +685,14 @@ namespace ChessV1
 		/// <param name="Position">The Boardposition.</param>
 		/// <param name="turnColor">The Color of the current Turn.</param>
 		/// <returns></returns>
-		private double GetScoreOf(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> move, Dictionary<Coordinate, PieceType> Position, Turn turnColor = Turn.Pregame)
+		private double GetScoreOf(KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> move, Dictionary<Coordinate, PieceType> Position, double depth, Turn turnColor = Turn.Pregame, MoveHistory currentHistory = null)
 		{
 			PieceType PieceType = Position.ContainsKey(move.Key.Key) ? Position[move.Key.Key] : PieceType.None;
+			string TypeString = PieceType.ToString().ToUpper();
 			// First, just evaluate the capture of the piece
 			double scoreOfPiececapture = Position.ContainsKey(move.Key.Value) ? GetPieceValue(Position[move.Key.Value]) : 0;
 			double PromotionScore = 0;
+			double HomestuckScore = 0;
 
 			switch (move.Value)
 			{
@@ -632,27 +703,71 @@ namespace ChessV1
 			}
 
 			double PositionMaterialAdvantage = 0;
-			if(turnColor == Turn.Pregame && Position.ContainsKey(move.Key.Value)) turnColor = GetColorOf(Position[move.Key.Key]);
+			double HomestuckDepthBonusMultiplier = 1 + ((((int)depth) / DepthScoreDecreaseSteps) * DepthScoreDecreaseWeight) / HomestuckDepthWeightDepthDecreaseDivider;    // Increase a bit with score
+			if (turnColor == Turn.Pregame && Position.ContainsKey(move.Key.Value)) turnColor = GetColorOf(Position[move.Key.Key]);
 			foreach (var piece in Position)
 			{
 				if (IsPieceColor(piece.Value, turnColor)) PositionMaterialAdvantage += GetPieceValue(piece.Value);
 				else PositionMaterialAdvantage -= GetPieceValue(piece.Value);
+
+				// Homestuck EarlyGame pieces weight
+
+				double PieceWeight = TypeString == "KNIGHT" ? PieceHomestuckActivityKnightWeight : TypeString == "BISHOP" ? PieceHomestuckActivityBishopWeight : -1;
+
+				if (PieceWeight < 0) continue;
+
+				if(turnColor == Turn.Black && piece.Key.Row <= 2)	// Bonus still applies and multiplier for negative is zero
+				{
+					if (piece.Key == move.Key.Key) HomestuckScore += PieceHomestuckPieceBeingMovedWeight * PieceWeight * move.Key.Value.Row;
+					else HomestuckScore -= (2 - piece.Key.Row) * PieceWeight * HomestuckDepthBonusMultiplier;
+				}
+				else if (turnColor == Turn.White && move.Key.Value.Row >= 5)
+				{
+					if (piece.Key == move.Key.Key) HomestuckScore += PieceHomestuckPieceBeingMovedWeight * PieceWeight * (7 - move.Key.Value.Row);
+					else HomestuckScore -= (piece.Key.Row - 5) * PieceWeight * HomestuckDepthBonusMultiplier;
+				}
 			}
 
-			double score = (scoreOfPiececapture * PieceCaptureWeight);
+			double score = HomestuckScore + (scoreOfPiececapture * PieceCaptureWeight);
 			// Activity
 			if(turnColor == Turn.Black && move.Key.Value.Row > 3) score += move.Key.Value.Row - 3 * ActivityWeight;	// Max: 4 * Weight => 0.2
 			else if(turnColor == Turn.White && move.Key.Value.Row < 4) score += Math.Abs(4 - move.Key.Value.Row) * ActivityWeight;
 
-			// Also an Idea: Activity Eval: How many squares can the piece see -> GetPieceLegalMoves().Count;
-			if(PieceType != PieceType.None)
+			// Activity Eval: How many squares can the piece see -> GetPieceLegalMoves().Count;
+			if (TypeString == "QUEEN" || TypeString == "ROOK" || TypeString == "BISHOP")
 			{
 				score += GetPieceLegalMoves(Position, new MoveHistory(Position), move.Key.Value, PieceType, turnColor, false, false).Count * BoardVisionActivityWeight;
 			}
-			
+
+			// Depth Decrease
+			if (depth > 0)
+			{
+				score -= Math.Max(score / (Math.Min(((int) depth) / DepthScoreDecreaseSteps, DepthScoreMaximum) * DepthScoreDecreaseWeight), 0);	// Don't allow adding
+			}
+
 			score += PromotionScore * PromotionWeight;
 			score += PositionMaterialAdvantage * PositionMaterialAdvantageWeight;
+			
+			// Repetition Prevention
+			if(currentHistory != null)
+			{
+				int Back = 2;
+				KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> LastMove;
+				while (currentHistory.Count >= Back && Back <= HistoryRepeatLimiter)
+				{
+					LastMove = currentHistory.History[currentHistory.Count - Back];
+					if (move.Key.Equals(LastMove.Key) && move.Value == LastMove.Value)
+						score *= RepeatMoveDecreaseMultiplier * (RepeatMoveDecreaseMultiplierHistory * Back/2);
+					Back += 2;
+				}
+			}
 
+			// Checkmate stuff
+			if (depth < 1 && scoreOfPiececapture == (int) PieceType.KING /* works for PieceType.KING and PieceType.king */)
+			{
+				score += ScoreBoostViaCheckmate;
+			}
+			
 			return score;
 		}
 
@@ -731,7 +846,7 @@ namespace ChessV1
 	public class MoveHistory
 	{
 		public static Dictionary<Coordinate, PieceType> DefaultInitialPosition { get; private set; } = Chessboard2.DefaultPosition();
-		private List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>> History { get; set; }
+		internal List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>> History { get; set; }
 		public int Count { get => History.Count; }
 		public Dictionary<Coordinate, PieceType> CustomSetup = null;
 
@@ -795,32 +910,6 @@ namespace ChessV1
 						position.Remove(new Coordinate(move.Key.Value.Row, 0));
 					}
 				}
-				/**
-				 
-				GPT-4 wants this to catch the Castleing error:
-				else if (move.Value == 'c') // Castles. Move the rook as well.
-				{
-					position[move.Key.Value] = position[move.Key.Key];
-					position.Remove(move.Key.Key);
-					if (move.Key.Value.Col == 6)  // Kingside castle, King is now on column 6. Move Rook from Column 7 to Column 5.
-					{
-						if (position.ContainsKey(new Coordinate(move.Key.Value.Row, 7))) // Check if Rook exists on Column 7
-						{
-							position[new Coordinate(move.Key.Value.Row, 5)] = position[new Coordinate(move.Key.Value.Row, 7)];
-							position.Remove(new Coordinate(move.Key.Value.Row, 7));
-						}
-					}
-					else  // Queenside castle, King is now on column 2. Move Rook from Column 0 to Column 3.
-					{
-						if (position.ContainsKey(new Coordinate(move.Key.Value.Row, 0))) // Check if Rook exists on Column 0
-						{
-							position[new Coordinate(move.Key.Value.Row, 3)] = position[new Coordinate(move.Key.Value.Row, 0)];
-							position.Remove(new Coordinate(move.Key.Value.Row, 0));
-						}
-					}
-				}
-				 
-				 */
 				else if (move.Value == 'Q') // Promotion of a pawn to a queen
 				{
 					position[move.Key.Value] = currentmove % 2 == 0 /* White */ ? PieceType.QUEEN : PieceType.queen;
@@ -1400,7 +1489,6 @@ namespace ChessV1
 
 		public static int GetPieceValue(PieceType Piece)
 		{
-			if (Piece.ToString().ToUpper() == "KING") return 999;
 			int value = (int)Piece;
 			if (value > 10) value -= 10;
 			return value == 2 ? 3 : value;
@@ -1414,7 +1502,8 @@ namespace ChessV1
 		public Point CurrentMousePosition;
 		public Calculation CurrentCalculation;
 
-		Coordinate SelectedField;
+		Coordinate _SelectedField;
+		Coordinate SelectedField { get => _SelectedField; set { if (value != Coordinate.NullCoord) GrabbedPieceTime = DateTime.Now; _SelectedField = value; } }
 		List<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>> AllLegalMoves, SelectedLegalMoves;
 		List<Coordinate> HighlightedFields;
 
@@ -1458,9 +1547,11 @@ namespace ChessV1
 			}
 			
 			ChessGraphics.PlaySound(Sound);
-			Sleep();
-
+			
 			Refresh();
+			Sleep();
+			Refresh();
+
 			CurrentCalculation = new Calculation(MoveHistory, MaxEngineDepth, Turn) { maxTimeMS = this.MaxEngineTimeMS };
 		}
 		public static void Sleep(int millis = MoveDelayMS)
@@ -1501,6 +1592,8 @@ namespace ChessV1
 			return Turn == Turn.White ? new Coordinate(Row, Col) :
 				new Coordinate(Math.Abs(7 - Row), Math.Abs(7 - Col));
 		}
+
+		private DateTime GrabbedPieceTime;
 
 		// Mouse Down
 		public void MouseDownEvent(MouseEventArgs e)
@@ -1600,8 +1693,9 @@ namespace ChessV1
 					if (!CurrentPosition.TryGetValue(field, out FieldType)) FieldType = PieceType.None;
 
 					// Dropped somewhere
-					if (field == SelectedField) { CurrentlyHolding = false; Refresh(); return; }
-					if (InvokeClickedOnFieldWhenSelected(field, FieldType)) return;
+					if (field == SelectedField) { if ((DateTime.Now - GrabbedPieceTime).Milliseconds > 500) DeselectCurrentField(); }
+					else if (InvokeClickedOnFieldWhenSelected(field, FieldType)) return;
+					CurrentlyHolding = false;
 				}
 
 				Refresh();
@@ -1761,38 +1855,3 @@ namespace ChessV1
 		}
 	}
 }
-
-/**
- 	public static class KeyValuePairExtensions
-	{
-		public static bool Equals<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp1, KeyValuePair<TKey, TValue> kvp2)
-		{
-			return kvp1.Key.Equals(kvp2.Key) && kvp1.Value.Equals(kvp2.Value);
-		}
-
-		public static bool EqualTo<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp1, KeyValuePair<TKey, TValue> kvp2)
-		{
-			return kvp1.Equals(kvp2);
-		}
-
-		public static bool NotEqualTo<TKey, TValue>(this KeyValuePair<TKey, TValue> kvp1, KeyValuePair<TKey, TValue> kvp2)
-		{
-			return !kvp1.Equals(kvp2);
-		}
-
-
-
-// These do not work:
-		public static bool operator ==(KeyValuePair kvp1, KeyValuePair kvp2)
-		{
-			return kvp1.EqualTo(kvp2);
-		}
-
-		public static bool operator !=(KeyValuePair kvp1, KeyValuePair kvp2)
-		{
-			return kvp1.NotEqualTo(kvp2);
-		}
-	}
- 
- 
- */
