@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Net;
 using System.Windows.Forms;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ChessV1
 {
@@ -340,7 +343,10 @@ namespace ChessV1
 		#endregion
 
 		private Turn TurnColor;
-		private int MaxDepth;
+		/// <summary>
+		/// Normal MaxDepth, -1 is Abort, 0 is unlimited
+		/// </summary>
+		protected int MaxDepth;
 		public double BestScore { get; private set; } = 0;
 		public KeyValuePair<Coordinate, Coordinate> _BestMove { get; private set; } = new KeyValuePair<Coordinate, Coordinate>(new Coordinate(-1, -1), new Coordinate(-1, -1));
 		public KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> BestMove { get; private set; } = EmptyMove;
@@ -408,7 +414,7 @@ namespace ChessV1
 			AllInitialMoveScores = new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>();
 
 			Scores = new Dictionary<KeyValuePair<Coordinate, Coordinate>, double>();
-			CalculateBestMove();
+			CalculateBestMoveParentThread();
 		}
 
 		private void ProcessNewDepth(Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>> initialMoveScores, double Depth)
@@ -455,6 +461,588 @@ namespace ChessV1
 			return score;
 		}
 
+
+
+		#region Two-Queue-Approach
+
+		/**
+		 * The Two-Queue-Approach is a multithreaded approach to the Seach-problem. It has two queues for depth that store Search Nodes. The premise
+		 * is that we want to use multiple Threads but dont want one thread working on depth 8 while another is still at depth 5 to get an efficient
+		 * method and goes through all depths at the highest speed. A depth is only evaluated and pushed as recommended 'best move' when every option
+		 * has been explored, so we want all threads to work at the lowest depth available. The problem with one queue used by multiple threads is that
+		 * the queues are not necessesarily sorted by depth, at least not to 100%. So, we make a two queues, one that stores the lower current depth
+		 * value and one that stores nodes with a depth at one above it.
+		 * The Threads get an element from the 'lower' depth queue and process it, then push resulting nodes in the 'higher queue'. When the 'lower
+		 * queue' is empty, the Threads grab elements from the higher queue, process the new depth, and push new nodes in the now empty queue, thus
+		 * making the former 'lower queue' now the 'higher queue'. The method FetchNewNode() looks at both queues and returns the node from the stack
+		 * with a lower depth and processes it. This way, all threads coordinate with the Search-depth.
+		 * If a Node tries to be enqueued but does not match either depth and no queue is free, it is added to the Backlog to be dealth with later
+		 * when a queue frees up.
+		 */
+
+		private ConcurrentQueue<TQA_SearchNode> TQA_SearchQueueOne = new ConcurrentQueue<TQA_SearchNode>();
+		private ConcurrentQueue<TQA_SearchNode> TQA_SearchQueueTwo = new ConcurrentQueue<TQA_SearchNode>();
+		private ConcurrentBag<TQA_SearchNode> TQA_Backlog = new ConcurrentBag<TQA_SearchNode>();
+		private SemaphoreSlim BacklogSemaphore = new SemaphoreSlim(1, 1);   // Limits how many threads can access a thing
+		// Stores the following:<PositionKey, Pair<Pair<Pair<Score of the move that lead to this position, multiplier how often this position came up>, List<string> of Sub-position keys in cache (follow-up move position keys)>, Bool if this position is mate to add up lines later>
+		// OLD: private ConcurrentDictionary<string, KeyValuePair<KeyValuePair<KeyValuePair<double, int>, List<string>>, bool>> TQA_PositionDataCache = new ConcurrentDictionary<string, KeyValuePair<KeyValuePair<KeyValuePair<double, int>, List<string>>, bool>>();
+		private ConcurrentDictionary<string, KeyValuePair<KeyValuePair<Dictionary<string, double>, List<string>>, bool>> TQA_PositionDataCache = new ConcurrentDictionary<string, KeyValuePair<KeyValuePair<Dictionary<string, double>, List<string>>, bool>>();
+		// But instead of KVP<double, int> that counts it needs to store a Dictionary of <string, double> that saves the beforePositionString and the score of that move. Because, when in one sequence I capture the queen and land there and in the other I capture a knight and land there, the scores are not the same
+		// Alternative: Save THAT score somewhere else??
+		private ConcurrentDictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, string> TQA_InitialMoves = new ConcurrentDictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, string>();
+
+		private double TQA_QueueOneDepth { get => TQA_SearchQueueOne.TryPeek(out TQA_SearchNode node) ? node.Depth : -1; }
+		private double TQA_QueueTwoDepth { get => TQA_SearchQueueTwo.TryPeek(out TQA_SearchNode node) ? node.Depth : -1; }
+
+		// The calculation problem:
+		// Store position key as key and as value: int Score, List<otherPosKeys that directly follow> -> linked tree, bool checkmate => top-down
+		// Or: Store all position keys that led up to this and do it bottom-up.
+		// Later calculate other stuff
+
+		// Depth within queues stays the same. TQA is short for Two-Queue-Approach. Maybe change this up to remember the low and high queue
+		private TQA_SearchNode TQA_FetchNewNode(TQA_SearchNode DefaultNode = null)
+		{
+			double One = TQA_QueueOneDepth;
+			double Two = TQA_QueueTwoDepth;
+			TQA_SearchNode node;
+
+			if (One < 0) return Two < 0 ? DefaultNode : TQA_SearchQueueTwo.TryDequeue(out node) ? node : DefaultNode;
+			if (Two < 0) return One < 0 ? DefaultNode : TQA_SearchQueueOne.TryDequeue(out node) ? node : DefaultNode;
+
+			return One < Two ? (TQA_SearchQueueOne.TryDequeue(out node) ? node : DefaultNode) :
+							   (TQA_SearchQueueTwo.TryDequeue(out node) ? node : DefaultNode);
+		}
+		private void TQA_EnqueueToSeachQueue(TQA_SearchNode SearchNode)
+		{
+			double Depth = SearchNode.Depth;
+			if (TQA_QueueOneDepth == Depth) { TQA_SearchQueueOne.Enqueue(SearchNode); return; }
+			if (TQA_QueueTwoDepth == Depth) { TQA_SearchQueueTwo.Enqueue(SearchNode); return; }
+			// Depth does not match either queue.
+			if (TQA_QueueOneDepth == -1) { TQA_SearchQueueOne.Enqueue(SearchNode); return; }
+			if (TQA_QueueTwoDepth == -1) { TQA_SearchQueueTwo.Enqueue(SearchNode); return; }
+			// If neither queue is finished (empty) and the depths do not match, add it to the leftovers to be sorted out when a queue frees up.
+			TQA_Backlog.Add(SearchNode);
+		}
+
+		// Threadsafe Backlog Handling by GPT-4, The ConcurrentBag and SemaphoreSlim too:
+		// This method happens when a queue is empty
+		private async Task ProcessBacklogAsync()
+		{
+			await BacklogSemaphore.WaitAsync(); // Acquire the semaphore
+			try
+			{
+				// One of those is -1 bcs queue is empty
+				double CurrentQDepth = Math.Max(TQA_QueueOneDepth, TQA_QueueTwoDepth);
+				// If both are empty
+				if(CurrentQDepth < 0) CurrentQDepth = -0.5;
+				int i = TQA_Backlog.Count;
+				while (i > 0)	// Go through every element
+				{
+					TQA_Backlog.TryTake(out TQA_SearchNode node);
+
+					if (node.Depth <= CurrentQDepth)
+					{
+						// Old and forgotten Node
+						// ToDo Add Backlog Handling
+					} else if(node.Depth == CurrentQDepth + 0.5)
+					{
+						TQA_EnqueueToSeachQueue(node);
+						i--;
+					}
+					else
+					{
+						// Add it back for future handling
+						TQA_Backlog.Add(node);
+					}
+				}
+			}
+			finally
+			{
+				BacklogSemaphore.Release(); // Release the semaphore
+			}
+		}
+
+		private async Task TQA_ProcessNewDepthAync(double MaxDepth)
+		{
+			// One queue is empty
+			// Handle the backlog
+			await ProcessBacklogAsync();
+
+			// Stores the Following: <The initial move, KVP< TotalScore, KVP <Number of Total Scores, Number of Checkmates>>>
+			// No, actually the score is calculated immediately so it just stores the final score
+			var Scores = new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, double>();
+
+			// Add all values
+			foreach (var initialMove in TQA_InitialMoves)
+			{
+				// Maybe store in KVP
+				string oldDepthPosKey = "";
+				string posKey = initialMove.Value;
+
+				// Stores <posKey#oldPosKey, depth>
+				Queue<KeyValuePair<string, double>> posKeyQueue = new Queue<KeyValuePair<string, double>>();
+				posKeyQueue.Enqueue(new KeyValuePair<string, double>(initialMove.Value + "#" + initialMove.Value, 0.0));
+
+				double TotalScore = 0.0, HighestScore = 0.0, LowestScore = 0.0;
+				int ScoreAmounts = 0, CheckmateAmounts = 0;
+				double CurrentDepth = 0;
+				while(TQA_PositionDataCache.ContainsKey(posKey) && CurrentDepth <= MaxDepth)
+				{
+					//CurrentDepth += 0.5;
+					// Fill up fill up lol
+					if (TQA_PositionDataCache[posKey].Key.Key.ContainsKey(oldDepthPosKey))
+					{
+						double score = TQA_PositionDataCache[posKey].Key.Key[oldDepthPosKey];
+						TotalScore += score;
+						// Highest/Lowest Score for weights
+						if (score < LowestScore) LowestScore = score;
+						if (score > HighestScore) HighestScore = score;
+						ScoreAmounts++;
+					}
+					if (TQA_PositionDataCache[posKey].Value)
+					{
+						CheckmateAmounts++;
+					}
+					else
+					{
+						// If not checkmate, add all children to the queue
+						foreach (var ChildPos in TQA_PositionDataCache[posKey].Key.Value)
+						{
+							if(CurrentDepth < MaxDepth) // Leave room for increment with < instead of <=
+								posKeyQueue.Enqueue(new KeyValuePair<string, double>($"{ChildPos}#{posKey}", CurrentDepth + 0.5));
+						}
+					}
+
+					if (posKeyQueue.Count == 0) break;
+
+					// Get next position Key
+					var next = posKeyQueue.Dequeue();   // Key = new child, Value = oldKey
+					var split = next.Key.Split('#');
+					posKey = split[0];
+					oldDepthPosKey = split[1];
+					CurrentDepth = next.Value;
+				}
+
+				// We accumulated all scores for this initMove, nice!
+				Scores.Add(initialMove.Key, TQA_CalculateMoveScore(TotalScore, HighestScore, LowestScore, ScoreAmounts, CheckmateAmounts));
+			}
+
+			// Now we have all the scores, lets get the best move, using GPT-4 ofc
+			// Sort the dictionary by value in descending order and take the top 3 key-value pairs
+			var top3 = Scores.OrderByDescending(kv => kv.Value).Take(3).ToList();
+
+			// Extract the keys from the top 3 key-value pairs
+			var top3Keys = top3.Select(kv => kv.Key).ToList();
+
+			// Print the keys for demonstration purposes
+			int d = 1;
+			foreach (var key in top3Keys)
+			{
+				Console.WriteLine($"Depth {MaxDepth}, {d++}.Best Move: ({key.Key.Key}, {key.Key.Value}), {key.Value}");
+			}
+		}
+
+		private double TQA_CalculateMoveScore(double TotalScore, double HighestScore, double LowestScore, int ScoreAmounts, int CheckmateAmounts)
+		{
+			// Code copied from CalculateMoveScore(List<int>, int)
+
+			if (ScoreAmounts == 0) return -1;
+
+			double score = 0;
+			score += (TotalScore / (double) ScoreAmounts) * AverageScoreWeight;
+			score += HighestScore * HighestScoreWeight;
+			score += LowestScore * LowestScoreWeight;
+
+			if (CheckmateAmounts > 0)
+			{
+				score += ((double)Scores.Count / CheckmateAmounts) * CheckmateLinePercentageWeight;
+				if (Scores.Count == CheckmateAmounts) score += ScoreBoostViaCheckmateSequence;
+			}
+
+			return score;
+		}
+
+		/*
+		private async Task TQA_CalculateBestMoveAync(MoveHistory CurrentHistory, Dictionary<Coordinate, PieceType> InitialPosition = null)
+		{
+			// First, lets get all the initial moves, position and set up our data
+			if(InitialPosition == null) InitialPosition = CurrentHistory.CalculatePosition();
+			var AllInitialLegalMoves = GetAllLegalMoves(InitialPosition, TurnColor, CurrentHistory);
+			foreach (var Move in AllInitialLegalMoves)
+			{
+			}
+		}
+
+		private async Task TQA_ProcessNewNodeAsync(Dictionary<Coordinate, PieceType> Position, MoveHistory oldHistory, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> Move, double depth, bool IsInitialMove = false)
+		{
+			TQA_SearchNode currentNode = TQA_FetchNewNode();
+			if (currentNode == null) return;
+			// Retrieved current Node
+			// Now first check if either queue is now empty
+			if(TQA_SearchQueueOne.Count == 0 || TQA_SearchQueueTwo.Count == 0)
+			{
+				//await TQA_ProcessNewDepthAync();
+			}
+		}
+
+		private async Task TQA_CalcMoveAync_Unused(Dictionary<Coordinate, PieceType> Position, MoveHistory oldHistory, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> Move, double depth, bool IsInitialMove = false)
+		{
+			// Your search logic for a single initial move
+			MoveHistory newHistory = oldHistory.Branch(Move);
+			var newPosition = newHistory.CalculatePosition();
+			string posKey = newHistory.GeneratePositionKey(newPosition);
+
+			if (IsInitialMove && !Move.Key.Equals(Coordinate.NullCoord))
+			{
+				TQA_InitialMoves.TryAdd(Move, posKey);
+			}
+			// Calculate the actual score, but only if this is not being calculated yet
+			if(TQA_PositionDataCache.ContainsKey(posKey))
+			{
+				// Already being handled, somehow remember this needs to be added, maybe use bottom-up after all?
+				// No, we just dont care. Later invert statement.
+			}
+			else
+			{
+				bool IsCheckmate = KingSafety2_IsKingSafe_IncludeFindKing(newPosition, newHistory.Count % 2 == 0 ? Turn.White : Turn.Black);
+				// Calculate score add add to the Cache
+				double Score = GetScoreOf(Move, newHistory, depth);
+				var allLegalFollowUpMovesList = new List<string>();
+
+				//var AllFollowUpMoves = GetAllLegalMoves(Position);
+				
+				TQA_PositionDataCache.TryAdd(posKey, new KeyValuePair<KeyValuePair<KeyValuePair<double, int>, List<string>>, bool>(new KeyValuePair<KeyValuePair<double, int>, List<string>>(new KeyValuePair<double, int>(Score, 1), allLegalFollowUpMovesList), IsCheckmate));
+			}
+		}
+		*/
+
+		private async Task TQA_CalcMoveAsync2(TQA_SearchNode Node)
+		{
+			// Your search logic for a single initial move
+			MoveHistory newHistory = Node.CurrentMoveHistory;
+			var newPosition = newHistory.CalculatePosition();
+			string posKey = Node.CurrentPositionKey;
+			string oldPosKey = Node.OldPositionKey;
+			var Move = Node.CurrentMoveHistory.LastMoveComplete;
+
+			/* This is now in the starter method
+			if (IsInitialMove && !Move.Key.Key.Equals(Coordinate.NullCoord))
+			{
+				TQA_InitialMoves.TryAdd(Move, posKey);
+			}
+			*/
+
+			double Score = GetScoreOf(Move, newHistory, Node.Depth);
+			if (Node.Depth % 1.0 == 0.5) Score *= -1;	// Invert score if its for the opponent
+
+			// Calculate the actual score, but only if this is not being calculated yet
+			if (!TQA_PositionDataCache.ContainsKey(posKey))
+			{
+				// If this does not work, we might just want to score a bool in the SearchNode that remembers if this move is a king capture
+				bool IsCheckmate = !KingSafety2_IsKingSafe_IncludeFindKing(newPosition, newHistory.Count % 2 == 0 ? Turn.White : Turn.Black);
+
+				// Calculate score add add to the Cache
+				var allLegalFollowUpMovesList = new List<string>();
+				
+				var AllNewNodes = TQA_SearchNode.AllNewNodesFromPosition(newPosition, newHistory, Node.Depth, this.MaxDepth);
+
+				if(AllNewNodes == null)
+				{
+					// Game is over by Draw, Stalemate or king capture
+					
+				}
+
+				// No new nodes if depth is reached
+				foreach (var node in AllNewNodes)
+				{
+					allLegalFollowUpMovesList.Add(node.CurrentPositionKey);
+					if(!TQA_PositionDataCache.ContainsKey(node.CurrentPositionKey))
+					{
+						// If its not in the cache, add the new node to the calculation processing queue
+						TQA_EnqueueToSeachQueue(node);
+					}
+				}
+
+				// Stores the scores in combination with the move/position that lead up to this score. For example, if the queen was captures to get here the score would differ from a knight capture so we save the previous pos as well
+				Dictionary<string, double> ScoreDict = new Dictionary<string, double>();
+				ScoreDict.Add(oldPosKey, Score);
+
+				TQA_PositionDataCache.TryAdd(posKey, new KeyValuePair<KeyValuePair<Dictionary<string, double>, List<string>>, bool>(new KeyValuePair<Dictionary<string, double>/*KeyValuePair<double, int> */, List<string>>( ScoreDict /*new KeyValuePair<double, int>(Score, 1) */, allLegalFollowUpMovesList), IsCheckmate));
+
+				// Add all new Nodes. If they already exist, they will be ignored on the next move
+				// => Even better, dont even add them to the queue, already implemented in loop just leaving this comment here
+
+			}
+			else	// Already being handled, position trace; We still need to add our oldPosKey with move value
+			{
+				if (TQA_PositionDataCache[posKey].Key.Key.ContainsKey(oldPosKey)) return;
+				TQA_PositionDataCache[posKey].Key.Key.Add(oldPosKey, Score);
+			}
+		}
+
+		// I want a method that receives: The (new) position that just branched, the new History, the old position, the old history (for score) and the newPositionString and ofc the Move, the current Depth and bool of if initial move
+
+		private class TQA_SearchNode
+		{
+			public static List<TQA_SearchNode> AllNewNodesFromPosition(Dictionary<Coordinate, PieceType> Position, MoveHistory History, double currentDepth, double MaxDepth)
+			{
+				Turn TurnColor = History.Count % 2 == 1 ? Turn.White : Turn.Black; // include invert through == 1 and not == 0 bcs thats the color of the last 
+				var AllFollowUpMoves = GetAllLegalMoves(Position, TurnColor, History);
+				var Nodelist = new List<TQA_SearchNode>();
+				string oldPositionKey = History.GeneratePositionKey(Position);
+
+				if (currentDepth > MaxDepth && MaxDepth != 0 /*unlimited*/) return Nodelist;	// Cancel
+				
+				// King captures are dealt with when checking new legal moves and adding them, because checkmates have extra value, in contrast to draws
+				if (TQA_IsDraw(Position))
+				{
+					return null;
+				}
+				
+				foreach (var move in AllFollowUpMoves)
+				{
+					MoveHistory newHistory = History.Branch(move);
+					var newPosition = History.CalculatePosition();
+					string positionKey = newHistory.GeneratePositionKey(newPosition);
+
+					TQA_SearchNode Node = new TQA_SearchNode(newPosition, newHistory, positionKey, move, Position, History, oldPositionKey, currentDepth + 0.5);
+					Nodelist.Add(Node);
+				}
+				return Nodelist;
+			}
+
+			public MoveHistory CurrentMoveHistory { get; private set; }
+			public MoveHistory OldMoveHistory { get; private set; }
+			public Dictionary<Coordinate, PieceType> CurrentPosition { get; private set; }
+			public Dictionary<Coordinate, PieceType> OldPosition { get; private set; }
+			public KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> CurrentMove { get; private set; }
+			public string CurrentPositionKey { get; private set; }
+			public string OldPositionKey { get; private set; }
+			public double Depth { get; private set; }
+
+			public TQA_SearchNode(
+				Dictionary<Coordinate, PieceType> newPosition,
+				MoveHistory newHistory,
+				string newPositionKey,
+				KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> currentMove,
+				Dictionary<Coordinate, PieceType> oldPosition,
+				MoveHistory oldHistory,
+				string oldPositionKey,
+				double newDepth)
+			{
+				CurrentPosition = newPosition;
+				CurrentMoveHistory = newHistory;
+				CurrentPositionKey = newPositionKey;
+				CurrentMove = currentMove;
+				OldPosition = oldPosition;
+				OldMoveHistory = oldHistory;
+				OldPositionKey = oldPositionKey;
+				Depth = newDepth;
+			}
+		}
+
+		/// <summary>
+		/// This is Async
+		/// </summary>
+		/// <param name="Position"></param>
+		/// <param name="History"></param>
+		/// <param name="currentDepth"></param>
+		/// <param name="MaxDepth"></param>
+		public Calculation(MoveHistory History, double MaxDepth, Turn InitialTurnColor, Dictionary<Coordinate, PieceType> Position = null)
+		{
+			this.TurnColor = InitialTurnColor;
+			// ToDo Set global Check, Checkmate and Stalemate variables
+			if (Position == null) Position = History.CalculatePosition();
+			TQA_SearchAsyncTwoQueueApproach(Position, History, 0.0, MaxDepth);
+		}
+
+		private async void TQA_SearchAsyncTwoQueueApproach(Dictionary<Coordinate, PieceType> Position, MoveHistory History, double currentDepth, double MaxDepth)
+		{
+			List<TQA_SearchNode> initialNodes = TQA_SearchNode.AllNewNodesFromPosition(Position, History, currentDepth, MaxDepth);
+			if(initialNodes == null || initialNodes.Count == 0)
+			{
+				Chessboard2.Log("Position given to SearchAsyncTwoQueueApproach has zero legal moves.");
+				return;
+			}
+			// Add initialMoves
+			foreach (TQA_SearchNode node in initialNodes)
+			{
+				if(!TQA_InitialMoves.ContainsKey(node.CurrentMove))
+					TQA_InitialMoves.TryAdd(node.CurrentMove, node.CurrentPositionKey);
+			}
+			// Get all initial SearchNodes
+			await TQA_RunSearchForAllInitialMovesAsync2(initialNodes);
+		}
+
+		#region Async Search By GPT-4, Optimized after request for while implementation
+
+		/**
+		 * Comment by GPT-4:
+		 * 
+		 * In this example, the while loop continues fetching and processing nodes as long as TQA_FetchNewNode returns a non-null value.
+		 * When TQA_FetchNewNode returns null, it means there are no more nodes to process, and the loop breaks. Please note that since
+		 * TQA_FetchNewNode may return null due to the queues being empty momentarily, you may want to consider adding a small delay
+		 * (e.g., using await Task.Delay(10)) before fetching the next node to avoid busy-waiting and reduce CPU usage. In this updated
+		 * version, the initial moves are enqueued before starting the worker tasks. Each worker task will run the RunSearchAsync method,
+		 * which will fetch and process nodes as long as there are nodes available. The number of worker tasks is determined based on the
+		 * number of available processor cores and the number of initial moves, ensuring a balance between parallelism and computational
+		 * resources.
+		 * 
+		 * > Is Math.Max for workerCount correct or should it be Math.Min?
+		 * 
+		 * You are right, I apologize for the confusion. It should be Math.Min instead of Math.Max. The idea is to limit the number of
+		 * worker tasks to the minimum between the number of initial moves and the number of available processor cores. Here's the
+		 * corrected version: [...] Using Math.Min ensures that you don't create more worker tasks than there are initial moves or
+		 * processor cores, which would be inefficient and could potentially lead to performance issues.
+		 */
+
+		private async Task TQA_RunSearchForAllInitialMovesAsync2(List<TQA_SearchNode> initialMoves)
+		{
+			// Enqueue initial moves
+			foreach (var initialMove in initialMoves)
+			{
+				TQA_EnqueueToSeachQueue(initialMove);
+			}
+
+			// Determine the number of worker tasks based on the available hardware resources
+			int workerCount = Math.Min(Environment.ProcessorCount, initialMoves.Count);
+
+			var tasks = new List<Task>();
+
+			for (int i = 0; i < workerCount; i++)
+			{
+				tasks.Add(Task.Run(() => TQA_RunSearchAsync2()));
+			}
+
+			await Task.WhenAll(tasks); // Wait for all tasks to complete
+		}
+
+		private async Task TQA_RunSearchAsync2()
+		{
+			while (true)
+			{
+				TQA_SearchNode currentNode = TQA_FetchNewNode();
+
+				if (currentNode == null)
+				{
+					break; // Exit the loop when there are no more nodes to process
+				}
+
+				if(currentNode.Depth == 0 && TQA_DetermineCheckZeroDepth(currentNode.CurrentPosition))
+				{
+					// Game Over
+					// ToDo maybe
+					break;
+				}
+
+				// Your search logic for the current node
+				await TQA_CalcMoveAsync2(currentNode);
+				// :) Maybe there needs to be some logic here too idk
+				// Oh yeah check if either queue is empty
+				
+				if(TQA_SearchQueueOne.Count == 0 || TQA_SearchQueueTwo.Count == 0)
+				{
+					TQA_SearchNode node;
+					TQA_SearchQueueOne.TryPeek(out node);
+					if (node == null) TQA_SearchQueueTwo.TryPeek(out node);
+
+					// Check that not both Queues are not empty, if so process the last known depth
+					if ((TQA_SearchQueueOne.Count == 0 && TQA_SearchQueueTwo.Count == 0) || node == null)
+					{
+						// Remember current and last processed depth?
+						break;
+					}
+					// Assert node is some node
+
+					double maxDepth = node.Depth - 0.5;	// Node is of the new stack. The depth we want to process, aka the finished calculated depth, is 0.5 (1 level) lower.
+					await TQA_ProcessNewDepthAync(maxDepth);
+				}
+
+				// Enqueue new nodes resulting from the search
+				// TQA_EnqueueToSeachQueue(newNode);
+			}
+		}
+
+		private bool TQA_DetermineCheckZeroDepth(Dictionary<Coordinate, PieceType> Position)
+		{
+			//IsCheck = IsTurnColorKingInCheck(pos, UpUntilPositionHistory, initialTurnColor);
+			IsCheck = KingSafety2_IsKingSafe_IncludeFindKing(Position, TurnColor);
+			if (TQA_InitialMoves.Count == 0)
+			{
+				// No legal moves. Now its either Stalemate or Checkmate
+				if (IsCheck) IsCheckmate = true;
+				else IsStalemate = true;
+				TQA_GameOver(IsCheck ? GameOver.Checkmate : GameOver.Stalemate);
+				return true;
+			}
+			else if (TQA_IsDraw(Position))
+			{
+				IsDraw = true;
+				TQA_GameOver(GameOver.Draw);
+				return true;
+			}
+			return false;
+		}
+
+		private static bool TQA_IsDraw(Dictionary<Coordinate, PieceType> Position)
+		{
+			if (Position.Count <= 2) return true;
+
+			int MaterialValueWhite = 0, MaterialValueBlack = 0;
+			// Since you cant checkmate with a 3-point piece, we ask how many there are, in addition to the king
+			foreach (var piece in Position)
+			{
+				int val = GetPieceValue(piece.Value);
+				Turn color = GetColorOf(piece.Value);
+				if (val == 1) if (color == Turn.White) MaterialValueWhite += 9; else MaterialValueBlack += 9;	// Pawns are worth 9 because they _can_ queen and thats important
+				else if (val != 10) if (color == Turn.White) MaterialValueWhite += val; else MaterialValueBlack += val;
+			}
+			if (MaterialValueWhite <= 3 && MaterialValueBlack <= 3) return true;	// Draw by Insufficient Material because they have no pawns and max one bishop/knight on the board, which is a draw
+
+			// No Draw
+			return false;
+		}
+
+		private void TQA_GameOver(GameOver GameOver)
+		{
+			// ToDo
+			Chessboard2.Log($"The Game is over: ToDo - {GameOver}");
+		}
+
+		public enum GameOver
+		{
+			Draw, Stalemate, Checkmate
+		}
+
+		#endregion
+
+
+
+		/*
+		// Proposed by GPT-4:
+		private async Task RunSearchAsync(SearchNode initialNode)
+		{
+			// Your search logic for a single initial move
+
+		}
+
+		private async Task RunSearchForAllInitialMovesAsync(List<SearchNode> initialMoves)
+		{
+			var tasks = new List<Task>();
+
+			foreach (var initialMove in initialMoves)
+			{
+				tasks.Add(Task.Run(() => RunSearchAsync(initialMove)));
+			}
+
+			await Task.WhenAll(tasks); // Wait for all tasks to complete
+		}
+		*/
+
+
+		#endregion
+
+
 		/*
 		 Auch möglich: Positionen und so werden erst ab move 3 gespeichert. Da move 1 und 2 noch keine Duplikationen hervorrufen können werden diese im OG dictionary gespeichert.
 		 */
@@ -486,6 +1074,33 @@ namespace ChessV1
 		private static KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> EmptyMove = new KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>(new KeyValuePair<Coordinate, Coordinate>(Coordinate.NullCoord, Coordinate.NullCoord), '-');
 
 		public Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>> AllInitialMoveScores;
+		ConcurrentDictionary<string, KeyValuePair<MoveHistory, List<double>>> positionDataCache = new ConcurrentDictionary<string, KeyValuePair<MoveHistory, List<double>>>();
+
+		private void CalculateBestMoveParentThread()
+		{
+			Turn initialTurnColor = this.TurnColor;
+			MoveHistory initialHistory = this.UpUntilPositionHistory.Clone();
+
+			var positionDataCache = new ConcurrentDictionary<string, KeyValuePair<MoveHistory, List<double>>>();
+
+			Queue<SearchNode> searchQueue = new Queue<SearchNode>();
+			searchQueue.Enqueue(new SearchNode(initialHistory, initialTurnColor, 0.0, EmptyMove));
+			List<Thread> SearchThreads = new List<Thread>();
+
+			var pos = initialHistory.CalculatePosition();
+			var allLegalMoves = GetAllLegalMoves(pos, initialTurnColor, initialHistory);
+
+			foreach (var move in allLegalMoves)
+			{
+				Thread Thread = new Thread(() =>
+				{
+					CalculateBestMove(ref searchQueue, ref positionDataCache, move);
+				});
+				Thread.Start();
+				SearchThreads.Add(Thread);
+			}
+			
+		}
 
 		/// <summary>
 		/// 
@@ -495,19 +1110,13 @@ namespace ChessV1
 		/// stores the aggregated scores for each line in the Scores dictionary to determine the best move.
 		/// 
 		/// </summary>
-		private void CalculateBestMove()
+		private void CalculateBestMove(ref Queue<SearchNode> searchQueue, ref ConcurrentDictionary<string, KeyValuePair<MoveHistory, List<double>>> PositionDataCache, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> InitialMove)
 		{
-			Turn initialTurnColor = this.TurnColor;
-			MoveHistory initialHistory = this.UpUntilPositionHistory.Clone();
-			
-			/**
-			 This segment defines the CalculateBestMove method and sets up the lineScores dictionary to store the scores of each line,
-			a stack called searchStack to store the search nodes, and then pushes the initial node onto the stack.
-			 */
+			// We now instead receive an initial move. Thus, the starting turn color must invert the starting turn color as one move has already been applied
 
-			Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores = new Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>>();
-			Queue<SearchNode> searchQueue = new Queue<SearchNode>();
-			searchQueue.Enqueue(new SearchNode(initialHistory, initialTurnColor, 0.0, EmptyMove));
+			MoveHistory InitialHistory = this.UpUntilPositionHistory.Branch(InitialMove);
+			var SecondInitialPosition = InitialHistory.CalculatePosition();
+			var AllSecondInitialLegalMoves = GetAllLegalMoves(SecondInitialPosition, InvertColor(TurnColor), InitialHistory);
 
 			// Method Restructure
 			double currentDepth = 0.0;
@@ -590,7 +1199,7 @@ namespace ChessV1
 					}
 
 					//IsCheck = IsTurnColorKingInCheck(pos, UpUntilPositionHistory, initialTurnColor);
-					IsCheck = KingSafety2_IsKingSafe_IncludeFindKing(pos, initialTurnColor);
+					IsCheck = KingSafety2_IsKingSafe_IncludeFindKing(pos, TurnColor);
 					if (allLegalMoves.Count == 0)
 					{
 						// No legal moves. Now its either Stalemate or Checkmate
@@ -611,21 +1220,10 @@ namespace ChessV1
 				{
 					// Calculate the move score before branching
 					double MoveScore = GetScoreOf(move, currentHistory, currentDepth);
-					if (currentTurnColor != initialTurnColor) MoveScore *= -1;
+					if (currentTurnColor != TurnColor) MoveScore *= -1;
 
 					// Branch the current history with the move
 					MoveHistory newHistory = currentHistory.Branch(move);
-
-					/*
-					if(currentDepth == 0.5)
-					{
-						Chessboard2.Log("Depth 50. Breakpoint.");
-					}
-					if (currentDepth == 0)
-					{
-						Chessboard2.Log("Depth 50. Breakpoint.");
-					}
-					*/
 
 					// Score stuff
 					{
@@ -644,27 +1242,115 @@ namespace ChessV1
 							{
 								initialMoveScores[initMove] = new KeyValuePair<List<double>, int>(initialMoveScores[initMove].Key, initialMoveScores[initMove].Value + 1);
 							}
-							/*
-							// by Gpt4, difference?
-							if (pos.ContainsKey(move.Key.Value) && pos[move.Key.Value].ToString().ToUpper() == "KING")
-							{
-								if (currentDepth < MaxDepth)
-								{
-									initialMoveScores[initMove] = new KeyValuePair<List<double>, int>(initialMoveScores[initMove].Key, initialMoveScores[initMove].Value + 1);
-								}
-							}
-							*/
 						}
 					}
 
 					// Push the new node onto the search stack with the updated information
 					if (currentDepth < MaxDepth)
 					{
-						searchQueue.Enqueue(new SearchNode(newHistory, InvertColor(currentTurnColor), currentDepth + 0.5, currentNode.InitialMove.Key.Equals(EmptyMove.Key) ? move : currentNode.InitialMove));
+						// ZielArray ist nicht lang genug exception like ?? searchQueue.Enqueue(new SearchNode(newHistory, InvertColor(currentTurnColor), currentDepth + 0.5, currentNode.InitialMove.Key.Equals(EmptyMove.Key) ? move : currentNode.InitialMove));
 					}
 				}
 			}
 		}
+
+		/**private async Task CalculateBestMoveAsync()
+		{
+			Turn initialTurnColor = this.TurnColor;
+			MoveHistory initialHistory = this.UpUntilPositionHistory.Clone();
+
+			/**
+			 This segment defines the CalculateBestMove method and sets up the lineScores dictionary to store the scores of each line,
+			a stack called searchStack to store the search nodes, and then pushes the initial node onto the stack.
+			 * /
+
+			Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>> lineScores = new Dictionary<KeyValuePair<Coordinate, Coordinate>, List<double>>();
+			Queue<SearchNode> searchQueue = new Queue<SearchNode>();
+			searchQueue.Enqueue(new SearchNode(initialHistory, initialTurnColor, 0.0, EmptyMove));
+
+			// Method Restructure
+			double currentDepth = 0.0;
+
+			var initialMoveScores = new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>();
+
+			/**
+			 * This while loop iterates until the search stack is empty. It processes each node in the search tree.
+			 * /
+			while (searchQueue.Count > 0)   // Übeltäter?
+			{
+				/**
+				 * This segment pops a node from the stack, retrieves the depth, turn color, move history, and scores for the current line.
+				 * /
+				SearchNode currentNode = searchQueue.Dequeue();
+				//Chessboard2.Log($"Depth: {currentNode.Depth} Current Queue Size: {searchQueue.Count}");
+
+				if (currentNode.Depth > currentDepth && currentNode.Depth % 1.0 == 0.0 && initialMoveScores.Count > 0)
+				{
+					ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
+				}
+
+				currentDepth = currentNode.Depth;
+				Turn currentTurnColor = currentNode.TurnColor;
+				MoveHistory currentHistory = currentNode.History;
+
+				/**
+				 * Check if the maximum depth has been reached, if it's reached, the method calls Finish and returns.
+				 * /
+				if (currentDepth > MaxDepth /* || (DateTime.Now - StartTime).TotalMilliseconds > this.maxTimeMS* /)
+				{
+					ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
+					return;
+				}
+
+				/**
+				 * This segment calculates the current position, gets all legal moves, and then processes each move in a loop.
+				 * /
+				var pos = currentHistory.CalculatePosition();
+				var allLegalMoves = GetAllLegalMoves(pos, currentTurnColor, currentHistory);
+
+				// Determine Check
+				if (currentDepth == 0)
+				{
+					// We have all Initial Legal Moves
+					if (initialMoveScores.Count == 0)
+					{
+						// Add all initial moves
+						foreach (var move in allLegalMoves)
+						{
+							if (initialMoveScores.ContainsKey(move)) continue;
+							initialMoveScores.Add(move, new KeyValuePair<List<double>, int>(new List<double>(), 0));
+						}
+					}
+
+					//IsCheck = IsTurnColorKingInCheck(pos, UpUntilPositionHistory, initialTurnColor);
+					IsCheck = KingSafety2_IsKingSafe_IncludeFindKing(pos, initialTurnColor);
+					if (allLegalMoves.Count == 0)
+					{
+						// No legal moves. Now its either Stalemate or Checkmate
+						if (IsCheck) IsCheckmate = true;
+						else IsStalemate = true;
+						ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
+						return;
+					}
+					else if (pos.Count <= 2)
+					{
+						IsDraw = true;
+						ProcessNewDepth(new Dictionary<KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char>, KeyValuePair<List<double>, int>>(initialMoveScores), currentNode.Depth);
+						return;
+					}
+				}
+
+				List<Task> tasks = new List<Task>();
+
+				foreach (var move in allLegalMoves)
+				{
+					tasks.Add(Task.Run(() => ProcessMove(move, initialHistory, initialTurnColor, positionScoresCache)));
+				}
+
+				await Task.WhenAll(tasks);
+			}
+		}
+		*/
 
 		private static bool _IsTurnColorKingInCheck(Dictionary<Coordinate, PieceType> position, MoveHistory History, Turn turnColor)
 		{
@@ -1017,6 +1703,8 @@ namespace ChessV1
 			newHistory.BlackCastleOptions = BlackCastleOptions;
 			return newHistory;
 		}
+
+		// https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
 		public string GeneratePositionKey() => GeneratePositionKey(this, CalculatePosition());
 		public string GeneratePositionKey(Dictionary<Coordinate, PieceType> PositionTrust) => GeneratePositionKey(this, PositionTrust);
 		public static string GeneratePositionKey(MoveHistory History, Dictionary<Coordinate, PieceType> Position = null)
@@ -1042,6 +1730,28 @@ namespace ChessV1
 					key += '/';
 				}
 			}
+
+			// Turn Color
+			key += " " + ((History.Count == 0 || History.Count % 2 == 0) ? "w" : "b") + " ";
+			// Castleing Options
+			if (History.WhiteCastleOptions == CastleOptions.Both) key += "KQ";
+			else if (History.WhiteCastleOptions == CastleOptions.Short) key += "K";
+			else if (History.WhiteCastleOptions == CastleOptions.Long) key += "Q";
+			else key += "-";
+
+			if (History.BlackCastleOptions == CastleOptions.Both) key += "kq";
+			else if (History.BlackCastleOptions == CastleOptions.Short) key += "k";
+			else if (History.BlackCastleOptions == CastleOptions.Long) key += "q";
+			else key += "-";
+			// En passant
+			// Just look at last move
+			var LastMove = History.LastMove;
+			if(LastMove.Key.Col == LastMove.Value.Col && Math.Abs(LastMove.Key.Row - LastMove.Value.Row) == 2
+				&& Position.ContainsKey(LastMove.Value) && Position[LastMove.Value].ToString().ToUpper() == "PAWN")
+				key += " " + ((char)(LastMove.Value.Col + 97)) + ((LastMove.Key.Row + LastMove.Value.Row) / 2);	// Either from 1 -> 3 => 4/2=2 or 6 -> 4 => 10/2=5
+
+			// This should generate a key that is unique to its position but not unique to its move order (except en passant and castle)
+
 			return key;
 		}
 		private static string GetPieceChar(PieceType type)

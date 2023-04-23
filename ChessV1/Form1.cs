@@ -206,7 +206,7 @@ namespace ChessV1
 		private void Form1_Load(object sender, EventArgs e)
 		{
 			_Chessboard = new Chessboard2(1000);
-			this.Controls.Add((Chessboard2) _Chessboard);
+			//this.Controls.Add((Chessboard2) _Chessboard);
 			RefreshSizeButton.PerformClick();
 
 			new UnitTest();
