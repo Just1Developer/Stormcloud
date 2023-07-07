@@ -101,9 +101,6 @@ namespace ChessV1.Stormcloud
 			double score = 0.0;
 			foreach (byte doublePiece in Position)
 			{
-				// byte piece1 = (byte)(doublePiece & firstHalfMask);
-				// byte piece2 = (byte) (doublePiece & secondHalfMask);
-
 				if (IsWhitePieceFirstHalf(doublePiece)) score += BytePieceValue((byte) ((doublePiece & firstHalfMask) >> 4));    // Shift by 4 to shift bits to second half
 				else score -= BytePieceValue((byte) ((doublePiece & firstHalfMask) >> 4));
 
@@ -117,23 +114,9 @@ namespace ChessV1.Stormcloud
 	partial class Stormcloud3	// Search Algorithm
 	{
 		private ConcurrentQueue<SearchNode> SearchNodes = new ConcurrentQueue<SearchNode>();	// We're using a queue so that we can use just one, right?
-		private ConcurrentDictionary<byte[], double> Hard_InitialMoveScores = new ConcurrentDictionary<byte[], double>();	// Finished Depth
-		private ConcurrentDictionary<byte[], double> Temp_InitialMoveScores = new ConcurrentDictionary<byte[], double>();   // Calculating (Live)
+		private ConcurrentDictionary<byte[], double> Temp_InitialMoveScores = new ConcurrentDictionary<byte[], double>();   // Calculating (Live) (just clone when necessary)
 
 		private ConcurrentDictionary<string, double> PositionDataCacheDirectEvaluation = new ConcurrentDictionary<string, double>();
-
-		/*
-		private ConcurrentQueue<SearchNode> NodeQueueOne = new ConcurrentQueue<SearchNode>();
-		private ConcurrentQueue<SearchNode> NodeQueueTwo = new ConcurrentQueue<SearchNode>();
-		private byte CurrentQueue = 0;
-		private SearchNode GetNode()
-		{
-			SearchNode Node = null;
-			if(CurrentQueue == 0 || NodeQueueTwo.Count == 0) NodeQueueOne.TryDequeue(out Node);
-			else if(CurrentQueue == 1 || NodeQueueOne.Count == 0) NodeQueueTwo.TryDequeue(out Node);
-			return Node;
-		}
-		*/
 
 		private byte[] StartPosition;
 		private Turn StartTurnColor;
@@ -184,15 +167,6 @@ namespace ChessV1.Stormcloud
 				OpponentMoveScores.Add(move.Move, score);
 				OpponentMoveFollowUps.Add(move.Move, moves);
 			}
-
-
-			/** Top 3 Moves:
-			List<Move> topMoves = OpponentMoveScores
-				.OrderByDescending(pair => pair.Value)
-				.Take(3)
-				.Select(pair => pair.Key)
-				.ToList();*/
-			// No order by descending because O(n) is better than O(n²)
 
 			byte[] bestMove = { 0, 0 };
 			double maxScore = double.NegativeInfinity;
@@ -391,11 +365,7 @@ namespace ChessV1.Stormcloud
 			//																							mask is important so we only judge the color of the pony now
 			// What? ->						div index by 2		get last bit to see if first half or 2nd	bit == 1 => uneven index => second half, else first half						=> this works because the other half is definetly 0000 bcs mask
 			//																																	then, when that masked with 10001000 (first and 2nd half black) yields 0, that means the horse is white.
-			// bool IsHorseWhite = (position[knightLocationIndex >> 1] & ((knightLocationIndex & 0x01) == 0x01 ? secondHalfMask : firstHalfMask) & 0x88) == 0;
-
-			//bool IsKnightWhite = IsWhitePiece((byte) (position[knightLocationIndex >> 1] & ((knightLocationIndex & 1) == 1 ? secondHalfMask : firstHalfMask)));
-			
-			//bool IsKnightWhite = IsWhitePiece(position[knightLocationIndex >> 1], (knightLocationIndex & 1) == 1);
+			//bool IsKnightWhite = IsWhitePiece(position[knightLocationIndex >> 1], (knightLocationIndex & 1) == 1); -> perhaps keep for now
 
 			// This seems buggy
 			// Todo
@@ -491,9 +461,6 @@ namespace ChessV1.Stormcloud
 			byte fromIndex = (byte) (move[0] >> 1); // equivalent to move[0] / 2
 			byte toIndex = (byte) (move[1] >> 1);   // equivalent to move[1] / 2
 
-			//bool isFromSecondHalf = (move[0] & 1) == 1; // equivalent to move[0] % 2 == 1
-			//bool isToSecondHalf = (move[1] & 1) == 1;   // equivalent to move[1] % 2 == 1
-
 			byte fromByte = Position[fromIndex];
 			byte toByte = Position[toIndex];
 
@@ -563,8 +530,6 @@ namespace ChessV1.Stormcloud
 				// Its always +/- 16
 				// Check if they are the same without the 16er-bit => 11101111 => 0xEF
 				if((move[0] & 0xEF) == (move[1] & 0xEF) && move[0] != move[1])
-				// Check if they are the same without the 16er-bit => 11110111 => 0xF7
-				//if((fromByte & 0xF7) == (toByte & 0xF7) && move[0] != move[1])
 				{
 					// moved by 16 (2 ranks) and is a pawn => Insert en passant
 					byte enPassantIndex = (byte) ((fromIndex + toIndex) >> 1);	// Average of the indexes
@@ -749,317 +714,3 @@ namespace ChessV1.Stormcloud
 		};
 	}
 }
-
-/*
- * Old code:
- * 		private void ProcessNextNode()
-		{
-			SearchNode node;
-			SearchNodes.TryDequeue(out node);
-
-			var AllNextOpponentMovesAndPositions = GetAllLegalMoveAndResultingPositionPairs(node.Position);
-			var OpponentMoveScores = new List<KeyValuePair<byte[], double>>();
-
-			foreach (var movePair in AllNextOpponentMovesAndPositions)
-			{
-				double score = 0;
-				foreach (var pos in GetAllLegalMoveAndResultingPositionPairs(movePair.Value))
-				{
-					score += PositionEvaluation(pos.Value, new PositionData());
-				}
-				OpponentMoveScores.Add(new KeyValuePair<byte[], double>(movePair.Key, score));
-			}
-			OpponentMoveScores.Sort((x, y) => y.Value.CompareTo(x.Value));
-			// Move with highest score is at index 0
-			SearchNode OpponentNode = node.Result(OpponentMoveScores[0].Key);   // Perhaps use an implementation where the already saved new position is used.
-
-			// Now get and enqueue all new stuff
-			var AllNextOwnMovesAndPositions = GetAllLegalMoveAndResultingPositionPairs(OpponentNode.Position);
-			foreach (var pair in AllNextOwnMovesAndPositions)
-			{
-				SearchNode node2 = OpponentNode.Result(pair.Key);
-				// ToDo Cache + Eval + PositionData object rework
-				if(PositionDataCache.ContainsKey(node2.PositionData.PositionKey)) SearchNodes.Enqueue(node2);
-			}
-		}
-
-		private List<KeyValuePair<byte[], byte[]>> GetAllLegalMoveAndResultingPositionPairs(byte[] Position)
-		{
-			var pos = new List<KeyValuePair<byte[], byte[]>>();
-			return pos;
-		}
-
-
-My own, outperfomed by GPT-4:
-		public SearchNode Result(byte[] Move)
-		{
-			// [0] = From, [1] = To
-			// Position: 32 double-piece array
-			byte[] index = { (byte)(Move[0] / 2), (byte) (Move[1] / 2) };
-			bool[] secHalf = { Move[0] % 2 == 1, Move[1] % 2 == 1 };
-			byte fromByte = Position[index[0]];
-			byte toByte = Position[index[1]];
-			if(secHalf[0])
-			{
-				// get and preserve only second 4 bits => % 16
-				fromByte = (byte) (fromByte % 16);
-			}
-			else
-			{
-				// get and preserve only first 4 bits => - (%16)
-				fromByte -= (byte) (fromByte % 16);
-			}
-			if (secHalf[1])
-			{
-				// get and preserve only second 4 bits => % 16
-				toByte = (byte)(fromByte % 16);
-			}
-			else
-			{
-				// get and preserve only first 4 bits => - (%16)
-				toByte -= (byte)(fromByte % 16);
-			}
-			byte[] pos = new byte[32];
-			Array.Copy(Position, pos, 32);
-			pos[index[0]] = fromByte;
-			pos[index[1]] = toByte;
-			return new SearchNode(pos);
-		}
-
-
-
-		public static Dictionary<byte, double> BytePieceValues2 = new Dictionary<byte, double>()
-			{
-				{ 0x00, 1 },	// White Pawn
-				{ 0x01, 1 },	// White Knight
-				{ 0x02, 1 },	// White Bishop
-				{ 0x03, 1 },	// White Rook
-				{ 0x04, 1 },	// White Queen
-				{ 0x05, 1 },	// White King
-				{ 0x06, 1 },	// White En Passant Pawn
-
-				{ 0x08, 1 },	// Black Pawn
-				{ 0x09, 1 },	// Black Knight
-				{ 0x0A, 1 },	// Black Bishop
-				{ 0x0B, 1 },	// Black Rook
-				{ 0x0C, 1 },	// Black Queen
-				{ 0x0D, 1 },	// Black King
-				{ 0x0E, 1 },	// Black En Passant Pawn
-			};
-
-		Full Value Array:
-		private static double BytePieceValue(byte piece2ndHalf) => BytePieceValues[piece2ndHalf & 0x07];	// Only last 3 bits => Mask 00000111 => 7
-		private static double[] BytePieceValues =
-		{
-		// Value, Representation	| Hex  | 2nd Bit Half
-			0,	// Empty			| 0x00 | 0000
-			1,	// White Pawn		| 0x01 | 0001
-			3,	// White Knight		| 0x02 | 0010
-			3,	// White Bishop		| 0x03 | 0011
-			5,	// White Rook		| 0x04 | 0100
-			9,	// White Queen		| 0x05 | 0101
-			double.PositiveInfinity,	// White King		| 0x06 | 0110
-			1,	// White En Passant	| 0x07 | 0111
-
-			0,	// Index-Filler		| 0x08 | 1000
-				
-			1,	// Black Pawn		| 0x09 | 1001
-			3,	// Black Knight		| 0x0A | 1010
-			3,	// Black Bishop		| 0x0B | 1011
-			5,	// Black Rook		| 0x0C | 1100
-			9,	// Black Queen		| 0x0D | 1101
-			double.PositiveInfinity,	// Black King		| 0x0E | 1110
-			1,	// Black En Passant	| 0x0F | 1111
-		};
-
-
-
-	internal struct PositionDataOld
-	{
-		List<Move2> AllLegalMoves;
-		double PositionKeyEval;
-		public string PositionKey;
-	}
-
-	internal struct PositionDataOlder
-	{
-		Turn TurnColor;
-		int NodeDepth;
-		double PositionKeyEval;
-		string PositionKey;
-	}
-
-
-
-
-
-
-
-
-
-
-
-Old Classes:
-
-	struct Move
-	{
-		internal byte From;
-		internal byte To;
-
-		public Move(byte From, byte To)
-		{
-			this.From = From;
-			this.To = To;
-		}
-
-		public override bool Equals(object obj)
-		{
-			if (obj == null || GetType() != obj.GetType())
-				return false;
-
-			Move other = (Move)obj;
-			return From == other.From && To == other.To;
-		}
-
-		public override int GetHashCode()
-		{
-			return From.GetHashCode() * 17 + To.GetHashCode();
-		}
-
-		// Overload == and != operators
-		public static bool operator ==(Move c1, Move c2)
-		{
-			if (ReferenceEquals(c1, null))
-			{
-				return ReferenceEquals(c2, null);
-			}
-
-			return c1.Equals(c2);
-		}
-
-		public static bool operator !=(Move c1, Move c2)
-		{
-			return !(c1 == c2);
-		}
-
-		public override string ToString()
-		{
-			return $"[From: {From}, To: {To}]";	// Todo print
-		}
-	}
-	
-	// Or Define Move As KeyValuePair<Coordinate, Coordinate>
-	struct Move2
-	{
-		Coordinate From;
-		Coordinate To;
-
-		public Move2(Coordinate From, Coordinate To)
-		{
-			this.From = From;
-			this.To = To;
-		}
-
-		public override bool Equals(object obj)
-		{
-			if (obj == null || GetType() != obj.GetType())
-				return false;
-
-			Move2 other = (Move2)obj;
-			return From == other.From && To == other.To;
-		}
-
-		public override int GetHashCode()
-		{
-			return From.GetHashCode() * 17 + To.GetHashCode();
-		}
-
-		// Overload == and != operators
-		public static bool operator ==(Move2 c1, Move2 c2)
-		{
-			if (ReferenceEquals(c1, null))
-			{
-				return ReferenceEquals(c2, null);
-			}
-
-			return c1.Equals(c2);
-		}
-
-		public static bool operator !=(Move2 c1, Move2 c2)
-		{
-			return !(c1 == c2);
-		}
-
-		public override string ToString()
-		{
-			return $"[From: {From}, To: {To}]";
-		}
-	}
-
-	struct Coordinate
-	{
-		public static Coordinate NullCoord = new Coordinate(-1, -1);
-		public int Row { get; set; }
-		public int Col { get; set; }
-
-		public Coordinate(int row, int col)
-		{
-			Row = row;
-			Col = col;
-		}
-
-		public override bool Equals(object obj)
-		{
-			if (obj == null || GetType() != obj.GetType())
-				return false;
-
-			Coordinate other = (Coordinate)obj;
-			return Row == other.Row && Col == other.Col;
-		}
-
-		public override int GetHashCode()
-		{
-			return Row * 17 + Col;
-		}
-
-		// Overload == and != operators
-		public static bool operator ==(Coordinate c1, Coordinate c2)
-		{
-			if (ReferenceEquals(c1, null))
-			{
-				return ReferenceEquals(c2, null);
-			}
-
-			return c1.Equals(c2);
-		}
-
-		public static bool operator !=(Coordinate c1, Coordinate c2)
-		{
-			return !(c1 == c2);
-		}
-
-		public override string ToString()
-		{
-			return $"({Row}, {Col})";
-		}
-	}
-
-	enum PieceType
-	{
-		WhiteKing = 9999, WhiteQueen = 9, WhiteRook = 5, WhiteBishop = 3, WhiteKnight = 4, WhitePawn = 1, WhiteEnpassant = 2,
-		BlackKing = 9991, BlackQueen = 19, BlackRook = 15, BlackBishop = 13, BlackKnight = 14, BlackPawn = 11, BlackEnpassant = 12
-	}
-
-
-		// not my best work honestly, but it'll do for now
-		public static int GetPieceValue(PieceType Type)
-		{
-			if ((int)Type > 9000) return (int) PieceType.WhiteKing;
-			int type = (int) Type;
-			if (type >= 10) type -= 10;
-			if (type == 4) type = 3;
-			if (type == 2) type = 1;
-			return type;
-		}
-
-*/
