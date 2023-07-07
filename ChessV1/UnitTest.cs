@@ -39,7 +39,7 @@ namespace ChessV1
 			//Calculation calc = new Calculation(moveHistory, 22, Turn.White);    // Something is wrong, Depth 50: 145ms, Kf1 (not even in the top 3 according to stockfish)
 			//Chessboard2.Log($"InCheck: {calc.IsCheck}, IsCheckmate: {calc.IsCheckmate}, IsStalemate: {calc.IsStalemate}");
 			// Async Calc:
-			Calculation calc = new Calculation(moveHistory, 22, Turn.White);
+			//Calculation calc = new Calculation(moveHistory, 22, Turn.White, TestBoardPosition);
 		}
 	}
 }

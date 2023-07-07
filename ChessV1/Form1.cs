@@ -195,7 +195,12 @@ namespace ChessV1
 		public void SetBestMove(string move, int score, int Depth)
 		{
 			Catfish_UI_BestMove.Text = move;
-			Catfish_UI_BestMoveScore.Text = $"Score: {(double) (score / 100.0)}  |  Depth: {Depth}";
+			//Catfish_UI_BestMoveScore.Text = $"Score: {(double) (score / 100.0)}  |  Depth: {Depth}";
+		}
+
+		public void SetScore(double score)
+		{
+			Catfish_UI_BestMoveScore.Text = $"Material: {(score > 0 ? $"+{score}" : $"{score}")}";
 		}
 
 		public void newTurn(Turn turn)
@@ -205,8 +210,8 @@ namespace ChessV1
 
 		private void Form1_Load(object sender, EventArgs e)
 		{
-			_Chessboard = new Chessboard2(1000);
-			//this.Controls.Add((Chessboard2) _Chessboard);
+			_Chessboard = new Chessboard(1000);
+			this.Controls.Add((Chessboard) _Chessboard);
 			RefreshSizeButton.PerformClick();
 
 			new UnitTest();

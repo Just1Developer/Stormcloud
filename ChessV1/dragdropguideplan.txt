@@ -1,0 +1,89 @@
+MouseDown Event
+
+Chessboard class:
+1. Confirm Mouse Button
+2. Get the field of clicking
+3. Check if own piece -> MouseUp is handling Moves (chess.com uses down when not holding)
+4. Clear selection if Holding and clicked on same square
+5. (Entering SelectPiece Method): Set Selected Field, Holding
+	and CurrentMousePosition
+6. Clear Legal Moves
+7. Get new Legal moves and fill up the list
+8. Refresh
+
+
+Chessboard2 class:
+1. Get Field of clicking
+2. Confirm Mouse Button
+3. Get Type of Piece
+4. Check for click on non-own field while no field is selected
+5. InvokeClickedOnFieldWhenSelected:
+	If Clicked on own piece:
+	6. Find and collect all legal moves for the selected piece
+	7. Set Selected Field, Holding and Type
+	Added: Set MousePosition variable to current position
+	8. Refresh
+	If not:
+	6. Check if Legal moves contain clicked field
+		If yes:
+		7. Apply the move
+		8. Deselect the field
+		9. Refresh
+		If not:
+		7. Deselect the current field
+		8. Refresh
+
+
+
+MouseUp Event
+
+Chessboard class:
+1. Get Field
+2. Check which Button
+	RMB: Highlight Field Toggle Stuff and Refresh
+	LMB:
+	3. If field is selectedField
+		If yes:
+		4. Check if Holding
+			If yes:
+			5. Stop Holding
+			6. Refresh
+			If not:
+			5. Deselect
+			6. Refresh
+		If not:
+		4. If dragged onto own piece, stop holding
+		5. Check if it's a legal move
+			If not:
+			6. Holding to false
+			7. Refresh
+			If yes:
+			6. Move Piece
+			7. Deselect Field
+			8. Refresh
+
+Chessboard2 class:
+1. Get Field
+2. Check if LMB
+	If yes:
+	3. Check if currently Holding
+		If yes:
+		4. Get Piecetype of field
+		4.5. If Field same as 
+		5. InvokeClickedOnFieldWhenSelected:
+			If Clicked on own piece:
+			6. Find and collect all legal moves for the selected piece
+			7. Set Selected Field, Holding and Type
+			Added: Set MousePosition variable to current position
+			8. Refresh
+			If not:
+			6. Check if Legal moves contain clicked field
+				If yes:
+				7. Apply the move
+				8. Deselect the field
+				9. Refresh
+				If not:
+				7. Deselect the current field
+				8. Refresh
+
+

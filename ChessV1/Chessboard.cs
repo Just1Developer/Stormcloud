@@ -225,6 +225,16 @@ namespace ChessV1
 			Point current = new Point(0, 0);
 			int delta = DisplaySize / 8;
 
+			List<int> legalKnightMoves = new List<int>();
+			if (StormcloudPosition == null) StormcloudPosition = ConvertToHexPositionArray(this.Pieces);
+			if(SelectedField >= 0)
+			{
+				foreach (byte mov in Stormcloud.Stormcloud3.GetLegalMovesKnight(StormcloudPosition, (byte) SelectedField, true))
+				{
+					legalKnightMoves.Add(mov);
+				}
+			}
+
 			// 0-7 for each row
 			for (int field = 0; field < 64; field++)
 			{
@@ -246,6 +256,15 @@ namespace ChessV1
 				if (LegalMoves != null && LegalMoves.Contains(field))
 					if (IsOpponentPiece(field) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(field)) g.DrawEllipse(new Pen(LegalMoveColor, delta / 12), new Rectangle(new Point(current.X + delta / 2 - delta / 4, current.Y + delta / 2 - delta / 4), new Size(delta / 2, delta / 2)));
 					else g.FillEllipse(LegalMoveColor, new Rectangle(new Point(current.X + delta / 2 - delta / 8, current.Y + delta / 2 - delta / 8), new Size(delta / 4, delta / 4)));
+
+				g.DrawString($"{field}", new Font(Font.FontFamily, 13f, FontStyle.Bold), new SolidBrush(Color.Red), rect);
+
+
+				// remove this
+				if(legalKnightMoves.Contains(field))
+				{
+					g.FillEllipse(new SolidBrush(Color.Red), new Rectangle(new Point(current.X + delta / 2 - delta / 8, current.Y + delta / 2 - delta / 8), new Size(delta / 4, delta / 4)));
+				}
 
 				if (field % 8 == 7) current = new Point(0, delta * ((field + 1) / 8));  // 8 = next row: 8/8 = 1 threshold
 				else current = new Point(current.X + delta, current.Y);
@@ -292,7 +311,45 @@ namespace ChessV1
 				Turn = Turn.White;
 			}
 			Form1.self.newTurn(Turn);
+			StormcloudPosition = ConvertToHexPositionArray(this.Pieces);
+			Form1.self.SetScore(Stormcloud.Stormcloud3.MaterialEvaluation(StormcloudPosition));
 		}
+
+		#region Stormcloud Conversion
+
+		byte[] StormcloudPosition = null;
+
+		private static byte[] ConvertToHexPositionArray(Dictionary<int, PieceType> pieces)
+		{
+			byte[] pos = new byte[32];
+			for (int i = 0; i < 64; i+=2)
+			{
+				PieceType type1 = PieceType.None, type2 = PieceType.None;
+				if (pieces.ContainsKey(i)) type1 = pieces[i];
+				if (pieces.ContainsKey(i + 1)) type2 = pieces[i + 1];
+				pos[i / 2] = (byte)((PieceHexValue[type1] & 0xF0) + (PieceHexValue[type2] & 0x0F));
+			}
+			return pos;
+		}
+
+		private static Dictionary<PieceType, byte> PieceHexValue = new Dictionary<PieceType, byte>()
+		{
+			{ PieceType.None, 0x00 },
+			{ PieceType.PAWN, 0x11 },
+			{ PieceType.KNIGHT, 0x22 },
+			{ PieceType.BISHOP, 0x33 },
+			{ PieceType.ROOK, 0x44 },
+			{ PieceType.QUEEN, 0x55 },
+			{ PieceType.KING, 0x66 },	// 7 is en passant and 8 is empty (1000)
+			{ PieceType.pawn, 0x99 },
+			{ PieceType.knight, 0xAA },
+			{ PieceType.bishop, 0xBB },
+			{ PieceType.rook, 0xCC },
+			{ PieceType.queen, 0xDD },
+			{ PieceType.king, 0xEE },
+		};
+
+		#endregion
 
 		public void FlipBoard(bool immediateFlip = false)
 		{

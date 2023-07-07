@@ -25,7 +25,7 @@ namespace ChessV1
 		ChessMode IChessboard.ChessMode { get; set; }
 
 		// Method Implementations, not yet functional
-		void IChessboard.Reset() {}
+		void IChessboard.Reset() { ResetBoard(Turn.White); }
 		bool IChessboard.UndoLastMove() => false;
 		bool IChessboard.Focus() => base.Focus();
 
@@ -502,6 +502,7 @@ namespace ChessV1
 		// Depth within queues stays the same. TQA is short for Two-Queue-Approach. Maybe change this up to remember the low and high queue
 		private TQA_SearchNode TQA_FetchNewNode(TQA_SearchNode DefaultNode = null)
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_FetchNewNode");
 			double One = TQA_QueueOneDepth;
 			double Two = TQA_QueueTwoDepth;
 			TQA_SearchNode node;
@@ -514,6 +515,9 @@ namespace ChessV1
 		}
 		private void TQA_EnqueueToSeachQueue(TQA_SearchNode SearchNode)
 		{
+			Chessboard2.Log("Qing new Element. New Queue Sizes: One: " + TQA_SearchQueueOne.Count + " | Two: " + TQA_SearchQueueTwo.Count);
+
+			// Debug: Chessboard2.Log("Function Call: TQA_EnqueueToSeachQueue");
 			double Depth = SearchNode.Depth;
 			if (TQA_QueueOneDepth == Depth) { TQA_SearchQueueOne.Enqueue(SearchNode); return; }
 			if (TQA_QueueTwoDepth == Depth) { TQA_SearchQueueTwo.Enqueue(SearchNode); return; }
@@ -528,6 +532,7 @@ namespace ChessV1
 		// This method happens when a queue is empty
 		private async Task ProcessBacklogAsync()
 		{
+			// Debug: Chessboard2.Log("Function Call: ProcessBacklogAsync");
 			await BacklogSemaphore.WaitAsync(); // Acquire the semaphore
 			try
 			{
@@ -562,8 +567,25 @@ namespace ChessV1
 			}
 		}
 
-		private async Task TQA_ProcessNewDepthAync(double MaxDepth)
+		private int ProcessedDepth = 0;
+		private async Task TQA_ProcessNewDepthAsync(double MaxDepth)
 		{
+			if (MaxDepth % 1.0 == 0.5) return;
+
+			if ((int)MaxDepth <= ProcessedDepth) return;
+			ProcessedDepth = (int) MaxDepth;
+
+			if (MaxDepth >= 2)
+			{
+				TimeSpan Calc = DateTime.Now - StartTime;
+				int mins = (int)Calc.TotalMinutes;
+				string _mins = mins < 10 ? "0" + mins : "" + mins;
+				string time = mins >= 2 ? $"{_mins}:{Calc.Seconds}" : $"00:{(int)Calc.TotalSeconds}";
+				Chessboard2.Log($"Depth {MaxDepth} Reached! Time: {time},{Calc.Milliseconds}s");
+			}
+
+
+			// Debug: Chessboard2.Log("Function Call: TQA_ProcessNewDepthAync");
 			// One queue is empty
 			// Handle the backlog
 			await ProcessBacklogAsync();
@@ -635,15 +657,18 @@ namespace ChessV1
 			var top3Keys = top3.Select(kv => kv.Key).ToList();
 
 			// Print the keys for demonstration purposes
+			/* For some reason it either takes very long or they arent printed at depth != 1
 			int d = 1;
 			foreach (var key in top3Keys)
 			{
 				Console.WriteLine($"Depth {MaxDepth}, {d++}.Best Move: ({key.Key.Key}, {key.Key.Value}), {key.Value}");
 			}
+			*/
 		}
 
 		private double TQA_CalculateMoveScore(double TotalScore, double HighestScore, double LowestScore, int ScoreAmounts, int CheckmateAmounts)
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_CalculateMoveScore");
 			// Code copied from CalculateMoveScore(List<int>, int)
 
 			if (ScoreAmounts == 0) return -1;
@@ -662,62 +687,9 @@ namespace ChessV1
 			return score;
 		}
 
-		/*
-		private async Task TQA_CalculateBestMoveAync(MoveHistory CurrentHistory, Dictionary<Coordinate, PieceType> InitialPosition = null)
-		{
-			// First, lets get all the initial moves, position and set up our data
-			if(InitialPosition == null) InitialPosition = CurrentHistory.CalculatePosition();
-			var AllInitialLegalMoves = GetAllLegalMoves(InitialPosition, TurnColor, CurrentHistory);
-			foreach (var Move in AllInitialLegalMoves)
-			{
-			}
-		}
-
-		private async Task TQA_ProcessNewNodeAsync(Dictionary<Coordinate, PieceType> Position, MoveHistory oldHistory, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> Move, double depth, bool IsInitialMove = false)
-		{
-			TQA_SearchNode currentNode = TQA_FetchNewNode();
-			if (currentNode == null) return;
-			// Retrieved current Node
-			// Now first check if either queue is now empty
-			if(TQA_SearchQueueOne.Count == 0 || TQA_SearchQueueTwo.Count == 0)
-			{
-				//await TQA_ProcessNewDepthAync();
-			}
-		}
-
-		private async Task TQA_CalcMoveAync_Unused(Dictionary<Coordinate, PieceType> Position, MoveHistory oldHistory, KeyValuePair<KeyValuePair<Coordinate, Coordinate>, char> Move, double depth, bool IsInitialMove = false)
-		{
-			// Your search logic for a single initial move
-			MoveHistory newHistory = oldHistory.Branch(Move);
-			var newPosition = newHistory.CalculatePosition();
-			string posKey = newHistory.GeneratePositionKey(newPosition);
-
-			if (IsInitialMove && !Move.Key.Equals(Coordinate.NullCoord))
-			{
-				TQA_InitialMoves.TryAdd(Move, posKey);
-			}
-			// Calculate the actual score, but only if this is not being calculated yet
-			if(TQA_PositionDataCache.ContainsKey(posKey))
-			{
-				// Already being handled, somehow remember this needs to be added, maybe use bottom-up after all?
-				// No, we just dont care. Later invert statement.
-			}
-			else
-			{
-				bool IsCheckmate = KingSafety2_IsKingSafe_IncludeFindKing(newPosition, newHistory.Count % 2 == 0 ? Turn.White : Turn.Black);
-				// Calculate score add add to the Cache
-				double Score = GetScoreOf(Move, newHistory, depth);
-				var allLegalFollowUpMovesList = new List<string>();
-
-				//var AllFollowUpMoves = GetAllLegalMoves(Position);
-				
-				TQA_PositionDataCache.TryAdd(posKey, new KeyValuePair<KeyValuePair<KeyValuePair<double, int>, List<string>>, bool>(new KeyValuePair<KeyValuePair<double, int>, List<string>>(new KeyValuePair<double, int>(Score, 1), allLegalFollowUpMovesList), IsCheckmate));
-			}
-		}
-		*/
-
 		private async Task TQA_CalcMoveAsync2(TQA_SearchNode Node)
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_CalcMoveAsync2");
 			// Your search logic for a single initial move
 			MoveHistory newHistory = Node.CurrentMoveHistory;
 			var newPosition = newHistory.CalculatePosition();
@@ -786,6 +758,7 @@ namespace ChessV1
 		{
 			public static List<TQA_SearchNode> AllNewNodesFromPosition(Dictionary<Coordinate, PieceType> Position, MoveHistory History, double currentDepth, double MaxDepth)
 			{
+				// Debug: Chessboard2.Log("Function Call: AllNewNodesFromPosition");
 				Turn TurnColor = History.Count % 2 == 1 ? Turn.White : Turn.Black; // include invert through == 1 and not == 0 bcs thats the color of the last 
 				var AllFollowUpMoves = GetAllLegalMoves(Position, TurnColor, History);
 				var Nodelist = new List<TQA_SearchNode>();
@@ -830,6 +803,7 @@ namespace ChessV1
 				string oldPositionKey,
 				double newDepth)
 			{
+				// Debug: Chessboard2.Log("Function Call: TQA_SearchNode Constructor");
 				CurrentPosition = newPosition;
 				CurrentMoveHistory = newHistory;
 				CurrentPositionKey = newPositionKey;
@@ -846,10 +820,11 @@ namespace ChessV1
 		/// </summary>
 		/// <param name="Position"></param>
 		/// <param name="History"></param>
-		/// <param name="currentDepth"></param>
 		/// <param name="MaxDepth"></param>
 		public Calculation(MoveHistory History, double MaxDepth, Turn InitialTurnColor, Dictionary<Coordinate, PieceType> Position = null)
 		{
+			StartTime = DateTime.Now;
+			Chessboard2.Log("Function Call: Calculation Async Constructor");
 			this.TurnColor = InitialTurnColor;
 			// ToDo Set global Check, Checkmate and Stalemate variables
 			if (Position == null) Position = History.CalculatePosition();
@@ -858,6 +833,7 @@ namespace ChessV1
 
 		private async void TQA_SearchAsyncTwoQueueApproach(Dictionary<Coordinate, PieceType> Position, MoveHistory History, double currentDepth, double MaxDepth)
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_SearchAsyncTwoQueueApproach");
 			List<TQA_SearchNode> initialNodes = TQA_SearchNode.AllNewNodesFromPosition(Position, History, currentDepth, MaxDepth);
 			if(initialNodes == null || initialNodes.Count == 0)
 			{
@@ -898,6 +874,7 @@ namespace ChessV1
 
 		private async Task TQA_RunSearchForAllInitialMovesAsync2(List<TQA_SearchNode> initialMoves)
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_RunSearchForAllInitialMovesAsync2");
 			// Enqueue initial moves
 			foreach (var initialMove in initialMoves)
 			{
@@ -919,6 +896,7 @@ namespace ChessV1
 
 		private async Task TQA_RunSearchAsync2()
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_RunSearchAsync2");
 			while (true)
 			{
 				TQA_SearchNode currentNode = TQA_FetchNewNode();
@@ -955,16 +933,14 @@ namespace ChessV1
 					// Assert node is some node
 
 					double maxDepth = node.Depth - 0.5;	// Node is of the new stack. The depth we want to process, aka the finished calculated depth, is 0.5 (1 level) lower.
-					await TQA_ProcessNewDepthAync(maxDepth);
+					await TQA_ProcessNewDepthAsync(maxDepth);
 				}
-
-				// Enqueue new nodes resulting from the search
-				// TQA_EnqueueToSeachQueue(newNode);
 			}
 		}
 
 		private bool TQA_DetermineCheckZeroDepth(Dictionary<Coordinate, PieceType> Position)
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_DetermineCheckZeroDepth");
 			//IsCheck = IsTurnColorKingInCheck(pos, UpUntilPositionHistory, initialTurnColor);
 			IsCheck = KingSafety2_IsKingSafe_IncludeFindKing(Position, TurnColor);
 			if (TQA_InitialMoves.Count == 0)
@@ -986,6 +962,7 @@ namespace ChessV1
 
 		private static bool TQA_IsDraw(Dictionary<Coordinate, PieceType> Position)
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_IsDraw");
 			if (Position.Count <= 2) return true;
 
 			int MaterialValueWhite = 0, MaterialValueBlack = 0;
@@ -1005,6 +982,7 @@ namespace ChessV1
 
 		private void TQA_GameOver(GameOver GameOver)
 		{
+			// Debug: Chessboard2.Log("Function Call: TQA_GameOver");
 			// ToDo
 			Chessboard2.Log($"The Game is over: ToDo - {GameOver}");
 		}
@@ -1015,29 +993,6 @@ namespace ChessV1
 		}
 
 		#endregion
-
-
-
-		/*
-		// Proposed by GPT-4:
-		private async Task RunSearchAsync(SearchNode initialNode)
-		{
-			// Your search logic for a single initial move
-
-		}
-
-		private async Task RunSearchForAllInitialMovesAsync(List<SearchNode> initialMoves)
-		{
-			var tasks = new List<Task>();
-
-			foreach (var initialMove in initialMoves)
-			{
-				tasks.Add(Task.Run(() => RunSearchAsync(initialMove)));
-			}
-
-			await Task.WhenAll(tasks); // Wait for all tasks to complete
-		}
-		*/
 
 
 		#endregion
@@ -2010,18 +1965,6 @@ namespace ChessV1
 			// Check if None of the pieces could now take the king
 			//Chessboard2.Log($"The move that Lands on {(char)(destination.Col + 97)}{Math.Abs(8 - destination.Row)} is not out of bounds and does not capture {turnColor}'s own piece.");
 
-			/*
-			foreach (var piece in position)
-			{
-				if (GetColorOf(piece.Value) == turnColor) continue;
-				var LegalMoves = GetPieceLegalMoves(position, History, piece.Key, piece.Value, turnColor, false, false);	// We dont actually need the History here because EnPassant is not important but w/e
-				foreach (var move in LegalMoves)
-				{
-					if (position.ContainsKey(move.Key.Value) && position[move.Key.Value].ToString().ToUpper() == "KING")
-						return false;	// When performing the given move, at least one move of the opponent can capture the King. Not a legal move.
-				}
-			}
-			*/
 			// Different Approach:
 			if (!KingSafety2_IsKingSafe_IncludeFindKing(position, turnColor)) return false;	// I know I can just return this but this is for clarity.
 
@@ -2243,13 +2186,17 @@ namespace ChessV1
 			if (!move.Equals("" + (char)(Move.Value.Col + 97))) move += (char)(Move.Value.Col + 97);	// TODO Col can be -1 to 8 instead of 0 to 7
 			move += Math.Abs(8 - Move.Value.Row);   // Move.Value.Row = 0 - 7 but opposite order.	7 -> 1, 6 -> 2, 5 -> 3... 0 -> 8
 
+			/*
 			switch(MoveType)
 			{
 				case 'Q': move += "=Q"; break;
 				case 'R': move += "=R"; break;
 				case 'B': move += "=B"; break;
 				case 'K': move += "=N"; break;
-			}
+			}*/
+			// Other way:
+			if (char.IsUpper(MoveType)) move += '=' + MoveType;
+
 
 			// Add check or mate
 			//Calculation calc = new Calculation(MoveHistory.Branch(Move, MoveType), 1, GetColorOf(PieceType));
@@ -2624,6 +2571,11 @@ namespace ChessV1
 		public static bool operator !=(Coordinate c1, Coordinate c2)
 		{
 			return !(c1 == c2);
+		}
+
+		public override string ToString()
+		{
+			return $"({Row}, {Col})";
 		}
 	}
 }
