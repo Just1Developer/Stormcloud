@@ -229,9 +229,9 @@ namespace ChessV1
 			if (StormcloudPosition == null) StormcloudPosition = ConvertToHexPositionArray(this.Pieces);
 			if(SelectedField >= 0)
 			{
-				foreach (byte mov in Stormcloud.Stormcloud3.GetLegalMovesKnight(StormcloudPosition, (byte) SelectedField, true))
+				foreach (byte[] mov in Stormcloud.Stormcloud3.GetLegalMovesKnight(StormcloudPosition, (byte) SelectedField, true))
 				{
-					legalKnightMoves.Add(mov);
+					legalKnightMoves.Add(mov[1]);
 				}
 			}
 
