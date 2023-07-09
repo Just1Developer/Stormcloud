@@ -13,7 +13,7 @@ namespace ChessV1
 		// TODO Undo -> Buggy (Should do normal moves just fine, but messes up in Atomic, castleing, en passant, etc.
 		// Nvm it hella buggy; Imma leave it in but its hella buggy fr fr
 
-		private bool DisregardTurnsDebug = false;
+		private bool DisregardTurnsDebug = true;
 
 		public Turn Turn { get; private set; } = Turn.White;
 		public ChessMode ChessMode { get; set; } = ChessMode.Normal;
@@ -151,7 +151,7 @@ namespace ChessV1
 			CastleAvailability.Add(Turn.White, CastleOptions.Both);
 			CastleAvailability.Add(Turn.Black, CastleOptions.Both);
 
-			/**/
+			/** /
 
 			HighlightedFieldsManual.Clear();
 			Form1.self.UndoButton.Enabled = false;
@@ -190,6 +190,8 @@ namespace ChessV1
 				for (int field = 8; field < 16; field++) Pieces[field] = PieceType.PAWN;
 				for (int field = 48; field < 56; field++) Pieces[field] = PieceType.pawn;
 			}
+			//*/
+
 			lastMove[0] = -1;
 			lastMove[1] = -1;
 			EnPassantWhite.Clear();
@@ -229,7 +231,7 @@ namespace ChessV1
 			if (StormcloudPosition == null) StormcloudPosition = ConvertToHexPositionArray(this.Pieces);
 			if(SelectedField >= 0)
 			{
-				foreach (byte[] mov in Stormcloud.Stormcloud3.GetLegalMovesKnight(StormcloudPosition, (byte) SelectedField, true))
+				foreach (byte[] mov in Stormcloud.Stormcloud3.GetLegalMovesPawn((byte[]) StormcloudPosition.Clone(), (byte) SelectedField, true))
 				{
 					legalKnightMoves.Add(mov[1]);
 				}
