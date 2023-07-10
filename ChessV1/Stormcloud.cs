@@ -7,6 +7,32 @@ using System.Threading.Tasks;
 
 namespace ChessV1.Stormcloud
 {
+
+	// Represent Moves as short or int instead of byte arrays?
+	// Yes: Short: 16 bit -> 6 bit: from | 6 bit: to | 4 bit resulting piece.
+	// Example: Short: 001000 010000 1001 => a7 -> a6, black pawn: move title: a6
+
+	/*
+	 * If we store at the back of the short
+	 * From: byte GetFrom(byte move) => (byte) (move >> 10);
+	 * To: byte GetTo(byte move) => (byte) ((move >> 4) & 0x3F);	// Mask for last 6 bit
+	 * Piece: byte GetPiece(byte move) => (byte) (move & 0x0F);		// Mask for last 4 bit (obv)
+	 * 
+	 * Construction like this: (GPT-4 but i knew too):
+	 * short GetMoveOf(byte fromIndex, byte toIndex, byte piece) => (short) ((fromIndex << 10) | (toIndex << 4) | (pieceType >> 4));	// Piece is usually stored in first half of the byte
+	 */
+
+	/*
+	 * 
+	 * Example: Pawn Structure Heatmap:
+	 * 
+	 * (  1/4, -7/24, 1/4 )
+	 * (  1/6, 1/4, 1/6 )
+	 * (  1/4, -7/24, 1/4 )
+	 */
+
+	// Enqueue searchnodes in queue for recycling
+
 	/// <summary>
 	/// Engine Calculation using the TQA Approach from Chessboard2.cs and Alpha-Beta Pruning
 	/// </summary>
@@ -20,8 +46,11 @@ namespace ChessV1.Stormcloud
 
 		#region Debug_DeleteMe_Unsafe
 
+		public static Stormcloud3 search;
+
 		public Stormcloud3()
 		{
+			search = this;
 			byte[] position = {
 				0xCA, 0xBD, 0xEB, 0xAC,
 				0x99, 0x99, 0x99, 0x99,
@@ -41,12 +70,16 @@ namespace ChessV1.Stormcloud
 
 		// Todo castle, checks, mate
 
+		// Out of memory at depth 10 (or 11 idk doesn't show) at around 3.5 GB ram usage
+
+
 		async void StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
 		{
 			SearchNode startNode = new SearchNode(startPosition, new PositionData());
 			SearchNodes.Enqueue(startNode);
-			//StartProcessingNodesSingleThread();
-			StartProcessingMultiThread();
+			ProcessNextNode(true);
+			StartProcessingNodesSingleThread();
+			//StartProcessingMultiThread();
 		}
 
 		#endregion
@@ -155,10 +188,12 @@ namespace ChessV1.Stormcloud
 
 		private async void StartProcessingMultiThread()
 		{
-
+			ProcessNextNode(true);
 			// (Temporary) Code from Stormcloud 2 (TQA)
 			// Determine the number of worker tasks based on the available hardware resources
 			int workerCount = Math.Min(Environment.ProcessorCount, 20);
+
+			System.Diagnostics.Debug.WriteLine($"Launching Multithreaded Search with {workerCount} worker threads.");
 
 			var tasks = new List<Task>();
 
@@ -173,7 +208,7 @@ namespace ChessV1.Stormcloud
 
 		private void StartProcessingNodesSingleThread()
 		{
-			while(SearchNodes.Count > 0 && CurrentDepth <= TargetDepth)
+			while (SearchNodes.Count > 0 && CurrentDepth <= TargetDepth)
 			{
 				ProcessNextNode();
 			}
@@ -193,11 +228,18 @@ namespace ChessV1.Stormcloud
 
 			bool NodeTurnColorIsWhite = node.PositionData.Turn == EvaluationResultWhiteTurn;
 
-
-
 			var AllNextOpponentMovesAndPositions = GetAllLegalMoveAndResultingPositionPairs(node.Position, !NodeTurnColorIsWhite);
 			var OpponentMoveScores = new Dictionary<byte[], double>();//new List<KeyValuePair<byte[], double>>();
 			var OpponentMoveFollowUps = new Dictionary<byte[], List<byte[]>>();
+
+
+			if (isNodeOfStartPosition)
+			{
+				foreach (var move in AllNextOpponentMovesAndPositions)
+				{
+					Temp_InitialMoveScores.TryAdd(move.Move, PositionEvaluation(move.Result, new PositionData()).Score);
+				}
+			}
 
 			// Evaluate all Opponent moves:
 
@@ -236,28 +278,38 @@ namespace ChessV1.Stormcloud
 			foreach (var moves in OpponentMoveFollowUps[bestMove])
 			{
 				SearchNode node2 = OpponentNode.Result(moves);
-				double thisScore = PositionEvaluation(node2).Score;
 				// ToDo Cache + Eval + PositionData object rework
+				/*
+				double thisScore = 0;
 				if (!PositionDataCacheDirectEvaluation.ContainsKey(node2.PositionData.PositionKey))
 				{
 					SearchNodes.Enqueue(node2);
-					PositionDataCacheDirectEvaluation.TryAdd(node2.PositionData.PositionKey, thisScore - opponentEval);
+					PositionDataCacheDirectEvaluation.TryAdd(node2.PositionData.PositionKey, PositionEvaluation(node2).Score);
+					thisScore -= opponentEval;
 				}
 				else
 				{
-					PositionDataCacheDirectEvaluation[node2.PositionData.PositionKey] += thisScore - opponentEval;
+					thisScore = PositionDataCacheDirectEvaluation[node2.PositionData.PositionKey] - opponentEval;
 				}
+				//*/
 
+				SearchNodes.Enqueue(node2);
 				if (node2.InitialMove != null && node2.InitialMove.Length > 1)
 				{
+					double thisScore = PositionEvaluation(node2).Score - opponentEval;
 					if (Temp_InitialMoveScores.ContainsKey(node2.InitialMove))
-						Temp_InitialMoveScores[node2.InitialMove] += thisScore - opponentEval;
-					else Temp_InitialMoveScores.TryAdd(node2.InitialMove, thisScore - opponentEval);
+						Temp_InitialMoveScores[node2.InitialMove] += thisScore;
+					else Temp_InitialMoveScores.TryAdd(node2.InitialMove, thisScore);
 				}
 			}
 		}
 
-		private void WasserEimer(SearchNode kingTookNode)
+		/// <summary>
+		/// When a checkmate is found, process search tree backwards to continue / search forced mate.
+		/// </summary>
+		/// <param name="kingTookNode"> The Searchnode in which the King was taken / could be taken. </param>
+		/// <exception cref="NotImplementedException"> Yeah // Todo </exception>
+		private void Wassereimer(SearchNode kingTookNode)
 		{
 			throw new NotImplementedException();
 		}
@@ -269,14 +321,15 @@ namespace ChessV1.Stormcloud
 			var scores = Temp_InitialMoveScores.ToDictionary(entry => entry.Key, entry => entry.Value);
 			if(Temp_InitialMoveScores.Count == 0)
 			{
-				System.Diagnostics.Debug.WriteLine($"Depth: {CurrentDepth} | Whoops, no moves | Cache Size: {PositionDataCacheDirectEvaluation.Count}");
+				System.Diagnostics.Debug.WriteLine($"Depth: {CurrentDepth} | Whoops, no moves | Nodes: {SearchNodes.Count}");
 				return;
 			}
 			var bestMove = scores.OrderByDescending(value => value.Value).First();
 			string move = bestMove.Key == null || bestMove.Key.Length == 0 ? "null" : 
 				bestMove.Key[0].ToString("X2") + " -> " + bestMove.Key[1].ToString("X2") + " | " +
-				(int) bestMove.Key[0] + " -> " + (int)bestMove.Key[1];
-			System.Diagnostics.Debug.WriteLine($"Depth: {CurrentDepth} | BestMove: [ {move} ]");
+				(int) bestMove.Key[0] + " -> " + (int) bestMove.Key[1] + " | " +
+				(char) (bestMove.Key[0] % 8 + 97) + (char)((64 - bestMove.Key[0]) / 8 + 49) + " -> " + (char)(bestMove.Key[1] % 8 + 97) + (char)((64 - bestMove.Key[1]) / 8 + 49);
+			System.Diagnostics.Debug.WriteLine($"Depth: {CurrentDepth} | BestMove: [ {move} ] | Nodes: {SearchNodes.Count}");
 		}
 	}
 
@@ -300,6 +353,7 @@ namespace ChessV1.Stormcloud
 		internal PositionData PositionData;
 		public byte[] InitialMove;
 		public int CurrentDepth;
+		public int FutureDepth = -2;
 
 		public SearchNode(byte[] Position, SearchNode parentNode = null)
 			: this(Position,
@@ -323,7 +377,11 @@ namespace ChessV1.Stormcloud
 			this.ParentNode = parentNode;
 			SetInitialMove();
 			if (ParentNode == null) CurrentDepth = 0;
-			else CurrentDepth = ParentNode.CurrentDepth + 1;
+			else
+			{
+				CurrentDepth = ParentNode.CurrentDepth + 1;
+				FutureDepth = ParentNode.FutureDepth - 1;
+			}
 		}
 		public SearchNode(byte[] Position, PositionData PositionData, byte[] initialMove)
 		{
@@ -347,7 +405,11 @@ namespace ChessV1.Stormcloud
 			this.ParentNode = parentNode;
 			SetInitialMove();
 			if (ParentNode == null) CurrentDepth = 0;
-			else CurrentDepth = ParentNode.CurrentDepth + 1;
+			else
+			{
+				CurrentDepth = ParentNode.CurrentDepth + 1;
+				FutureDepth = ParentNode.FutureDepth - 1;
+			}
 		}
 
 		public SearchNode Result(byte[] move)
@@ -447,9 +509,13 @@ namespace ChessV1.Stormcloud
 		private List<byte[]> GetAllLegalMoves(byte[] Position, bool isTurnColorWhite)              // Todo perhaps discard of this? Or move part of the other function in here
 		{
 			var moves = new List<byte[]>();
-			for (byte i = 0; i < 64; ++i)
+			byte colorMask1 = isTurnColorWhite ? (byte) 0 : (byte) 0x80;
+			byte colorMask2 = isTurnColorWhite ? (byte) 0 : (byte) 0x08;
+			for (byte i = 0; i < 64; i += 2)
 			{
-				moves.AddRange(GetLegalMovesPiece(Position, i, isTurnColorWhite));
+				byte piece = Position[i >> 1];
+				if((piece & 0x80) == colorMask1) moves.AddRange(GetLegalMovesPiece(Position, i, isTurnColorWhite));
+				if ((piece & 0x08) == colorMask2) moves.AddRange(GetLegalMovesPiece(Position, (byte) (i+1), isTurnColorWhite));
 			}
 			return moves;
 		}
@@ -604,7 +670,7 @@ namespace ChessV1.Stormcloud
 				if (IsRank8(index)) break;
 				index -= 7;
 				isSecondHalf2 = !isSecondHalf2;
-				addIfLegal(isSecondHalf);
+				if (addIfLegal(isSecondHalf)) break;
 			}
 
 			index = bishopLocationIndex;
@@ -615,7 +681,7 @@ namespace ChessV1.Stormcloud
 				if (IsRank8(index)) break;
 				index -= 9;
 				isSecondHalf2 = !isSecondHalf2;
-				addIfLegal(isSecondHalf);
+				if (addIfLegal(isSecondHalf)) break;
 			}
 
 			index = bishopLocationIndex;
@@ -626,7 +692,7 @@ namespace ChessV1.Stormcloud
 				if (IsRank1(index)) break;
 				index += 7;
 				isSecondHalf2 = !isSecondHalf2;
-				addIfLegal(isSecondHalf);
+				if (addIfLegal(isSecondHalf)) break;
 			}
 
 			index = bishopLocationIndex;
@@ -637,20 +703,29 @@ namespace ChessV1.Stormcloud
 				if (IsRank1(index)) break;
 				index += 9;
 				isSecondHalf2 = !isSecondHalf2;
-				addIfLegal(isSecondHalf);
+				if (addIfLegal(isSecondHalf)) break;
 			}
 
-			void addIfLegal(bool secondHalf)
+			bool addIfLegal(bool secondHalf)	// Returns if should break
 			{
 				byte piece2 = position[index >> 1];
-				if (isPieceWhite && !IsWhitePiece(piece2, secondHalf))
+				if (isPieceWhite)
 				{
-					legalMoves.Add(of(bishopLocationIndex, index));
+					if(!IsWhitePiece(piece2, secondHalf))
+					{
+						legalMoves.Add(of(bishopLocationIndex, index));
+						return false;
+					}
 				}
-				else if (!isPieceWhite && !IsBlackPiece(piece2, secondHalf))
+				if (!isPieceWhite && !IsBlackPiece(piece2, secondHalf))
 				{
-					legalMoves.Add(of(bishopLocationIndex, index));
+					if (!IsBlackPiece(piece2, secondHalf))
+					{
+						legalMoves.Add(of(bishopLocationIndex, index));
+						return false;
+					}
 				}
+				return true;
 			}
 
 
@@ -668,7 +743,7 @@ namespace ChessV1.Stormcloud
 			{
 				if (IsRank8(index)) break;
 				index -= 8;
-				addIfLegal(isSecondHalf);
+				if (addIfLegal(isSecondHalf)) break;
 			}
 
 			index = rookLocationIndex;
@@ -676,7 +751,7 @@ namespace ChessV1.Stormcloud
 			{
 				if (IsRank1(index)) break;
 				index += 8;
-				addIfLegal(isSecondHalf);
+				if (addIfLegal(isSecondHalf)) break;
 			}
 
 			index = rookLocationIndex;
@@ -686,7 +761,7 @@ namespace ChessV1.Stormcloud
 				if (IsFileA(index)) break;
 				index -= 1;
 				isSecondHalf2 = !isSecondHalf2;
-				addIfLegal(isSecondHalf);
+				if (addIfLegal(isSecondHalf)) break;
 			}
 
 			index = rookLocationIndex;
@@ -696,20 +771,29 @@ namespace ChessV1.Stormcloud
 				if (IsFileH(index)) break;
 				index += 1;
 				isSecondHalf2 = !isSecondHalf2;
-				addIfLegal(isSecondHalf);
+				if (addIfLegal(isSecondHalf)) break;
 			}
 
-			void addIfLegal(bool secondHalf)
+			bool addIfLegal(bool secondHalf)    // Returns if should break
 			{
 				byte piece2 = position[index >> 1];
-				if (isPieceWhite && !IsWhitePiece(piece2, secondHalf))
+				if (isPieceWhite)
 				{
-					legalMoves.Add(of(rookLocationIndex, index));
+					if (!IsWhitePiece(piece2, secondHalf))
+					{
+						legalMoves.Add(of(rookLocationIndex, index));
+						return false;
+					}
 				}
-				else if (!isPieceWhite && !IsBlackPiece(piece2, secondHalf))
+				if (!isPieceWhite && !IsBlackPiece(piece2, secondHalf))
 				{
-					legalMoves.Add(of(rookLocationIndex, index));
+					if (!IsBlackPiece(piece2, secondHalf))
+					{
+						legalMoves.Add(of(rookLocationIndex, index));
+						return false;
+					}
 				}
+				return true;
 			}
 
 			return legalMoves;
