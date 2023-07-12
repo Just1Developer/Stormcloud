@@ -12,6 +12,8 @@ namespace ChessV1.Stormcloud
 	// Yes: Short: 16 bit -> 6 bit: from | 6 bit: to | 4 bit resulting piece.
 	// Example: Short: 001000 010000 1001 => a7 -> a6, black pawn: move title: a6
 
+	// Castle: Maybe first half of the byte means temporary no? (attacked)
+
 	/*
 	 * If we store at the back of the short
 	 * From: byte GetFrom(byte move) => (byte) (move >> 10);
@@ -29,6 +31,8 @@ namespace ChessV1.Stormcloud
 	 * (  1/4, -7/24, 1/4 )
 	 * (  1/6, 1/4, 1/6 )
 	 * (  1/4, -7/24, 1/4 )
+	 * 
+	 * Field Coverage Matrices for every piece type
 	 */
 
 	// Enqueue searchnodes in queue for recycling
@@ -61,7 +65,7 @@ namespace ChessV1.Stormcloud
 				0x11, 0x11, 0x11, 0x11,
 				0x42, 0x35, 0x63, 0x24
 			};
-			double Test_Eval = PositionEvaluation(position, new PositionData() { PositionKey = "", Turn = EvaluationResultWhiteTurn }).Score;
+			double Test_Eval = PositionEvaluation(position, new OldSearch_PositionData() { PositionKey = "", Turn = EvaluationResultWhiteTurn }).Score;
 			var moves = GetAllLegalMoves(position, true).Count;
 			System.Diagnostics.Debug.WriteLine("D >> Test Eval mat: " + Test_Eval + " | Moves: " + moves);
 
@@ -75,10 +79,10 @@ namespace ChessV1.Stormcloud
 
 		async void StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
 		{
-			SearchNode startNode = new SearchNode(startPosition, new PositionData());
-			SearchNodes.Enqueue(startNode);
-			ProcessNextNode(true);
-			StartProcessingNodesSingleThread();
+			OldSearch_SearchNode startNode = new OldSearch_SearchNode(startPosition, new OldSearch_PositionData());
+			OldSearch_SearchNodes.Enqueue(startNode);
+			OldSearch_ProcessNextNode(true);
+			//OldSearch_StartProcessingNodesSingleThread();
 			//StartProcessingMultiThread();
 		}
 
@@ -95,8 +99,8 @@ namespace ChessV1.Stormcloud
 			}
 		}
 
-		EvaluationResult PositionEvaluation(SearchNode Node) => PositionEvaluation(Node.Position, Node.PositionData);
-		EvaluationResult PositionEvaluation(byte[] Position, PositionData PositionData)
+		EvaluationResult PositionEvaluation(OldSearch_SearchNode Node) => PositionEvaluation(Node.Position, Node.PositionData);
+		EvaluationResult PositionEvaluation(byte[] Position, OldSearch_PositionData PositionData)
 		{
 			double score = 0;
 
@@ -139,6 +143,7 @@ namespace ChessV1.Stormcloud
 
 		const byte firstHalfMask = 0xF0;	/// First meaning the first 4 bits from the left
 		const byte secondHalfMask = 0x0F;
+		const short PieceMask = 0x000F;
 
 		// Todo OG: private
 		public static double MaterialEvaluation(byte[] Position)
@@ -156,39 +161,45 @@ namespace ChessV1.Stormcloud
 		}
 	}
 
+	partial class Stormcloud3 // Advanced Alpha Beta Pruning Search Algorithm
+	{
+
+	}
+
+	// Old Search Algorithm
 	partial class Stormcloud3	// Search Algorithm
 	{
-		private ConcurrentQueue<SearchNode> SearchNodes = new ConcurrentQueue<SearchNode>();	// We're using a queue so that we can use just one, right?
-		private ConcurrentDictionary<byte[], double> Temp_InitialMoveScores = new ConcurrentDictionary<byte[], double>();   // Calculating (Live) (just clone when necessary)
+		private ConcurrentQueue<OldSearch_SearchNode> OldSearch_SearchNodes = new ConcurrentQueue<OldSearch_SearchNode>();	// We're using a queue so that we can use just one, right?
+		private ConcurrentDictionary<short, double> OldSearch_Temp_InitialMoveScores = new ConcurrentDictionary<short, double>();   // Calculating (Live) (just clone when necessary)
 
-		private ConcurrentDictionary<string, double> PositionDataCacheDirectEvaluation = new ConcurrentDictionary<string, double>();
+		private ConcurrentDictionary<string, double> OldSearch_PositionDataCacheDirectEvaluation = new ConcurrentDictionary<string, double>();
 
-		private byte[] StartPosition;
-		private Turn StartTurnColor;
+		private byte[] OldSearch_StartPosition;
+		private Turn OldSearch_StartTurnColor;
 
 		public Stormcloud3(byte[] Position, Turn CurrentTurnColor)
 		{
-			this.StartPosition = Position;
-			this.StartTurnColor = CurrentTurnColor;
+			this.OldSearch_StartPosition = Position;
+			this.OldSearch_StartTurnColor = CurrentTurnColor;
 		}
 
 		// ToDo Actually process position keys and values and stuff
 
 		private short TargetDepth = 100, CurrentDepth = 1;
 
-		private void StartProcessingInitialEntry(byte[] startPosition, bool isWhiteStart)
+		private void OldSearch_StartProcessingInitialEntry(byte[] startPosition, bool isWhiteStart)
 		{
-			var InitialMovesWithPositions = GetAllLegalMoveAndResultingPositionPairs(startPosition, isWhiteStart);
+			var InitialMovesWithPositions = GetAllLegalMoveAndResultingPositionPairs(startPosition, isWhiteStart, 0x0F);
 
 			foreach (var v in InitialMovesWithPositions)
 			{
-				SearchNodes.Enqueue(new SearchNode(v.Result, v.Move));  //, new PositionData(isWhiteStart ? EvaluationResultWhiteTurn : EvaluationResultBlackTurn)
+				OldSearch_SearchNodes.Enqueue(new OldSearch_SearchNode(v.Result, v.Move));  //, new PositionData(isWhiteStart ? EvaluationResultWhiteTurn : EvaluationResultBlackTurn)
 			}
 		}
 
-		private async void StartProcessingMultiThread()
+		private async void OldSearch_StartProcessingMultiThread()
 		{
-			ProcessNextNode(true);
+			OldSearch_ProcessNextNode(true);
 			// (Temporary) Code from Stormcloud 2 (TQA)
 			// Determine the number of worker tasks based on the available hardware resources
 			int workerCount = Math.Min(Environment.ProcessorCount, 20);
@@ -199,45 +210,45 @@ namespace ChessV1.Stormcloud
 
 			for (int i = 0; i < workerCount; i++)
 			{
-				tasks.Add(Task.Run(() => StartProcessingNodesSingleThread()));
+				tasks.Add(Task.Run(() => OldSearch_StartProcessingNodesSingleThread()));
 			}
 
 			await Task.WhenAll(tasks); // Wait for all tasks to complete
 
 		}
 
-		private void StartProcessingNodesSingleThread()
+		private void OldSearch_StartProcessingNodesSingleThread()
 		{
-			while (SearchNodes.Count > 0 && CurrentDepth <= TargetDepth)
+			while (OldSearch_SearchNodes.Count > 0 && CurrentDepth <= TargetDepth)
 			{
-				ProcessNextNode();
+				OldSearch_ProcessNextNode();
 			}
 		}
 
-		private void ProcessNextNode(bool isNodeOfStartPosition = false, SearchNode node = null)
+		private void OldSearch_ProcessNextNode(bool isNodeOfStartPosition = false, OldSearch_SearchNode node = null)
 		{
-			if (node == null) SearchNodes.TryDequeue(out node);
+			if (node == null) OldSearch_SearchNodes.TryDequeue(out node);
 			if (node == null) return;
 
 			int depth = node.CurrentDepth;
 
 			if(CurrentDepth <= depth)
 			{
-				ProcessNewDepth();
+				OldSearch_ProcessNewDepth();
 			}
 
 			bool NodeTurnColorIsWhite = node.PositionData.Turn == EvaluationResultWhiteTurn;
 
-			var AllNextOpponentMovesAndPositions = GetAllLegalMoveAndResultingPositionPairs(node.Position, !NodeTurnColorIsWhite);
-			var OpponentMoveScores = new Dictionary<byte[], double>();//new List<KeyValuePair<byte[], double>>();
-			var OpponentMoveFollowUps = new Dictionary<byte[], List<byte[]>>();
+			var AllNextOpponentMovesAndPositions = GetAllLegalMoveAndResultingPositionPairs(node.Position, !NodeTurnColorIsWhite, node.PositionData.Castle);
+			var OpponentMoveScores = new Dictionary<short, double>();//new List<KeyValuePair<byte[], double>>();
+			var OpponentMoveFollowUps = new Dictionary<short, List<short>>();
 
 
 			if (isNodeOfStartPosition)
 			{
 				foreach (var move in AllNextOpponentMovesAndPositions)
 				{
-					Temp_InitialMoveScores.TryAdd(move.Move, PositionEvaluation(move.Result, new PositionData()).Score);
+					OldSearch_Temp_InitialMoveScores.TryAdd(move.Move, PositionEvaluation(move.Result, new OldSearch_PositionData()).Score);
 				}
 			}
 
@@ -246,17 +257,17 @@ namespace ChessV1.Stormcloud
 			foreach (var move in AllNextOpponentMovesAndPositions)
 			{
 				double score = 0;
-				var moves = new List<byte[]>();
-				foreach (var pos in GetAllLegalMoveAndResultingPositionPairs(move.Result, NodeTurnColorIsWhite))
+				var moves = new List<short>();
+				foreach (var pos in GetAllLegalMoveAndResultingPositionPairs(move.Result, NodeTurnColorIsWhite, move.CastleOptions))
 				{
-					score += PositionEvaluation(pos.Result, new PositionData()).Score;
+					score += PositionEvaluation(pos.Result, new OldSearch_PositionData()).Score;
 					moves.Add(pos.Move);
 				}
 				OpponentMoveScores.Add(move.Move, score);
 				OpponentMoveFollowUps.Add(move.Move, moves);
 			}
 
-			byte[] bestMove = { 0, 0 };
+			short bestMove = 0x0000;
 			double maxScore = double.NegativeInfinity;
 
 			foreach (var pair in OpponentMoveScores)
@@ -269,7 +280,7 @@ namespace ChessV1.Stormcloud
 			}
 
 			// Move with highest score is at index 0
-			SearchNode OpponentNode = node.Result(bestMove);   // Perhaps use an implementation where the already saved new position is used.
+			OldSearch_SearchNode OpponentNode = node.Result(bestMove);   // Perhaps use an implementation where the already saved new position is used.
 			double opponentEval = PositionEvaluation(OpponentNode).Score;
 
 			// Todo rework scores and 
@@ -277,29 +288,14 @@ namespace ChessV1.Stormcloud
 			// Now get and enqueue all new stuff
 			foreach (var moves in OpponentMoveFollowUps[bestMove])
 			{
-				SearchNode node2 = OpponentNode.Result(moves);
-				// ToDo Cache + Eval + PositionData object rework
-				/*
-				double thisScore = 0;
-				if (!PositionDataCacheDirectEvaluation.ContainsKey(node2.PositionData.PositionKey))
-				{
-					SearchNodes.Enqueue(node2);
-					PositionDataCacheDirectEvaluation.TryAdd(node2.PositionData.PositionKey, PositionEvaluation(node2).Score);
-					thisScore -= opponentEval;
-				}
-				else
-				{
-					thisScore = PositionDataCacheDirectEvaluation[node2.PositionData.PositionKey] - opponentEval;
-				}
-				//*/
-
-				SearchNodes.Enqueue(node2);
-				if (node2.InitialMove != null && node2.InitialMove.Length > 1)
+				OldSearch_SearchNode node2 = OpponentNode.Result(moves);
+				OldSearch_SearchNodes.Enqueue(node2);
+				if (node2.InitialMove != 0)
 				{
 					double thisScore = PositionEvaluation(node2).Score - opponentEval;
-					if (Temp_InitialMoveScores.ContainsKey(node2.InitialMove))
-						Temp_InitialMoveScores[node2.InitialMove] += thisScore;
-					else Temp_InitialMoveScores.TryAdd(node2.InitialMove, thisScore);
+					if (OldSearch_Temp_InitialMoveScores.ContainsKey(node2.InitialMove))
+						OldSearch_Temp_InitialMoveScores[node2.InitialMove] += thisScore;
+					else OldSearch_Temp_InitialMoveScores.TryAdd(node2.InitialMove, thisScore);
 				}
 			}
 		}
@@ -309,67 +305,77 @@ namespace ChessV1.Stormcloud
 		/// </summary>
 		/// <param name="kingTookNode"> The Searchnode in which the King was taken / could be taken. </param>
 		/// <exception cref="NotImplementedException"> Yeah // Todo </exception>
-		private void Wassereimer(SearchNode kingTookNode)
+		private void OldSearch_Wassereimer(OldSearch_SearchNode kingTookNode)
 		{
 			throw new NotImplementedException();
 		}
 
-		private void ProcessNewDepth()
+		private void OldSearch_ProcessNewDepth()
 		{
 			short CurrentDepth = this.CurrentDepth;
 			this.CurrentDepth++;
-			var scores = Temp_InitialMoveScores.ToDictionary(entry => entry.Key, entry => entry.Value);
-			if(Temp_InitialMoveScores.Count == 0)
+			var scores = OldSearch_Temp_InitialMoveScores.ToDictionary(entry => entry.Key, entry => entry.Value);
+			if(OldSearch_Temp_InitialMoveScores.Count == 0)
 			{
-				System.Diagnostics.Debug.WriteLine($"Depth: {CurrentDepth} | Whoops, no moves | Nodes: {SearchNodes.Count}");
+				System.Diagnostics.Debug.WriteLine($"Depth: {CurrentDepth} | Whoops, no moves | Nodes: {OldSearch_SearchNodes.Count}");
 				return;
 			}
 			var bestMove = scores.OrderByDescending(value => value.Value).First();
-			string move = bestMove.Key == null || bestMove.Key.Length == 0 ? "null" : 
-				bestMove.Key[0].ToString("X2") + " -> " + bestMove.Key[1].ToString("X2") + " | " +
-				(int) bestMove.Key[0] + " -> " + (int) bestMove.Key[1] + " | " +
-				(char) (bestMove.Key[0] % 8 + 97) + (char)((64 - bestMove.Key[0]) / 8 + 49) + " -> " + (char)(bestMove.Key[1] % 8 + 97) + (char)((64 - bestMove.Key[1]) / 8 + 49);
-			System.Diagnostics.Debug.WriteLine($"Depth: {CurrentDepth} | BestMove: [ {move} ] | Nodes: {SearchNodes.Count}");
+			byte bestMoveFrom = MoveFromIndex(bestMove.Key);
+			byte bestMoveTo = MoveToIndex(bestMove.Key);
+			string move = bestMove.Key == 0 ? "null" :
+				bestMoveFrom.ToString("X2") + " -> " + bestMoveTo.ToString("X2") + " | " +
+				(int) bestMoveFrom + " -> " + (int)bestMoveTo + " | " +
+				(char) (bestMoveFrom % 8 + 97) + (char)((64 - bestMoveFrom) / 8 + 49) + " -> " + (char)(bestMoveTo % 8 + 97) + (char)((64 - bestMoveTo) / 8 + 49);
+			System.Diagnostics.Debug.WriteLine($"Depth: {CurrentDepth} | BestMove: [ {move} ] | Nodes: {OldSearch_SearchNodes.Count}");
 		}
 	}
 
-	struct MoveResultingPositionPair
+	struct OldSearch_MoveResultingPositionPair
 	{
-		public byte[] Move; // key
+		public short Move; // key
 		public byte[] Result; // value
+		public byte CastleOptions;	// Castle options
 
-		public MoveResultingPositionPair(byte[] move, byte[] result)
+		public OldSearch_MoveResultingPositionPair(short move, byte[] result)
 		{
 			Move = move;
 			Result = result;
+			CastleOptions = 0x0F;
+		}
+		public OldSearch_MoveResultingPositionPair(short move, byte[] result, byte castleoptions)
+		{
+			Move = move;
+			Result = result;
+			CastleOptions = castleoptions;
 		}
 	}
 
-	class SearchNode
+	class OldSearch_SearchNode
 	{
 		internal byte[] Position;    // See position binary data docs
 		// Position data
-		SearchNode ParentNode;	// Save pointer to previous node in search tree for forced checkmate backtracking
-		internal PositionData PositionData;
-		public byte[] InitialMove;
+		OldSearch_SearchNode ParentNode;	// Save pointer to previous node in search tree for forced checkmate backtracking
+		internal OldSearch_PositionData PositionData;
+		public short InitialMove;
 		public int CurrentDepth;
 		public int FutureDepth = -2;
 
-		public SearchNode(byte[] Position, SearchNode parentNode = null)
+		public OldSearch_SearchNode(byte[] Position, OldSearch_SearchNode parentNode = null)
 			: this(Position,
-				  new PositionData(true, Stormcloud3.GeneratePositionKey(Position))
+				  new OldSearch_PositionData(true, Stormcloud3.GeneratePositionKey(Position))
 				{
 					// ToDo Auto-Generate Position Data
 				}, parentNode)
 		{ }
-		public SearchNode(byte[] Position, byte[] initialMove)
+		public OldSearch_SearchNode(byte[] Position, short initialMove)
 			: this(Position,
-				  new PositionData(true, Stormcloud3.GeneratePositionKey(Position))
+				  new OldSearch_PositionData(true, Stormcloud3.GeneratePositionKey(Position))
 				{
 					// ToDo Auto-Generate Position Data
 				}, initialMove)
 		{ }
-		public SearchNode(byte[] Position, PositionData PositionData, SearchNode parentNode = null)
+		public OldSearch_SearchNode(byte[] Position, OldSearch_PositionData PositionData, OldSearch_SearchNode parentNode = null)
 		{
 			if (Position == null) this.Position = new byte[32];
 			else this.Position = Position;
@@ -383,7 +389,7 @@ namespace ChessV1.Stormcloud
 				FutureDepth = ParentNode.FutureDepth - 1;
 			}
 		}
-		public SearchNode(byte[] Position, PositionData PositionData, byte[] initialMove)
+		public OldSearch_SearchNode(byte[] Position, OldSearch_PositionData PositionData, short initialMove)
 		{
 			if (Position == null) this.Position = new byte[32];
 			else this.Position = Position;
@@ -393,15 +399,15 @@ namespace ChessV1.Stormcloud
 			CurrentDepth = 0;
 		}
 		
-		public SearchNode(byte[] Position, byte Turn, string PositionKey, SearchNode parentNode = null)
+		public OldSearch_SearchNode(byte[] Position, byte Turn, string PositionKey, OldSearch_SearchNode parentNode = null)
 		: this(Position, Turn == Stormcloud3.EvaluationResultWhiteTurn, PositionKey, parentNode)
 		{ }
 
-		public SearchNode(byte[] Position, bool Turn, string PositionKey, SearchNode parentNode = null)
+		public OldSearch_SearchNode(byte[] Position, bool Turn, string PositionKey, OldSearch_SearchNode parentNode = null)
 		{
 			if (Position == null) this.Position = new byte[32];
 			else this.Position = Position;
-			this.PositionData = new PositionData(Turn, PositionKey);
+			this.PositionData = new OldSearch_PositionData(Turn, PositionKey);
 			this.ParentNode = parentNode;
 			SetInitialMove();
 			if (ParentNode == null) CurrentDepth = 0;
@@ -412,24 +418,25 @@ namespace ChessV1.Stormcloud
 			}
 		}
 
-		public SearchNode Result(byte[] move)
+		public OldSearch_SearchNode Result(short move)
 		{
-			byte[] newPosition = Stormcloud3.ResultingPosition(Position, move);
-			PositionData newData = PositionData.Next(newPosition);
-			return new SearchNode(newPosition, newData, this);
+			var newPosition = Stormcloud3.ResultingPosition(Position, move, PositionData.Castle);
+			OldSearch_PositionData newData = PositionData.Next(newPosition.Item2);
+			newData.Castle = newPosition.Item3;	// New pos key
+			return new OldSearch_SearchNode(newPosition.Item1, newData, this);
 		}
 
-		void SetInitialMove(byte[] move = null)
+		void SetInitialMove(short move = 0)	// Move = 0 represents 0x0000 meaning square 0 -> square 0
 		{
-			if (move != null) InitialMove = move;
+			if (move == 0) InitialMove = move;
 			else if (ParentNode != null) InitialMove = ParentNode.InitialMove;
-			else InitialMove = new byte[0];
+			else InitialMove = 0;
 		}
 	}
 	
 	// Todo update castleing
 
-	internal struct PositionData
+	internal struct OldSearch_PositionData
 	{
 		public const byte defaultCastle = 0xFF;
 
@@ -455,7 +462,7 @@ namespace ChessV1.Stormcloud
 		/// 
 		/// </summary>
 		/// <param name="Turn"></param>
-		public PositionData(bool IsTurnWhite, string PositionKey, byte castle = defaultCastle)
+		public OldSearch_PositionData(bool IsTurnWhite, string PositionKey, byte castle = defaultCastle)
 		{
 			this.IsTurnWhite = IsTurnWhite;
 			this.Turn = IsTurnWhite ? Stormcloud3.EvaluationResultWhiteTurn : Stormcloud3.EvaluationResultBlackTurn;
@@ -465,10 +472,10 @@ namespace ChessV1.Stormcloud
 
 		// Todo castle implement
 
-		public PositionData Next(byte[] newPosition) => Next(Stormcloud3.GeneratePositionKey(newPosition));
-		public PositionData Next(string newPositionKey)
+		public OldSearch_PositionData Next(byte[] newPosition) => Next(Stormcloud3.GeneratePositionKey(newPosition));
+		public OldSearch_PositionData Next(string newPositionKey)
 		{
-			PositionData data = new PositionData(!this.IsTurnWhite, newPositionKey);   // prev: (byte) ~this.Turn for Turn
+			OldSearch_PositionData data = new OldSearch_PositionData(!this.IsTurnWhite, newPositionKey);   // prev: (byte) ~this.Turn for Turn
 			return data;
 		}
 	}
@@ -489,12 +496,13 @@ namespace ChessV1.Stormcloud
 		/// </summary>
 		/// <param name="Position"> The Position, a size 32 byte array. </param>
 		/// <returns> List of all legal moves paired with their resulting position. </returns>
-		private List<MoveResultingPositionPair> GetAllLegalMoveAndResultingPositionPairs(byte[] Position, bool isTurnColorWhite)
+		private List<OldSearch_MoveResultingPositionPair> GetAllLegalMoveAndResultingPositionPairs(byte[] Position, bool isTurnColorWhite, byte CastleOptions)
 		{
-			var movePairs = new List<MoveResultingPositionPair>();
-			foreach (byte[] move in GetAllLegalMoves(Position, isTurnColorWhite))
+			var movePairs = new List<OldSearch_MoveResultingPositionPair>();
+			foreach (short move in GetAllLegalMoves(Position, isTurnColorWhite))
 			{
-				movePairs.Add(new MoveResultingPositionPair(move, ResultingPosition(Position, move)));
+				var _out = ResultingPosition(Position, move, CastleOptions);
+				movePairs.Add(new OldSearch_MoveResultingPositionPair(move, _out.Item1, _out.Item3));
 			}
 			return movePairs;
 		}
@@ -506,9 +514,9 @@ namespace ChessV1.Stormcloud
 		/// </summary>
 		/// <param name="Position"> The Position, a size 32 byte array. </param>
 		/// <returns> List of all legal moves. </returns>
-		private List<byte[]> GetAllLegalMoves(byte[] Position, bool isTurnColorWhite)              // Todo perhaps discard of this? Or move part of the other function in here
+		private List<short> GetAllLegalMoves(byte[] Position, bool isTurnColorWhite)              // Todo perhaps discard of this? Or move part of the other function in here
 		{
-			var moves = new List<byte[]>();
+			var moves = new List<short>();
 			byte colorMask1 = isTurnColorWhite ? (byte) 0 : (byte) 0x80;
 			byte colorMask2 = isTurnColorWhite ? (byte) 0 : (byte) 0x08;
 			for (byte i = 0; i < 64; i += 2)
@@ -520,7 +528,7 @@ namespace ChessV1.Stormcloud
 			return moves;
 		}
 
-		public static List<byte[]> GetLegalMovesPiece(byte[] position, byte pieceLocationIndex, bool isTurnColorWhite)
+		public static List<short> GetLegalMovesPiece(byte[] position, byte pieceLocationIndex, bool isTurnColorWhite)
 		{
 			byte piece = position[pieceLocationIndex >> 1];
 			bool isPieceWhite;
@@ -535,7 +543,7 @@ namespace ChessV1.Stormcloud
 				isPieceWhite = (piece & 0x80) == 0; // 4th bit is 0
 				piece &= 0x70; // Even index => 1st half
 			}
-			if(isPieceWhite != isTurnColorWhite) return new List<byte[]>();
+			if(isPieceWhite != isTurnColorWhite) return new List<short>();
 
 			// Todo look for checks
 			if (piece == 0x10) return GetLegalMovesPawn(position, pieceLocationIndex, isPieceWhite);
@@ -545,7 +553,7 @@ namespace ChessV1.Stormcloud
 			if (piece == 0x50) return GetLegalMovesQueen(position, pieceLocationIndex, isPieceWhite);
 			if (piece == 0x60) return GetLegalMovesKing(position, pieceLocationIndex, isPieceWhite);
 
-			return new List<byte[]>();
+			return new List<short>();
 		}
 
 		/// <summary>
@@ -555,9 +563,9 @@ namespace ChessV1.Stormcloud
 		/// <param name="pawnLocationIndex"> The location index of the pawn (64-format). </param>
 		/// <param name="isPieceWhite"> If the pawn is white or not. Not really necessary, but the method that calls this already knows so why calculate it again? </param>
 		/// <returns> List of all legal moves of this pawn. </returns>
-		public static List<byte[]> GetLegalMovesPawn(byte[] position, byte pawnLocationIndex, bool isPieceWhite)	// 0x09 = black pawn (1001)
+		public static List<short> GetLegalMovesPawn(byte[] position, byte pawnLocationIndex, bool isPieceWhite)	// 0x09 = black pawn (1001)
 		{
-			List<byte[]> legalMoves = new List<byte[]>();
+			var legalMoves = new List<short>();
 			// This is not here. => What is not here? I forgot, I'm not gonna lie. If I dont remember, its not important and this comment will be removed.
 			// Todo
 
@@ -590,7 +598,7 @@ namespace ChessV1.Stormcloud
 				{
 					if (isPieceWhite && IsBlackPiece(piece, isSecondHalf))
 					{
-						legalMoves.Add(new byte[] { pawnLocationIndex, fieldIndex2 });
+						legalMoves.Add(ToMove(pawnLocationIndex, fieldIndex2));
 					}
 					else if (!isPieceWhite && IsWhitePiece(piece, isSecondHalf))
 					{
@@ -603,13 +611,13 @@ namespace ChessV1.Stormcloud
 			{
 				if (IsEdgeRank64IndexFormat(to))   // We assume its the correct final rank since pawns shouldnt go backwards
 				{
-					byte colorMask = (byte) (isPieceWhite ? 0x00 : 0x80);
-					legalMoves.Add(ofPro(pawnLocationIndex, to, (byte) (0x02 | colorMask)));	// Promotion to Knight
-					legalMoves.Add(ofPro(pawnLocationIndex, to, (byte) (0x03 | colorMask)));	// Promotion to Bishop
-					legalMoves.Add(ofPro(pawnLocationIndex, to, (byte) (0x04 | colorMask)));	// Promotion to Rook
-					legalMoves.Add(ofPro(pawnLocationIndex, to, (byte) (0x05 | colorMask)));	// Promotion to Queen
+					byte colorMask = (byte) (isPieceWhite ? 0x00 : 0x08);
+					legalMoves.Add(ToMove(pawnLocationIndex, to, (byte) (0x02 | colorMask)));	// Promotion to Knight
+					legalMoves.Add(ToMove(pawnLocationIndex, to, (byte) (0x03 | colorMask)));	// Promotion to Bishop
+					legalMoves.Add(ToMove(pawnLocationIndex, to, (byte) (0x04 | colorMask)));	// Promotion to Rook
+					legalMoves.Add(ToMove(pawnLocationIndex, to, (byte) (0x05 | colorMask)));	// Promotion to Queen
 				}
-				else legalMoves.Add(of(pawnLocationIndex, to));
+				else legalMoves.Add(ToMove(pawnLocationIndex, to));
 			}
 
 			diagonalMove(7);
@@ -624,7 +632,7 @@ namespace ChessV1.Stormcloud
 		/// <param name="position"></param>
 		/// <param name="knightLocationIndex">Location Index in 64-format.</param>
 		/// <returns></returns>
-		public static List<byte[]> GetLegalMovesKnight(byte[] position, byte knightLocationIndex, bool isPieceWhite)
+		public static List<short> GetLegalMovesKnight(byte[] position, byte knightLocationIndex, bool isPieceWhite)
 		{
 			byte[] possibleMoves = KnightPossibleMoves[knightLocationIndex];
 			//																							mask is important so we only judge the color of the pony now
@@ -635,7 +643,7 @@ namespace ChessV1.Stormcloud
 			// This seems buggy
 			// Todo
 
-			List<byte[]> legalMoves = new List<byte[]>();
+			List<short> legalMoves = new List<short>();
 			foreach (byte possibleMove in possibleMoves)
 			{
 				// Check if piece is of own color
@@ -645,22 +653,22 @@ namespace ChessV1.Stormcloud
 				// Check if the target field is empty
 				if (IsFieldEmpty(position[knightLocationIndex >> 1], isSecondHalf))
 				{
-					legalMoves.Add(new byte[2] { knightLocationIndex, possibleMove });
+					legalMoves.Add(ToMove(knightLocationIndex, possibleMove));
 				}
 				// If not, check if the colors are different. This might not be the prettiest, but its the fastest
 				else if (IsWhitePiece(position[possibleMove >> 1], isSecondHalf) != isPieceWhite)
 				{
-					legalMoves.Add(new byte[2] { knightLocationIndex, possibleMove });
+					legalMoves.Add(ToMove(knightLocationIndex, possibleMove));
 				}
 			}
 			return legalMoves;
 		}
 
-		public static List<byte[]> GetLegalMovesBishop(byte[] position, byte bishopLocationIndex, bool isPieceWhite)
+		public static List<short> GetLegalMovesBishop(byte[] position, byte bishopLocationIndex, bool isPieceWhite)
 			=> GetLegalMovesBishop(position, bishopLocationIndex, isPieceWhite, (bishopLocationIndex & 1) == 1);
-		public static List<byte[]> GetLegalMovesBishop(byte[] position, byte bishopLocationIndex, bool isPieceWhite, bool isSecondHalf)
+		public static List<short> GetLegalMovesBishop(byte[] position, byte bishopLocationIndex, bool isPieceWhite, bool isSecondHalf)
 		{
-			List<byte[]> legalMoves = new List<byte[]>();
+			List<short> legalMoves = new List<short>();
 
 			byte index = bishopLocationIndex;
 			bool isSecondHalf2 = isSecondHalf;
@@ -713,7 +721,7 @@ namespace ChessV1.Stormcloud
 				{
 					if(!IsWhitePiece(piece2, secondHalf))
 					{
-						legalMoves.Add(of(bishopLocationIndex, index));
+						legalMoves.Add(ToMove(bishopLocationIndex, index));
 						return false;
 					}
 				}
@@ -721,7 +729,7 @@ namespace ChessV1.Stormcloud
 				{
 					if (!IsBlackPiece(piece2, secondHalf))
 					{
-						legalMoves.Add(of(bishopLocationIndex, index));
+						legalMoves.Add(ToMove(bishopLocationIndex, index));
 						return false;
 					}
 				}
@@ -732,11 +740,11 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<byte[]> GetLegalMovesRook(byte[] position, byte rookLocationIndex, bool isPieceWhite)
+		public static List<short> GetLegalMovesRook(byte[] position, byte rookLocationIndex, bool isPieceWhite)
 			=> GetLegalMovesRook(position, rookLocationIndex, isPieceWhite, (rookLocationIndex & 1) == 1);
-		public static List<byte[]> GetLegalMovesRook(byte[] position, byte rookLocationIndex, bool isPieceWhite, bool isSecondHalf)
+		public static List<short> GetLegalMovesRook(byte[] position, byte rookLocationIndex, bool isPieceWhite, bool isSecondHalf)
 		{
-			List<byte[]> legalMoves = new List<byte[]>();
+			List<short> legalMoves = new List<short>();
 
 			byte index = rookLocationIndex;
 			while (true)
@@ -781,7 +789,7 @@ namespace ChessV1.Stormcloud
 				{
 					if (!IsWhitePiece(piece2, secondHalf))
 					{
-						legalMoves.Add(of(rookLocationIndex, index));
+						legalMoves.Add(ToMove(rookLocationIndex, index));
 						return false;
 					}
 				}
@@ -789,7 +797,7 @@ namespace ChessV1.Stormcloud
 				{
 					if (!IsBlackPiece(piece2, secondHalf))
 					{
-						legalMoves.Add(of(rookLocationIndex, index));
+						legalMoves.Add(ToMove(rookLocationIndex, index));
 						return false;
 					}
 				}
@@ -799,9 +807,9 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<byte[]> GetLegalMovesQueen(byte[] position, byte queenLocationIndex, bool isPieceWhite)
+		public static List<short> GetLegalMovesQueen(byte[] position, byte queenLocationIndex, bool isPieceWhite)
 		{
-			List<byte[]> legalMoves = new List<byte[]>();
+			List<short> legalMoves = new List<short>();
 			bool isSecondHalf = (queenLocationIndex & 1) == 1;
 
 			legalMoves.AddRange(GetLegalMovesBishop(position, queenLocationIndex, isPieceWhite, isSecondHalf));
@@ -810,12 +818,9 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<byte[]> GetLegalMovesKing(byte[] position, byte kingLocationIndex, bool isPieceWhite)
+		public static List<short> GetLegalMovesKing(byte[] position, byte kingLocationIndex, bool isPieceWhite)
 		{
-			// Debug / Test stuff
-			//position = (byte[])position.Clone();
-			//System.Diagnostics.Debug.WriteLine($"Index: {kingLocationIndex} | {Convert.ToString((byte) (kingLocationIndex << 5), 2)} | {((byte)(kingLocationIndex << 5)).ToString("X2")}");
-			List<byte[]> legalMoves = new List<byte[]>();
+			List<short> legalMoves = new List<short>();
 			bool isSecondHalf = (kingLocationIndex & 1) == 1;
 
 			if(!IsRank8(kingLocationIndex))
@@ -852,6 +857,29 @@ namespace ChessV1.Stormcloud
 				addIfLegal(i, !isSecondHalf);	// No need to check, since the corners are the ones we need to check
 			}
 
+			if(kingLocationIndex == 4)
+			{
+				if(CanCastleBlackKingside(kingLocationIndex))
+				{
+					addIfLegal((byte)(kingLocationIndex + 2), isSecondHalf);
+				}
+				if (CanCastleBlackQueenside(kingLocationIndex))
+				{
+					addIfLegal((byte)(kingLocationIndex - 2), isSecondHalf);
+				}
+			}
+			else if (kingLocationIndex == 60)
+			{
+				if (CanCastleWhiteKingside(kingLocationIndex))
+				{
+					addIfLegal((byte)(kingLocationIndex + 2), isSecondHalf);
+				}
+				if (CanCastleWhiteQueenside(kingLocationIndex))
+				{
+					addIfLegal((byte)(kingLocationIndex - 2), isSecondHalf);
+				}
+			}
+
 			void deltaSameRankUp(byte delta)
 			{
 				byte i = (byte) (kingLocationIndex - delta);
@@ -870,11 +898,11 @@ namespace ChessV1.Stormcloud
 				byte piece2 = position[index >> 1];
 				if(isPieceWhite && !IsWhitePiece(piece2, secondHalf))
 				{
-					legalMoves.Add(of(kingLocationIndex, index));
+					legalMoves.Add(ToMove(kingLocationIndex, index));
 				}
 				else if(!isPieceWhite && !IsBlackPiece(piece2, secondHalf))
 				{
-					legalMoves.Add(of(kingLocationIndex, index));
+					legalMoves.Add(ToMove(kingLocationIndex, index));
 				}
 			}
 
@@ -902,8 +930,6 @@ namespace ChessV1.Stormcloud
 			if (IsBlackPiece(ogPiece, isOGsecondHalf) && IsBlackPiece(targetPiece, isTargetSecondHalf)) return false;
 			return true;
 		}
-		private static byte[] of(byte from, byte to) => new byte[] { from, to };
-		private static byte[] ofPro(byte from, byte to, byte newPiece) => new byte[] { from, to, newPiece };
 
 		private static bool IsSameRank64IndexFormat(byte i1, byte i2)
 		{
@@ -924,6 +950,17 @@ namespace ChessV1.Stormcloud
 			// Check if 00000000 or 00000111
 			return posIndex == 0 || posIndex == 0x07;   // "first" 3 bits is rank
 		}
+
+		private static bool CanCastleWhiteQueenside(byte castleOptions) => (castleOptions & 0x88) == 0x88;
+		private static bool CanCastleWhiteKingside(byte castleOptions) => (castleOptions & 0x44) == 0x44;
+		private static bool CanCastleBlackQueenside(byte castleOptions) => (castleOptions & 0x22) == 0x22;
+		private static bool CanCastleBlackKingside(byte castleOptions) => (castleOptions & 0x11) == 0x11;
+
+		private static byte MoveFromIndex(short move) => (byte) (move >> 10);			// Binary mask: 1111 1100 0000 0000 (not necessary)
+		private static byte MoveToIndex(short move) => (byte) ((move & 0x03F0) >> 4);	// Binary mask: 0000 0011 1111 (0000)
+		private static byte MovePieceByte(short move) => (byte) (move & 0x000F);		// Binary mask: 0000 0000 0000 1111
+		private static short ToMovePieceUpper(byte From, byte To, byte PieceType) => (byte) ((From << 10) | (To << 4) | (PieceType >> 4));		// We trust that the upper most bits of To will always be 0 (128 and 64 bit)
+		private static short ToMove(byte From, byte To, byte PieceType = 0x00) => (byte) ((From << 10) | (To << 4) | PieceType);		// We trust that the upper most bits of To will always be 0 (128 and 64 bit)
 
 		private static bool IsRank8(byte posIndex) => (posIndex >> 3) == 0;
 		private static bool IsRank1(byte posIndex) => (posIndex >> 3) == 7;
@@ -965,35 +1002,38 @@ namespace ChessV1.Stormcloud
 		/// <param name="move"></param>
 		/// <param name="differentPiece0xX0"></param>
 		/// <returns></returns>
-		public static byte[] ResultingPosition(byte[] Position, byte[] move)
+		public static Tuple<byte[], string, byte> ResultingPosition(byte[] Position, short move, byte castleOptions, string currentKey = null)
 		{
 			// Input Validation not needed, as this is an internal process
 
-			byte fromIndex = (byte) (move[0] >> 1); // equivalent to move[0] / 2
-			byte toIndex = (byte) (move[1] >> 1);   // equivalent to move[1] / 2
+			byte moveFrom = MoveFromIndex(move);
+			byte moveTo = MoveToIndex(move);
+
+			byte fromIndex = (byte) (moveFrom >> 1); // equivalent to moveFrom / 2
+			byte toIndex = (byte) (moveTo >> 1);   // equivalent to moveTo / 2
 
 			byte fromByte = Position[fromIndex];
 			byte toByte = Position[toIndex];
 			byte piece;
 
-			if ((move[0] & 1) == 1)     // equivalent to move[0] % 2 == 1 => uneven number, second half is piece, erase piece, so erase 2nd half
+			if ((moveFrom & 1) == 1)     // equivalent to moveFrom % 2 == 1 => uneven number, second half is piece, erase piece, so erase 2nd half
 			{
 				// promotion piece is stored at #3 of the move array, if it exists
-				if(move.Length == 2) piece = (byte) (fromByte & secondHalfMask);
-				else piece = (byte) (move[2] | (byte) ((fromByte & 0x08) << 4));	// add color bit of fromByte for piece color (2nd half since there is the piece)
+				if((move & PieceMask) != 0) piece = (byte)((move & PieceMask) | (byte)((fromByte & 0x08) << 4));   // add color bit of fromByte for piece color (2nd half since there is the piece)
+				else piece = (byte) (fromByte & PieceMask);
 				fromByte &= firstHalfMask; // Keep only first 4 bits
 			}
 			else
 			{
-				if (move.Length == 2) piece = (byte) ((fromByte & firstHalfMask) << 4);
-				else piece = (byte)(move[2] | (byte) ((fromByte & 0x80) << 4)); // add color bit of fromByte for piece color (1st half since there is the piece)		1000 mask to get color bit and then do an or to maybe apply it
+				if ((move & PieceMask) != 0) piece = (byte)((move & PieceMask) | (byte)((fromByte & 0x80) << 4)); // add color bit of fromByte for piece color (1st half since there is the piece)		1000 mask to get color bit and then do an or to maybe apply it
+				else piece = (byte) ((fromByte & firstHalfMask) << 4);
 				fromByte &= secondHalfMask; // Keep only second 4 bits => erase first 4 bits
 											//fromByte >>= bitsPerHalf; // Shift right by 4 bits to keep only first 4 bits			=> this is still from inverted version
 			}
 
 			// piece is xxxx0000
 
-			if ((move[1] & 1) == 1)     // equivalent to move[1] % 2 == 1
+			if ((moveTo & 1) == 1)     // equivalent to moveTo % 2 == 1
 			{
 				toByte &= firstHalfMask; // Keep only first 4 bits
 				toByte += piece;
@@ -1037,31 +1077,111 @@ namespace ChessV1.Stormcloud
 				if ((_piece & mask2) == mask2) { newPosition[i] &= firstHalfMask; break; } // If second half is en passant, erase the second half
 			}
 
+			char[] s = null;
+
+			if (currentKey != null)
+			{
+				s = currentKey.ToCharArray();
+				s[moveTo] = currentKey[moveFrom];
+			}
+
 			// Add en passant
-			if((piece & 0x70) == 1)	// Pawn
+			if ((piece & 0x70) == 1)	// Pawn
 			{
 				// Its always +/- 16
 				// Check if they are the same without the 16er-bit => 11101111 => 0xEF
-				if((move[0] & 0xEF) == (move[1] & 0xEF) && move[0] != move[1])
+				if((moveFrom & 0xEF) == (moveTo & 0xEF) && moveFrom != moveTo)
 				{
 					// moved by 16 (2 ranks) and is a pawn => Insert en passant
 					byte enPassantIndex = (byte) ((fromIndex + toIndex) >> 1);	// Average of the indexes
 					
 					// Mask is what we're going to keep, so if its the second half (uneven index) we want the first half masked
-					if((move[0] & 1) == 1)
+					if((moveFrom & 1) == 1)
 					{
 						// Clear Index not necessary as its guaranteed empty
 						// add en passant to 2nd part of the byte and add the coloring bit if piece is also that color
 						newPosition[enPassantIndex] += (byte) (0x07 + ((piece >> 4) & 0x08));
+						if (s != null) s[(moveFrom + moveTo) >> 1] = '0';	// set to empty
 					}
 					else
 					{
 						newPosition[enPassantIndex] += (byte)(0x70 + (piece & 0x80));
+						if (s != null) s[(moveFrom + moveTo) >> 1] = '0';   // set to empty
 					}
 				}
 			}
 
-			return newPosition;
+			// Castle: Maybe first half of the byte means temporary no? (attacked)
+			// Update Castle Options
+			if ((piece & 0x70) == 6)    // Check if King
+			{
+				if (moveFrom == 60)
+				{
+					castleOptions &= 0x03;      // Remove bits for 4 and 8 (both white bits) | Erase Castle Options White
+				}
+				else if (moveFrom == 4)
+				{
+					castleOptions &= 0x0C;      // Remove bits for 1 and 2 (both black bits) | Erase Castle Options Black
+				}
+				// Its always +/- 2 if castles
+				// Check if they are the same without the 2s-bit => 11111101 => 0xFD
+				if ((moveFrom & 0xFD) == (moveTo & 0xFD) && moveFrom != moveTo)
+				{
+					// 1. move the rook
+					// 2. Update castle options
+					if (moveTo == 58)  // White Queenside
+					{
+						newPosition[28] = 0;		// Remove rook	(other field must have been empty for castle to be an option)
+						newPosition[29] = 0x64;     // Set 29 to King-Rook combo
+					}
+					else if (moveTo == 62)  // White Kingside
+					{
+						newPosition[31] = 0x60;    // Remove rook and add King
+						newPosition[30] = 0x04;    // Set 30 to empty-rook combo	(field was prev occupied by king so there's that
+					}
+					else if (moveTo == 2)  // Black Queenside
+					{
+						newPosition[0] = 0;        // Remove rook	(other field must have been empty for castle to be an option)
+						newPosition[1] = 0x64;     // Set 1 to King-Rook combo
+					}
+					else if (moveTo == 6)  // Black Kingside
+					{
+						newPosition[3] = 0x60;    // Remove rook and add King
+						newPosition[2] = 0x04;    // Set 2 to empty-rook combo	(field was prev occupied by king so there's that
+					}
+				}
+			}
+			// Else if rook
+			else if ((piece & 0x70) == 4 && castleOptions != 0)
+			{
+				if (moveFrom == 56) // If from is white queenside rook
+				{
+					castleOptions &= 0x07;		// White queenside rook = 8er bit = 8
+				}
+				else if (moveFrom == 63) // If from is white kingside rook
+				{
+					castleOptions &= 0x0B;      // White kingside rook = 4er bit = 4 inverse 1011 = F-4 = B
+				}
+				else if (moveFrom == 0) // If from is black queenside rook
+				{
+					castleOptions &= 0x0D;      // Black queenside rook = 2er bit = 2 inverse 1101 = F-2 = D
+				}
+				else if (moveFrom == 7) // If from is black kingside rook
+				{
+					castleOptions &= 0x0E;      // Black kingside rook = 1er bit = 1 inverse 1110 = F-1 = E
+				}
+			}
+
+			if (currentKey == null)
+			{
+				currentKey = GeneratePositionKey(newPosition);
+			}
+			else
+			{
+				currentKey = new string(s);
+			}
+
+			return new Tuple<byte[], string, byte>(newPosition, currentKey, castleOptions);
 		}
 
 

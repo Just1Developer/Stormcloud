@@ -231,9 +231,9 @@ namespace ChessV1
 			if (StormcloudPosition == null) StormcloudPosition = ConvertToHexPositionArray(this.Pieces);
 			if(SelectedField >= 0)
 			{
-				foreach (byte[] mov in Stormcloud.Stormcloud3.GetLegalMovesPawn((byte[]) StormcloudPosition.Clone(), (byte) SelectedField, true))
+				foreach (short mov in Stormcloud.Stormcloud3.GetLegalMovesPawn((byte[]) StormcloudPosition.Clone(), (byte) SelectedField, true))
 				{
-					legalKnightMoves.Add(mov[1]);
+					legalKnightMoves.Add((mov >> 4) & 0x003F);	// Last 6 bits
 				}
 			}
 
