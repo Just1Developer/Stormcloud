@@ -25,6 +25,7 @@ namespace ChessV1.Stormcloud
 	 */
 
 	/*
+	 * We definitely need a center heatmap / center matrix (8x8)
 	 * 
 	 * Example: Pawn Structure Heatmap:
 	 * 
@@ -55,6 +56,7 @@ namespace ChessV1.Stormcloud
 		public Stormcloud3()
 		{
 			search = this;
+			/*
 			byte[] position = {
 				0xCA, 0xBD, 0xEB, 0xAC,
 				0x99, 0x99, 0x99, 0x99,
@@ -65,25 +67,48 @@ namespace ChessV1.Stormcloud
 				0x11, 0x11, 0x11, 0x11,
 				0x42, 0x35, 0x63, 0x24
 			};
+			*/
+			
+			// Generated Testposition (by me on the board, whites queen is hanging, blacks queen too but protected and only attacked by queen)
+			byte[] position = new byte[] { 0xC0, 0x00, 0xE0, 0x0C, 0x99, 0x90, 0x09, 0x99, 0x00, 0xAB, 0xBA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xD1, 0x91, 0x00, 0x00, 0x25, 0x30, 0x10, 0x11, 0x00, 0x00, 0x01, 0x40, 0x00, 0x60, 0x24, };
+			/*
+			 * Depth: 8 | Time: 55,7723242s | Score: -2 | Move: Queen on d3 takes Queen on c4   ||   d3 -> c4   ||   Queen on d3 takes Queen on c4
+			 * Stockfish: -4.3 | Best Move: Qxc4 => Same move
+			 */
+
+
 			double Test_Eval = PositionEvaluation(position, new OldSearch_PositionData() { PositionKey = "", Turn = EvaluationResultWhiteTurn }).Score;
-			var moves = GetAllLegalMoves(position, true).Count;
-			System.Diagnostics.Debug.WriteLine("D >> Test Eval mat: " + Test_Eval + " | Moves: " + moves);
+			var moves = GetAllLegalMoves(position, true);
+			System.Diagnostics.Debug.WriteLine("D >> Test Eval mat: " + Test_Eval + " | Moves: " + moves.Count);
+			/*
+			int i = 0;
+			foreach (var move in moves)
+			{
+				System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToString1(position, move)}");
+			}
+			*/
 
 			StartEvaluationTestSingleThread(position, true);
 		}
 
 		// Todo castle, checks, mate
-
 		// Out of memory at depth 10 (or 11 idk doesn't show) at around 3.5 GB ram usage
-
-
-		async void StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
+		void OldSearch_StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
 		{
 			OldSearch_SearchNode startNode = new OldSearch_SearchNode(startPosition, new OldSearch_PositionData());
 			OldSearch_SearchNodes.Enqueue(startNode);
 			OldSearch_ProcessNextNode(true);
 			//OldSearch_StartProcessingNodesSingleThread();
 			//StartProcessingMultiThread();
+		}
+		void StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
+		{
+			IsRootTurnColorWhite = isWhitesTurn;
+			string posKey = GeneratePositionKey(startPosition);
+			DateTime start = DateTime.Now;
+			int d = 8;
+			double score = CC_FailsoftAlphaBeta(startPosition, isWhitesTurn, 0xFF, posKey, d);
+			System.Diagnostics.Debug.WriteLine($"Depth: {d} | Time: {(DateTime.Now - start).TotalSeconds}s | Score: {score} | Move: {MoveToStringPro1(startPosition, CC_Failsoft_BestMove)}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(startPosition, CC_Failsoft_BestMove)}");
 		}
 
 		#endregion
@@ -99,12 +124,16 @@ namespace ChessV1.Stormcloud
 			}
 		}
 
+		// Maybe Evaluate all legal moves too (or beforehand and enter them into the method as arg) to take them into account
+
 		EvaluationResult PositionEvaluation(OldSearch_SearchNode Node) => PositionEvaluation(Node.Position, Node.PositionData);
-		EvaluationResult PositionEvaluation(byte[] Position, OldSearch_PositionData PositionData)
+		EvaluationResult PositionEvaluation(byte[] Position, OldSearch_PositionData PositionData) => PositionEvaluation(Position, PositionData.Turn);
+		EvaluationResult PositionEvaluation(byte[] Position, bool IsTurnColorWhite) => PositionEvaluation(Position, IsTurnColorWhite ? EvaluationResultWhiteTurn : EvaluationResultBlackTurn);
+		EvaluationResult PositionEvaluation(byte[] Position, byte Turn)
 		{
 			double score = 0;
 
-			byte result = (byte)~PositionData.Turn;	// Invert previous turn byte as default result
+			byte result = (byte)~Turn;	// Invert previous turn byte as default result
 
 			bool GameOver = (result & EvalResultGameOverMask) == EvalResultGameOverMask;	// 0110 or 1001 is for turns, so we need to actually check for 1100
 			bool Draw = GameOver && ((result & EvalResultDrawMask) == EvaluationResultDraw);
@@ -113,7 +142,7 @@ namespace ChessV1.Stormcloud
 
 			// ...
 
-			double materialAdvantage = (PositionData.Turn & 0x0F) != 0 ? MaterialEvaluation(Position) : -MaterialEvaluation(Position);
+			double materialAdvantage = (Turn & 0x0F) != 0 ? MaterialEvaluation(Position) : -MaterialEvaluation(Position);
 
 			score += materialAdvantage;
 
@@ -163,7 +192,234 @@ namespace ChessV1.Stormcloud
 
 	partial class Stormcloud3 // Advanced Alpha Beta Pruning Search Algorithm
 	{
+		/*
+		 * Fail-Soft Alpha Beta: https://www.chessprogramming.org/Alpha-Beta#Outside_the_Bounds
+		 * cc = copycat = code copied / adjusted from pseudo-c-code from the internet
+		int alphaBeta( int alpha, int beta, int depthleft ) {
+			int bestscore = -oo;
+			if( depthleft == 0 ) return quiesce( alpha, beta );
+			for ( all moves)  {
+				score = -alphaBeta( -beta, -alpha, depthleft - 1 );
+				if( score >= beta )
+					return score;  // fail-soft beta-cutoff
+				if( score > bestscore ) {
+					bestscore = score;
+					if( score > alpha )
+						alpha = score;
+				}
+			}
+			return bestscore;
+		}
+		 */
 
+		public static string MoveToString1(short value)
+		{
+			byte from = MoveFromIndex(value);
+			byte to = MoveToIndex(value);
+			char fromFile = (char) (from % 8 + 97);
+			int fromRank = 8 - from / 8;
+			char toFile = (char) (to % 8 + 97);
+			int toRank = 8 - to / 8;
+			return $"{fromFile}{fromRank} -> {toFile}{toRank}";
+		}
+
+		// Empty moves are possible
+
+		public static string MoveToStringCas(byte[] position, short value)
+		{
+			byte from = MoveFromIndex(value);
+			byte to = MoveToIndex(value);
+			//System.Diagnostics.Debug.WriteLine($"Debug: from: {Convert.ToString(from, 2)} | to {Convert.ToString(to, 2)} | short: {Convert.ToString(value, 2)} | 0x{value.ToString("X2")}");
+			byte pieceFrom = position[from >> 1];
+			byte pieceTo = position[to >> 1];
+			string nameFrom = (from & 1) == 1 ? PieceName(pieceFrom) : PieceName((byte) (pieceFrom >> 4));
+			string nameTo = (to & 1) == 1 ? PieceName(pieceTo) : PieceName((byte) (pieceTo >> 4));
+			char fromFile = (char)(from % 8 + 97);
+			int fromRank = 8 - from / 8;	// 7 -> 1
+			char toFile = (char)(to % 8 + 97);
+			int toRank = 8 - to / 8;
+			return $"{nameFrom} on {fromFile}{fromRank} {(nameTo == "Empty" ? "to" : "takes")} {nameTo} on {toFile}{toRank}";
+		}
+
+		public static string MoveToStringPro1(byte[] position, short value)
+		{
+			byte from = MoveFromIndex(value);
+			byte to = MoveToIndex(value);
+			//System.Diagnostics.Debug.WriteLine($"Debug: from: {Convert.ToString(from, 2)} | to {Convert.ToString(to, 2)} | short: {Convert.ToString(value, 2)} | 0x{value.ToString("X2")}");
+			byte pieceFrom = position[from >> 1];
+			byte pieceTo = position[to >> 1];
+			string nameFrom = (from & 1) == 1 ? PieceNamePro(pieceFrom) : PieceNamePro((byte) (pieceFrom >> 4));
+			string nameTo = (to & 1) == 1 ? PieceNamePro(pieceTo) : PieceNamePro((byte) (pieceTo >> 4));
+			char fromFile = (char)(from % 8 + 97);
+			int fromRank = 8 - from / 8;	// 7 -> 1
+			char toFile = (char)(to % 8 + 97);
+			int toRank = 8 - to / 8;
+			string fromFile2 = fromRank == toRank ? "" + fromFile : "";	// This aint right
+			string fromRank2 = fromFile == toFile ? "" + fromFile : "";	// This aint right
+			return $"{nameFrom}{fromFile2}{fromRank2}{(nameTo != "Empty" ? "x" : "")}{toFile}{toRank}";
+		}
+
+		private static string PieceName(byte piece)
+		{
+			switch ((byte) (piece & 0x07))
+			{
+				case 0x01: return "Pawn";
+				case 0x02: return "Knight";
+				case 0x03: return "Bishop";
+				case 0x04: return "Rook";
+				case 0x05: return "Queen";
+				case 0x06: return "King";
+			}
+			return "Empty";
+		}
+
+		private static string PieceNamePro(byte piece)
+		{
+			switch ((byte) (piece & 0x07))
+			{
+				case 0x01: return "";
+				case 0x02: return "N";
+				case 0x03: return "B";
+				case 0x04: return "R";
+				case 0x05: return "Q";
+				case 0x06: return "K";
+			}
+			return "-";
+		}
+
+		short CC_Failsoft_BestMove = 0;
+
+		double CC_FailsoftAlphaBeta(byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depth)
+			=> CC_FailsoftAlphaBeta(double.NegativeInfinity, double.PositiveInfinity, position, isTurnColorWhite, castleOptions, posKey, depth, true);
+
+		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, bool isRoot = false)
+		{
+			double bestscore = int.MinValue;
+			if (depthleft == 0) return CC_FailsoftQuiesce(alpha, beta, position, isTurnColorWhite, castleOptions, posKey, true);
+
+			/*
+			var moves = GetAllLegalMoves(position, isTurnColorWhite);
+			System.Diagnostics.Debug.WriteLine("lne: " + moves.Count);
+			*/
+
+			foreach (var move in GetAllLegalMoves(position, isTurnColorWhite))
+			{
+				var result = ResultingPosition(position, move, castleOptions, posKey);
+				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, depthleft - 1);
+				if (score >= beta)
+				{
+					if(isRoot)
+					{
+						CC_Failsoft_BestMove = move;
+					}
+					return score;
+				}
+				if (score > bestscore)
+				{
+					bestscore = score;
+					if (score > alpha)
+					{
+						alpha = score;
+						if(isRoot)
+						{
+							CC_Failsoft_BestMove = move;
+						}
+					}
+				}
+			}
+			return bestscore;
+		}
+
+		/*
+		 * -- Benchmarks --
+		 * 
+		 * -- Depth 4:
+		 * 
+		 * 
+		 * No Quiesce (via || true statement in first if):
+		 * Depth: 4 | Time: 0,0084995s | Score: 8 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
+		 * 
+		 * Old Quiesce:
+		 * Depth 4 | ~380 secs
+		 * 
+		 * Improved Quiesce:
+		 * Depth: 4 | Time: 0,0180641s | Score: 8 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
+		 * 
+		 * Improved Quiesce with post-capture-chain stuff:
+		 * Depth: 4 | Time: 0,0198224s | Score: 8 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
+		 * 
+		 * 
+		 * -- Depth 8:
+		 * 
+		 * 
+		 * No Quiesce (via || true statement in first if):
+		 * Depth: 8 | Time: 9,4162471s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
+		 * 
+		 * Improved Quiesce:
+		 * Depth: 8 | Time: 16,9334008s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
+		 * 
+		 * Improved Quiesce with post-capture-chain stuff:
+		 * Depth: 8 | Time: 27,7719654s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
+		 * 
+		 * Improved Quiesce with post-capture-chain stuff + post-chain-chain-length-threshold:
+		 * Depth: 8 | Time: 16,8250764s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3	(probably because the capture chains were all short)
+		 * 
+		 * Improved Quiesce with this: if ((captureChainLength >= 3 || captureChainLength % 2 == 1) && IsRootTurnColorWhite == isTurnColorWhite):
+		 * Depth: 8 | Time: 17,3345857s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3		(could work, lets try)
+		 * 
+		 * Old Quiesce:
+		 * Unknown
+		 * 
+		 * => This is still way too slow, but it is a correct algorithm.
+		 * 
+		 */
+
+		private bool IsRootTurnColorWhite;
+
+		// The key if isRoot is that only the root call can edit capture chains
+		double CC_FailsoftQuiesce(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, bool isRoot = false, int captureChainLength = 0, List<byte> captureChainFields = null)
+		{
+			// https://www.chessprogramming.org/Quiescence_Search
+			double stand_pat = PositionEvaluation(position, isTurnColorWhite).Score;
+			if (stand_pat >= beta) return stand_pat;
+			if (alpha < stand_pat) alpha = stand_pat;
+
+			if(captureChainFields == null) captureChainFields = new List<byte>();   // Only look at capture chains
+																					// Todo perhaps later add that it should always end on an opponentmove
+
+			List<short> AllCaptures = GetAllLegalMovesCapturesOnly(position, isTurnColorWhite, captureChainFields);
+
+			foreach (var capture in AllCaptures)
+			{
+				if (isRoot) captureChainFields.Add(MoveToIndex(capture));
+				var result = ResultingPosition(position, capture, castleOptions, posKey);	// The point of MakeCapture() and TakeBack() is that we modify the same element and dont create a new one every time
+				double score = -CC_FailsoftQuiesce(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, false, captureChainLength+1, captureChainFields);
+
+				if (score >= beta) return beta;
+				if (score > alpha) alpha = score;
+			}
+
+			//*
+			// Last run
+			if(AllCaptures.Count == 0)
+			{
+				// If no captures are available (finished), consider all resulting moves with the premise of stand_pat again, final capture
+				if ((captureChainLength >= 3 || captureChainLength % 2 == 1) && IsRootTurnColorWhite == isTurnColorWhite)
+				{
+					// If its the final 
+					foreach (var capture in GetAllLegalMovesCapturesOnly(position, isTurnColorWhite, null))
+					{
+						if (isRoot) captureChainFields.Add(MoveToIndex(capture));
+						double score = PositionEvaluation(position, isTurnColorWhite).Score;
+
+						if (score >= beta) return beta;
+						if (score > alpha) alpha = score;
+					}
+				}
+			}//*/
+
+			return alpha;
+		}
 	}
 
 	// Old Search Algorithm
@@ -434,8 +690,6 @@ namespace ChessV1.Stormcloud
 		}
 	}
 	
-	// Todo update castleing
-
 	internal struct OldSearch_PositionData
 	{
 		public const byte defaultCastle = 0xFF;
@@ -486,6 +740,7 @@ namespace ChessV1.Stormcloud
 
 		#region Legal Moves
 
+		#region Legal Moves [All]
 
 		/// <summary>
 		/// A list of all legal moves based on the provided position,<br/>
@@ -566,9 +821,7 @@ namespace ChessV1.Stormcloud
 		public static List<short> GetLegalMovesPawn(byte[] position, byte pawnLocationIndex, bool isPieceWhite)	// 0x09 = black pawn (1001)
 		{
 			var legalMoves = new List<short>();
-			// This is not here. => What is not here? I forgot, I'm not gonna lie. If I dont remember, its not important and this comment will be removed.
-			// Todo
-
+			
 			// Check if field infront is clear
 			byte fieldIndex = (byte) (isPieceWhite ? pawnLocationIndex - 8 : pawnLocationIndex + 8);
 			if (IsValidIndex(fieldIndex))
@@ -635,19 +888,11 @@ namespace ChessV1.Stormcloud
 		public static List<short> GetLegalMovesKnight(byte[] position, byte knightLocationIndex, bool isPieceWhite)
 		{
 			byte[] possibleMoves = KnightPossibleMoves[knightLocationIndex];
-			//																							mask is important so we only judge the color of the pony now
-			// What? ->						div index by 2		get last bit to see if first half or 2nd	bit == 1 => uneven index => second half, else first half						=> this works because the other half is definetly 0000 bcs mask
-			//																																	then, when that masked with 10001000 (first and 2nd half black) yields 0, that means the horse is white.
-			//bool IsKnightWhite = IsWhitePiece(position[knightLocationIndex >> 1], (knightLocationIndex & 1) == 1); -> perhaps keep for now
-
-			// This seems buggy
-			// Todo
-
 			List<short> legalMoves = new List<short>();
+
 			foreach (byte possibleMove in possibleMoves)
 			{
 				// Check if piece is of own color
-				//if((knightLocationIndex & 0x01) == 0x01 ? IsPieceWhite2ndHalf(position[move >> 1]) : IsPieceWhite1stHalf(position[move >> 1]) != IsKnightWhite)
 
 				bool isSecondHalf = (possibleMove & 1) == 1;
 				// Check if the target field is empty
@@ -714,24 +959,13 @@ namespace ChessV1.Stormcloud
 				if (addIfLegal(isSecondHalf)) break;
 			}
 
-			bool addIfLegal(bool secondHalf)	// Returns if should break
+			bool addIfLegal(bool secondHalf)    // Returns if should break
 			{
-				byte piece2 = position[index >> 1];
-				if (isPieceWhite)
+				byte piece = position[index >> 1];
+				if (IsWhitePiece(piece, secondHalf) != isPieceWhite)
 				{
-					if(!IsWhitePiece(piece2, secondHalf))
-					{
-						legalMoves.Add(ToMove(bishopLocationIndex, index));
-						return false;
-					}
-				}
-				if (!isPieceWhite && !IsBlackPiece(piece2, secondHalf))
-				{
-					if (!IsBlackPiece(piece2, secondHalf))
-					{
-						legalMoves.Add(ToMove(bishopLocationIndex, index));
-						return false;
-					}
+					legalMoves.Add(ToMove(bishopLocationIndex, index));
+					return !IsFieldEmpty(piece, secondHalf);    // If field is empty => dont break, if field is empty => break
 				}
 				return true;
 			}
@@ -784,22 +1018,11 @@ namespace ChessV1.Stormcloud
 
 			bool addIfLegal(bool secondHalf)    // Returns if should break
 			{
-				byte piece2 = position[index >> 1];
-				if (isPieceWhite)
+				byte piece = position[index >> 1];
+				if (IsWhitePiece(piece, secondHalf) != isPieceWhite)
 				{
-					if (!IsWhitePiece(piece2, secondHalf))
-					{
-						legalMoves.Add(ToMove(rookLocationIndex, index));
-						return false;
-					}
-				}
-				if (!isPieceWhite && !IsBlackPiece(piece2, secondHalf))
-				{
-					if (!IsBlackPiece(piece2, secondHalf))
-					{
-						legalMoves.Add(ToMove(rookLocationIndex, index));
-						return false;
-					}
+					legalMoves.Add(ToMove(rookLocationIndex, index));
+					return !IsFieldEmpty(piece, secondHalf);	// If field is empty => dont break, if field is empty => break
 				}
 				return true;
 			}
@@ -859,22 +1082,22 @@ namespace ChessV1.Stormcloud
 
 			if(kingLocationIndex == 4)
 			{
-				if(CanCastleBlackKingside(kingLocationIndex))
+				if(CanCastleBlackKingside(kingLocationIndex) && (position[2] & 0x0F) + (position[3] & 0xF0) == 0)		// Also check fields in between
 				{
 					addIfLegal((byte)(kingLocationIndex + 2), isSecondHalf);
 				}
-				if (CanCastleBlackQueenside(kingLocationIndex))
+				if (CanCastleBlackQueenside(kingLocationIndex) && (position[0] & 0x0F) + (position[1] & 0xFF) == 0)
 				{
 					addIfLegal((byte)(kingLocationIndex - 2), isSecondHalf);
 				}
 			}
 			else if (kingLocationIndex == 60)
 			{
-				if (CanCastleWhiteKingside(kingLocationIndex))
+				if (CanCastleWhiteKingside(kingLocationIndex) && (position[30] & 0x0F) + (position[31] & 0xF0) == 0)
 				{
 					addIfLegal((byte)(kingLocationIndex + 2), isSecondHalf);
 				}
-				if (CanCastleWhiteQueenside(kingLocationIndex))
+				if (CanCastleWhiteQueenside(kingLocationIndex) && (position[28] & 0x0F) + (position[29] & 0xFF) == 0)
 				{
 					addIfLegal((byte)(kingLocationIndex - 2), isSecondHalf);
 				}
@@ -909,6 +1132,397 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
+		#endregion
+
+		#region Legal Moves [Capture Only]
+
+		/// <summary>
+		/// A list of all legal moves based on the provided position. <br/>
+		/// Each Move: [0] = From | [1] = To. <br/>
+		/// Indexes are 64-based.
+		/// </summary>
+		/// <param name="Position"> The Position, a size 32 byte array. </param>
+		/// <returns> List of all legal moves. </returns>
+		private List<short> GetAllLegalMovesCapturesOnly(byte[] Position, bool isTurnColorWhite, List<byte> captureChainFields)              // Todo perhaps discard of this? Or move part of the other function in here
+		{
+			var moves = new List<short>();
+			byte colorMask1 = isTurnColorWhite ? (byte)0 : (byte)0x80;
+			byte colorMask2 = isTurnColorWhite ? (byte)0 : (byte)0x08;
+			for (byte i = 0; i < 64; i += 2)
+			{
+				byte piece = Position[i >> 1];
+				if ((piece & 0x80) == colorMask1) moves.AddRange(GetLegalMovesPieceCapturesOnly(Position, i, isTurnColorWhite, captureChainFields));
+				if ((piece & 0x08) == colorMask2) moves.AddRange(GetLegalMovesPieceCapturesOnly(Position, (byte)(i + 1), isTurnColorWhite, captureChainFields));
+			}
+			return moves;
+		}
+
+		public static List<short> GetLegalMovesPieceCapturesOnly(byte[] position, byte pieceLocationIndex, bool isTurnColorWhite, List<byte> captureChainFields)
+		{
+			byte piece = position[pieceLocationIndex >> 1];
+			bool isPieceWhite;
+			if ((pieceLocationIndex & 1) == 1)
+			{
+				isPieceWhite = (piece & 0x08) == 0; // 4th bit is 0
+				piece &= 0x07; // Uneven index => 2nd half
+				piece = (byte)(piece << 4); // Move to first half
+			}
+			else
+			{
+				isPieceWhite = (piece & 0x80) == 0; // 4th bit is 0
+				piece &= 0x70; // Even index => 1st half
+			}
+			if (isPieceWhite != isTurnColorWhite) return new List<short>();
+
+			// Todo look for checks
+			if (piece == 0x10) return GetLegalMovesPawnCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
+			if (piece == 0x20) return GetLegalMovesKnightCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
+			if (piece == 0x30) return GetLegalMovesBishopCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
+			if (piece == 0x40) return GetLegalMovesRookCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
+			if (piece == 0x50) return GetLegalMovesQueenCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
+			if (piece == 0x60) return GetLegalMovesKingCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
+
+			return new List<short>();
+		}
+
+		/// <summary>
+		/// All legal moves of a pawn.
+		/// </summary>
+		/// <param name="position"> The current position. </param>
+		/// <param name="pawnLocationIndex"> The location index of the pawn (64-format). </param>
+		/// <param name="isPieceWhite"> If the pawn is white or not. Not really necessary, but the method that calls this already knows so why calculate it again? </param>
+		/// <returns> List of all legal moves of this pawn. </returns>
+		public static List<short> GetLegalMovesPawnCapturesOnly(byte[] position, byte pawnLocationIndex, bool isPieceWhite, List<byte> captureChainFields) // 0x09 = black pawn (1001)
+		{
+			var legalMoves = new List<short>();
+			
+			// Checking in front is not necessary since they def wont be captures
+			byte fieldIndex = (byte)(isPieceWhite ? pawnLocationIndex - 8 : pawnLocationIndex + 8);
+
+			void diagonalMove(byte delta)
+			{
+				byte fieldIndex2 = (byte)(isPieceWhite ? pawnLocationIndex - delta : pawnLocationIndex + delta);
+				if (!IsValidIndex(fieldIndex2)) return;
+				bool isSecondHalf = (fieldIndex2 & 1) == 1;
+				byte piece = position[fieldIndex2 >> 1];
+				if (IsSameRank64IndexFormat(fieldIndex, fieldIndex2))
+				{
+					if (isPieceWhite && IsBlackPiece(piece, isSecondHalf))
+					{
+						legalMoves.Add(ToMove(pawnLocationIndex, fieldIndex2));
+					}
+					else if (!isPieceWhite && IsWhitePiece(piece, isSecondHalf))
+					{
+						add(fieldIndex2);
+					}
+				}
+			}
+
+			void add(byte to)
+			{
+				// Only check the capture chain if it exists
+				if (captureChainFields != null) if(!captureChainFields.Contains(to)) return;
+				if (IsEdgeRank64IndexFormat(to))   // We assume its the correct final rank since pawns shouldnt go backwards
+				{
+					byte colorMask = (byte)(isPieceWhite ? 0x00 : 0x08);
+					legalMoves.Add(ToMove(pawnLocationIndex, to, (byte)(0x02 | colorMask)));    // Promotion to Knight
+					legalMoves.Add(ToMove(pawnLocationIndex, to, (byte)(0x03 | colorMask)));    // Promotion to Bishop
+					legalMoves.Add(ToMove(pawnLocationIndex, to, (byte)(0x04 | colorMask)));    // Promotion to Rook
+					legalMoves.Add(ToMove(pawnLocationIndex, to, (byte)(0x05 | colorMask)));    // Promotion to Queen
+				}
+				else legalMoves.Add(ToMove(pawnLocationIndex, to));
+			}
+
+			diagonalMove(7);
+			diagonalMove(9);
+
+			return legalMoves;
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="position"></param>
+		/// <param name="knightLocationIndex">Location Index in 64-format.</param>
+		/// <returns></returns>
+		public static List<short> GetLegalMovesKnightCapturesOnly(byte[] position, byte knightLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+		{
+			byte[] possibleMoves = KnightPossibleMoves[knightLocationIndex];
+			List<short> legalMoves = new List<short>();
+
+			foreach (byte possibleMove in possibleMoves)
+			{
+				// Only check the capture chain if it exists
+				if (captureChainFields != null) if (!captureChainFields.Contains(possibleMove)) continue;
+				// Check if piece is of own color
+
+				bool isSecondHalf = (possibleMove & 1) == 1;
+				// Check if the target field is capture
+				if (IsWhitePiece(position[possibleMove >> 1], isSecondHalf) != isPieceWhite)
+				{
+					legalMoves.Add(ToMove(knightLocationIndex, possibleMove));
+				}
+			}
+			return legalMoves;
+		}
+
+		public static List<short> GetLegalMovesBishopCapturesOnly(byte[] position, byte bishopLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+			=> GetLegalMovesBishopCapturesOnly(position, bishopLocationIndex, isPieceWhite, (bishopLocationIndex & 1) == 1, captureChainFields);
+		public static List<short> GetLegalMovesBishopCapturesOnly(byte[] position, byte bishopLocationIndex, bool isPieceWhite, bool isSecondHalf, List<byte> captureChainFields)
+		{
+			List<short> legalMoves = new List<short>();
+
+			byte index = bishopLocationIndex;
+			bool isSecondHalf2 = isSecondHalf;
+			while (true)
+			{
+				if (IsFileH(index)) break;
+				if (IsRank8(index)) break;
+				index -= 7;
+				isSecondHalf2 = !isSecondHalf2;
+				if (addIfLegal(isSecondHalf)) break;
+			}
+
+			index = bishopLocationIndex;
+			isSecondHalf2 = isSecondHalf;
+			while (true)
+			{
+				if (IsFileA(index)) break;
+				if (IsRank8(index)) break;
+				index -= 9;
+				isSecondHalf2 = !isSecondHalf2;
+				if (addIfLegal(isSecondHalf)) break;
+			}
+
+			index = bishopLocationIndex;
+			isSecondHalf2 = isSecondHalf;
+			while (true)
+			{
+				if (IsFileA(index)) break;
+				if (IsRank1(index)) break;
+				index += 7;
+				isSecondHalf2 = !isSecondHalf2;
+				if (addIfLegal(isSecondHalf)) break;
+			}
+
+			index = bishopLocationIndex;
+			isSecondHalf2 = isSecondHalf;
+			while (true)
+			{
+				if (IsFileH(index)) break;
+				if (IsRank1(index)) break;
+				index += 9;
+				isSecondHalf2 = !isSecondHalf2;
+				if (addIfLegal(isSecondHalf)) break;
+			}
+
+			bool addIfLegal(bool secondHalf)    // Returns if should break
+			{
+				byte piece = position[index >> 1];
+				if (IsWhitePiece(piece, secondHalf) != isPieceWhite)
+				{
+					if (captureChainFields != null)
+						if (captureChainFields.Contains(index))
+							legalMoves.Add(ToMove(bishopLocationIndex, index));
+					return !IsFieldEmpty(piece, secondHalf);    // If field is empty => dont break, if field is empty => break
+				}
+				/*	// Check if the above works as intended					// Todo
+				byte piece2 = position[index >> 1];
+				if (isPieceWhite)
+				{
+					if (!IsWhitePiece(piece2, secondHalf))
+					{
+						if (!captureChainFields.Contains(index)) return false;	// Insert here because return value is important
+						legalMoves.Add(ToMove(bishopLocationIndex, index));
+						return false;
+					}
+				}
+				if (!isPieceWhite)
+				{
+					if (!IsBlackPiece(piece2, secondHalf))
+					{
+						if (!captureChainFields.Contains(index)) return false;
+						legalMoves.Add(ToMove(bishopLocationIndex, index));
+						return false;
+					}
+				}
+				*/
+				return true;
+			}
+
+
+			return legalMoves;
+		}
+
+		public static List<short> GetLegalMovesRookCapturesOnly(byte[] position, byte rookLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+			=> GetLegalMovesRookCapturesOnly(position, rookLocationIndex, isPieceWhite, (rookLocationIndex & 1) == 1, captureChainFields);
+		public static List<short> GetLegalMovesRookCapturesOnly(byte[] position, byte rookLocationIndex, bool isPieceWhite, bool isSecondHalf, List<byte> captureChainFields)
+		{
+			List<short> legalMoves = new List<short>();
+
+			byte index = rookLocationIndex;
+			while (true)
+			{
+				if (IsRank8(index)) break;
+				index -= 8;
+				if (addIfLegal(isSecondHalf)) break;
+			}
+
+			index = rookLocationIndex;
+			while (true)
+			{
+				if (IsRank1(index)) break;
+				index += 8;
+				if (addIfLegal(isSecondHalf)) break;
+			}
+
+			index = rookLocationIndex;
+			bool isSecondHalf2 = isSecondHalf;
+			while (true)
+			{
+				if (IsFileA(index)) break;
+				index -= 1;
+				isSecondHalf2 = !isSecondHalf2;
+				if (addIfLegal(isSecondHalf)) break;
+			}
+
+			index = rookLocationIndex;
+			isSecondHalf2 = isSecondHalf;
+			while (true)
+			{
+				if (IsFileH(index)) break;
+				index += 1;
+				isSecondHalf2 = !isSecondHalf2;
+				if (addIfLegal(isSecondHalf)) break;
+			}
+
+			bool addIfLegal(bool secondHalf)    // Returns if should break
+			{
+				byte piece = position[index >> 1];
+				if (IsWhitePiece(piece, secondHalf) != isPieceWhite)
+				{
+					// Only check the capture chain if it exists
+					if (captureChainFields != null)
+						if (captureChainFields.Contains(index))
+							legalMoves.Add(ToMove(rookLocationIndex, index));
+					return !IsFieldEmpty(piece, secondHalf);    // If field is empty => dont break, if field is empty => break
+				}
+				return true;
+			}
+
+			return legalMoves;
+		}
+
+		public static List<short> GetLegalMovesQueenCapturesOnly(byte[] position, byte queenLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+		{
+			List<short> legalMoves = new List<short>();
+			bool isSecondHalf = (queenLocationIndex & 1) == 1;
+
+			legalMoves.AddRange(GetLegalMovesBishopCapturesOnly(position, queenLocationIndex, isPieceWhite, isSecondHalf, captureChainFields));
+			legalMoves.AddRange(GetLegalMovesRookCapturesOnly(position, queenLocationIndex, isPieceWhite, isSecondHalf, captureChainFields));
+
+			return legalMoves;
+		}
+
+		public static List<short> GetLegalMovesKingCapturesOnly(byte[] position, byte kingLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+		{
+			List<short> legalMoves = new List<short>();
+			bool isSecondHalf = (kingLocationIndex & 1) == 1;
+
+			if (!IsRank8(kingLocationIndex))
+			{
+				// Look for moves above
+				deltaSameRankUp(9);
+
+				byte i = (byte)(kingLocationIndex - 8);
+				addIfLegal(i, isSecondHalf);
+
+				deltaSameRankUp(7);
+			}
+			if (!IsRank1(kingLocationIndex))
+			{
+				// Look for moves below
+				deltaSameRankDown(9);
+
+				byte i = (byte)(kingLocationIndex + 8);
+				addIfLegal(i, isSecondHalf);
+
+				deltaSameRankDown(7);
+			}
+			if (!IsFileA(kingLocationIndex))
+			{
+				//System.Diagnostics.Debug.WriteLine($"Index");
+				// Check move to the right
+				byte i = (byte)(kingLocationIndex - 1);
+				addIfLegal(i, !isSecondHalf);   // No need to check, since the corners are the ones we need to check
+			}
+			if (!IsFileH(kingLocationIndex))
+			{
+				// Check move to the right
+				byte i = (byte)(kingLocationIndex + 1);
+				addIfLegal(i, !isSecondHalf);   // No need to check, since the corners are the ones we need to check
+			}
+
+			if (kingLocationIndex == 4)
+			{
+				if (CanCastleBlackKingside(kingLocationIndex) && (position[2] & 0x0F) + (position[3] & 0xF0) == 0)      // Also check fields in between
+				{
+					addIfLegal((byte)(kingLocationIndex + 2), isSecondHalf);
+				}
+				if (CanCastleBlackQueenside(kingLocationIndex) && (position[0] & 0x0F) + (position[1] & 0xFF) == 0)
+				{
+					addIfLegal((byte)(kingLocationIndex - 2), isSecondHalf);
+				}
+			}
+			else if (kingLocationIndex == 60)
+			{
+				if (CanCastleWhiteKingside(kingLocationIndex) && (position[30] & 0x0F) + (position[31] & 0xF0) == 0)
+				{
+					addIfLegal((byte)(kingLocationIndex + 2), isSecondHalf);
+				}
+				if (CanCastleWhiteQueenside(kingLocationIndex) && (position[28] & 0x0F) + (position[29] & 0xFF) == 0)
+				{
+					addIfLegal((byte)(kingLocationIndex - 2), isSecondHalf);
+				}
+			}
+
+			void deltaSameRankUp(byte delta)
+			{
+				byte i = (byte)(kingLocationIndex - delta);
+				if (IsSameRank64IndexFormat((byte)(kingLocationIndex - 8), i))
+					addIfLegal(i, !isSecondHalf);
+			}
+			void deltaSameRankDown(byte delta)
+			{
+				byte i = (byte)(kingLocationIndex + delta);
+				if (IsSameRank64IndexFormat((byte)(kingLocationIndex + 8), i))
+					addIfLegal(i, !isSecondHalf);
+			}
+
+			void addIfLegal(byte index, bool secondHalf)
+			{
+				// Only check the capture chain if it exists
+				if (captureChainFields != null) if (!captureChainFields.Contains(index)) return;
+				if (IsWhitePiece(position[index >> 1], secondHalf) != isPieceWhite)
+				{
+					legalMoves.Add(ToMove(kingLocationIndex, index));
+				}
+				byte piece2 = position[index >> 1];
+				if (isPieceWhite && !IsWhitePiece(piece2, secondHalf))
+				{
+					legalMoves.Add(ToMove(kingLocationIndex, index));
+				}
+				else if (!isPieceWhite && !IsBlackPiece(piece2, secondHalf))
+				{
+					legalMoves.Add(ToMove(kingLocationIndex, index));
+				}
+			}
+
+			return legalMoves;
+		}
+
+		#endregion
+
 		#region Helper Methods | Board Index Analysis
 
 		// Check if the first bit of each half is 0 (indicates white piece)
@@ -939,8 +1553,8 @@ namespace ChessV1.Stormcloud
 		private static bool IsEdgeFile64IndexFormat(byte posIndex)
 		{
 			// edge is 00000000 or 00001000 or 00010000 or 00011000 or 00100000 => xxxxx000 or xxxxx111 since 111 is position inside rank
-			posIndex <<= 5;	// no need to cast because posIndex is byte
-			// Check if 11100000 or 00000000
+			posIndex <<= 5; // no need to cast because posIndex is byte
+							// Check if 11100000 or 00000000
 			return posIndex == 0 || posIndex == 0xE0;   // last 3 bits is position inside rank
 		}
 
@@ -956,17 +1570,17 @@ namespace ChessV1.Stormcloud
 		private static bool CanCastleBlackQueenside(byte castleOptions) => (castleOptions & 0x22) == 0x22;
 		private static bool CanCastleBlackKingside(byte castleOptions) => (castleOptions & 0x11) == 0x11;
 
-		private static byte MoveFromIndex(short move) => (byte) (move >> 10);			// Binary mask: 1111 1100 0000 0000 (not necessary)
-		private static byte MoveToIndex(short move) => (byte) ((move & 0x03F0) >> 4);	// Binary mask: 0000 0011 1111 (0000)
-		private static byte MovePieceByte(short move) => (byte) (move & 0x000F);		// Binary mask: 0000 0000 0000 1111
-		private static short ToMovePieceUpper(byte From, byte To, byte PieceType) => (byte) ((From << 10) | (To << 4) | (PieceType >> 4));		// We trust that the upper most bits of To will always be 0 (128 and 64 bit)
-		private static short ToMove(byte From, byte To, byte PieceType = 0x00) => (byte) ((From << 10) | (To << 4) | PieceType);		// We trust that the upper most bits of To will always be 0 (128 and 64 bit)
+		private static byte MoveFromIndex(short move) => (byte)((move >> 10) & 0x3F);            // Binary mask: 1111 1100 0000 0000 (not necessary) | Neutralize 128- and 64-bit since their default is 1 (we're shifting to the left)
+		private static byte MoveToIndex(short move) => (byte)((move & 0x03F0) >> 4);    // Binary mask: 0000 0011 1111 (0000)
+		private static byte MovePieceByte(short move) => (byte)(move & 0x000F);     // Binary mask: 0000 0000 0000 1111
+		private static short ToMovePieceUpper(byte From, byte To, byte PieceType) => (short) ((From << 10) | (To << 4) | (PieceType >> 4));       // We trust that the upper most bits of To will always be 0 (128 and 64 bit)
+		private static short ToMove(byte From, byte To, byte PieceType = 0x00) => (short) ((From << 10) | (To << 4) | PieceType);     // We trust that the upper most bits of To will always be 0 (128 and 64 bit)
 
 		private static bool IsRank8(byte posIndex) => (posIndex >> 3) == 0;
 		private static bool IsRank1(byte posIndex) => (posIndex >> 3) == 7;
-		private static bool IsFileA(byte posIndex) => ((byte) (posIndex << 5)) == 0;
-		private static bool IsFileH(byte posIndex) => ((byte) (posIndex << 5)) == 0xE0;
-		private static bool IsValidIndex(byte posIndex) => (posIndex & 0xC0) == 0;		// Mask 1100 0000 != 0 means >= 64 means invalid index
+		private static bool IsFileA(byte posIndex) => ((byte)(posIndex << 5)) == 0;
+		private static bool IsFileH(byte posIndex) => ((byte)(posIndex << 5)) == 0xE0;
+		private static bool IsValidIndex(byte posIndex) => (posIndex & 0xC0) == 0;      // Mask 1100 0000 != 0 means >= 64 means invalid index
 
 		// Rank: index >> 3		| => First half
 		// File: index & 0x07	| => Second (feinschliff) half, but index is only size 6 (0-64, byte is 0-256)

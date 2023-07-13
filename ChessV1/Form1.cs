@@ -22,6 +22,7 @@ namespace ChessV1
 		public ComboBox GameMode;
 
 		public Label Catfish_UI_Title, Catfish_UI_BestMove_Title, Catfish_UI_BestMove, Catfish_UI_BestMoveScore;
+		public TextBox TextFieldExport1;
 
 		public Form1()
 		{
@@ -42,6 +43,12 @@ namespace ChessV1
 			tf_Result.Location = new Point(340, 450);
 			tf_Result.Text = "";
 			Controls.Add(tf_Result);
+
+			TextFieldExport1 = new TextBox();
+			TextFieldExport1.Font = new Font(tf_Result.Font.FontFamily, 35f);
+			TextFieldExport1.AutoSize = true;
+			TextFieldExport1.Location = new Point(1040, 150);
+			Controls.Add(TextFieldExport1);
 
 			// Checkboxes
 
@@ -201,6 +208,11 @@ namespace ChessV1
 		public void SetScore(double score)
 		{
 			Catfish_UI_BestMoveScore.Text = $"Material: {(score > 0 ? $"+{score}" : $"{score}")}";
+		}
+
+		public void SetPosKey(string key)
+		{
+			TextFieldExport1.Text = key;
 		}
 
 		public void newTurn(Turn turn)

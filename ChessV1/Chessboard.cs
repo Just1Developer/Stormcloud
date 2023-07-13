@@ -151,7 +151,7 @@ namespace ChessV1
 			CastleAvailability.Add(Turn.White, CastleOptions.Both);
 			CastleAvailability.Add(Turn.Black, CastleOptions.Both);
 
-			/** /
+			/**/
 
 			HighlightedFieldsManual.Clear();
 			Form1.self.UndoButton.Enabled = false;
@@ -315,6 +315,7 @@ namespace ChessV1
 			Form1.self.newTurn(Turn);
 			StormcloudPosition = ConvertToHexPositionArray(this.Pieces);
 			Form1.self.SetScore(Stormcloud.Stormcloud3.MaterialEvaluation(StormcloudPosition));
+			Form1.self.SetPosKey(ConvertToHexPositionArrayString(StormcloudPosition));
 		}
 
 		#region Stormcloud Conversion
@@ -332,6 +333,20 @@ namespace ChessV1
 				pos[i / 2] = (byte)((PieceHexValue[type1] & 0xF0) + (PieceHexValue[type2] & 0x0F));
 			}
 			return pos;
+		}
+
+		private static string ConvertToHexPositionArrayString(Dictionary<int, PieceType> pieces) => ConvertToHexPositionArrayString(ConvertToHexPositionArray(pieces));
+		private static string ConvertToHexPositionArrayString(byte[] position)
+		{
+			System.Text.StringBuilder b = new System.Text.StringBuilder("byte[] testPos = new byte[] { ");
+			foreach (byte b2 in position)
+			{
+				b.Append("0x");
+				b.Append(b2.ToString("X2"));
+				b.Append(", ");
+			}
+			b.Append("};");
+			return b.ToString();
 		}
 
 		private static Dictionary<PieceType, byte> PieceHexValue = new Dictionary<PieceType, byte>()
