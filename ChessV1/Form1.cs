@@ -197,11 +197,26 @@ namespace ChessV1
 			Catfish_UI_BestMoveScore.Location = new Point(Catfish_UI_BestMove_Title.Location.X + Catfish_UI_BestMove_Title.Width / 4, Catfish_UI_BestMove.Location.Y + Catfish_UI_BestMove.Height + 10);
 			Catfish_UI_BestMoveScore.Text = "Score: 0";
 			Controls.Add(Catfish_UI_BestMoveScore);
+
+			Timer t = new Timer();
+			t.Tick += (s, e) =>
+			{
+				Catfish_UI_BestMove.Text = bestMove;
+				Catfish_UI_BestMoveScore.Text = $"Eval: {(bestMoveScore > 0 ? $"+{bestMoveScore}" : $"{bestMoveScore}")} | Depth: {bestMoveDepth}";
+			};
+			t.Interval = 150;
+			t.Start();
 		}
 
-		public void SetBestMove(string move, int score, int Depth)
+		public static string bestMove = "None";
+		public static double bestMoveScore = 0;
+		public static int bestMoveDepth = 0;
+
+		public void SetBestMove(string move, double score, int Depth)
 		{
 			Catfish_UI_BestMove.Text = move;
+			Catfish_UI_BestMoveScore.Text = $"Material: {(score > 0 ? $"+{score}" : $"{score}")}";
+			//SetScore(score);
 			//Catfish_UI_BestMoveScore.Text = $"Score: {(double) (score / 100.0)}  |  Depth: {Depth}";
 		}
 

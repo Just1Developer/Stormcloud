@@ -8,11 +8,14 @@ using System.Threading.Tasks;
 namespace ChessV1.Stormcloud
 {
 
+	// Todo rename file to Stormcloud3
+
 	// Represent Moves as short or int instead of byte arrays?
 	// Yes: Short: 16 bit -> 6 bit: from | 6 bit: to | 4 bit resulting piece.
 	// Example: Short: 001000 010000 1001 => a7 -> a6, black pawn: move title: a6
 
 	// Castle: Maybe first half of the byte means temporary no? (attacked)
+	// Todo add castleOptions to position Key
 
 	/*
 	 * If we store at the back of the short
@@ -88,7 +91,11 @@ namespace ChessV1.Stormcloud
 			}
 			*/
 
-			StartEvaluationTestSingleThread(position, true);
+			Debug_StartEvaluationTestSingleThread(position, true);
+		}
+		public Stormcloud3(bool diff)	// 2nd constructor
+		{
+
 		}
 
 		// Todo castle, checks, mate
@@ -98,17 +105,38 @@ namespace ChessV1.Stormcloud
 			OldSearch_SearchNode startNode = new OldSearch_SearchNode(startPosition, new OldSearch_PositionData());
 			OldSearch_SearchNodes.Enqueue(startNode);
 			OldSearch_ProcessNextNode(true);
-			//OldSearch_StartProcessingNodesSingleThread();
+			OldSearch_StartProcessingNodesSingleThread();
 			//StartProcessingMultiThread();
 		}
-		void StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
+
+		//System.Threading.Thread Debug_SearchThread = null;
+		//int Debug_Depth = 2;
+
+		// Though its a bugged position, pawn captures seem to ignore color (9 -> C), (black pawn -> black rook)
+
+		public void Debug_StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
 		{
+			//if(Debug_SearchThread != null) Debug_SearchThread.Abort();
 			IsRootTurnColorWhite = isWhitesTurn;
 			string posKey = GeneratePositionKey(startPosition);
-			DateTime start = DateTime.Now;
-			int d = 8;
-			double score = CC_FailsoftAlphaBeta(startPosition, isWhitesTurn, 0xFF, posKey, d);
-			System.Diagnostics.Debug.WriteLine($"Depth: {d} | Time: {(DateTime.Now - start).TotalSeconds}s | Score: {score} | Move: {MoveToStringPro1(startPosition, CC_Failsoft_BestMove)}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(startPosition, CC_Failsoft_BestMove)}");
+			System.Diagnostics.Debug.WriteLine("posKey: " + posKey);
+			DateTime start;
+			//Debug_SearchThread = new System.Threading.Thread(() =>
+			//{
+				System.Diagnostics.Debug.WriteLine("Starting Stormcloud Calc...");
+				int Debug_Depth = 2;
+				while (Debug_Depth <= 8)
+				{
+					start = DateTime.Now;
+					double score = CC_FailsoftAlphaBeta(startPosition, isWhitesTurn, 0xFF, posKey, Debug_Depth);
+					string moveString = MoveToStringPro1(startPosition, CC_Failsoft_BestMove);
+					System.Diagnostics.Debug.WriteLine($"Depth: {Debug_Depth++} | Time: {(DateTime.Now - start).TotalSeconds}s | Score: {score} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(startPosition, CC_Failsoft_BestMove)}");
+					Form1.bestMove = moveString;
+					Form1.bestMoveScore = score;
+					Form1.bestMoveDepth = Debug_Depth;
+				}
+			//});
+			//Debug_SearchThread.Start();
 		}
 
 		#endregion
@@ -126,7 +154,7 @@ namespace ChessV1.Stormcloud
 
 		// Maybe Evaluate all legal moves too (or beforehand and enter them into the method as arg) to take them into account
 
-		EvaluationResult PositionEvaluation(OldSearch_SearchNode Node) => PositionEvaluation(Node.Position, Node.PositionData);
+		EvaluationResult PositionEvaluation(OldSearch_SearchNode Node) => PositionEvaluation(Node.Position, Node.PositionData.Turn);
 		EvaluationResult PositionEvaluation(byte[] Position, OldSearch_PositionData PositionData) => PositionEvaluation(Position, PositionData.Turn);
 		EvaluationResult PositionEvaluation(byte[] Position, bool IsTurnColorWhite) => PositionEvaluation(Position, IsTurnColorWhite ? EvaluationResultWhiteTurn : EvaluationResultBlackTurn);
 		EvaluationResult PositionEvaluation(byte[] Position, byte Turn)
@@ -142,11 +170,43 @@ namespace ChessV1.Stormcloud
 
 			// ...
 
+			// This is bad because here white is 1 but otherwise white is 0
 			double materialAdvantage = (Turn & 0x0F) != 0 ? MaterialEvaluation(Position) : -MaterialEvaluation(Position);
 
 			score += materialAdvantage;
 
 			return new EvaluationResult(score, result);
+		}
+
+		// Todo remove not legal moves here
+
+		/// <summary>
+		/// Returns Tuple<Score, EvalResult, AllActuallyLegalMoves, (CastleOptionsActual)>
+		/// </summary>
+		/// <param name="Position"></param>
+		/// <param name="IsWhitesTurn"></param>
+		/// <param name="CastleOptions"></param>
+		/// <returns></returns>
+		Tuple<double, byte, List<short>> AdvancedPositionEvaluation(byte[] Position, bool IsWhitesTurn, byte CastleOptions, List<short> AllLegalNextMoves)
+		{
+			double score = 0.0;
+			byte result = IsWhitesTurn ? EvaluationResultBlackTurn : EvaluationResultWhiteTurn;     // Default Value
+
+			double materialAdvantage = IsWhitesTurn ? MaterialEvaluation(Position) : -MaterialEvaluation(Position);
+
+			score += materialAdvantage;
+			score += (0.2 * (AllLegalNextMoves.Count - 10));    // less than 10 moves is negative, more than 10 is positive. Mobile positions are preferred
+
+			// ...
+
+			// Todo calculate result
+
+			bool GameOver = (result & EvalResultGameOverMask) == EvalResultGameOverMask;    // 0110 or 1001 is for turns, so we need to actually check for 1100
+			bool Draw = GameOver && ((result & EvalResultDrawMask) == EvaluationResultDraw);
+			if (Draw) result = EvaluationResultDraw;
+			else if (GameOver) result = (result & EvalResultWhiteMask) != 0 ? EvaluationResultWhiteWon : EvaluationResultBlackWon;
+
+			return new Tuple<double, byte, List<short>>(score, result, AllLegalNextMoves);
 		}
 
 		/**
@@ -254,9 +314,9 @@ namespace ChessV1.Stormcloud
 			int fromRank = 8 - from / 8;	// 7 -> 1
 			char toFile = (char)(to % 8 + 97);
 			int toRank = 8 - to / 8;
-			string fromFile2 = fromRank == toRank ? "" + fromFile : "";	// This aint right
-			string fromRank2 = fromFile == toFile ? "" + fromFile : "";	// This aint right
-			return $"{nameFrom}{fromFile2}{fromRank2}{(nameTo != "Empty" ? "x" : "")}{toFile}{toRank}";
+			string fromFile2 = /*fromRank == toRank ||*/ nameFrom == "" && nameTo != "-" /*pawn*/ ? "" + fromFile : "";	// This aint right
+			string fromRank2 = fromFile == toFile ? "" + fromRank : "";	// This aint right
+			return $"{nameFrom}{fromFile2}{/*fromRank2*/ ""}{(nameTo != "-" ? "x" : "")}{toFile}{toRank}";
 		}
 
 		private static string PieceName(byte piece)
@@ -290,9 +350,9 @@ namespace ChessV1.Stormcloud
 		short CC_Failsoft_BestMove = 0;
 
 		double CC_FailsoftAlphaBeta(byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depth)
-			=> CC_FailsoftAlphaBeta(double.NegativeInfinity, double.PositiveInfinity, position, isTurnColorWhite, castleOptions, posKey, depth, true);
+			=> CC_FailsoftAlphaBeta(double.NegativeInfinity, double.PositiveInfinity, position, isTurnColorWhite, castleOptions, posKey, depth, null, true);
 
-		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, bool isRoot = false)
+		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, List<short> AllLegalMoves = null, bool isRoot = false)
 		{
 			double bestscore = int.MinValue;
 			if (depthleft == 0) return CC_FailsoftQuiesce(alpha, beta, position, isTurnColorWhite, castleOptions, posKey, true);
@@ -302,10 +362,34 @@ namespace ChessV1.Stormcloud
 			System.Diagnostics.Debug.WriteLine("lne: " + moves.Count);
 			*/
 
-			foreach (var move in GetAllLegalMoves(position, isTurnColorWhite))
+			if (AllLegalMoves == null) AllLegalMoves = GetAllLegalMoves(position, isTurnColorWhite);
+
+			foreach (var move in AllLegalMoves)
 			{
 				var result = ResultingPosition(position, move, castleOptions, posKey);
-				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, depthleft - 1);
+
+				// Todo: King capture detection doesn't quite work yet. Also, capture king is not the best move on scholars mate, engine even opens up the king >> coloring? Can the queen not take the king there?
+
+				// Check for King Captures (Checkmates)
+				// 2nd Half
+				if ((move & 1) == 1)
+				{
+					// King captured
+					if ((position[MoveToIndex(move) >> 1] & 0x07) == 6)
+					{
+						return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+					}
+				}
+				// 1st Half
+				else if ((position[MoveToIndex(move) >> 1] & 0x70) == 6)
+				{
+					// King captured
+					return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+				}
+
+				var followUpMoves = GetAllLegalMoves(result.Item1, !isTurnColorWhite);
+
+				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, depthleft - 1, followUpMoves);
 				if (score >= beta)
 				{
 					if(isRoot)
@@ -391,6 +475,23 @@ namespace ChessV1.Stormcloud
 
 			foreach (var capture in AllCaptures)
 			{
+				// Check for King Captures (Checkmates)
+				// 2nd Half
+				if ((capture & 1) == 1)
+				{
+					// King captured
+					if ((position[MoveToIndex(capture) >> 1] & 0x07) == 6)
+					{
+						return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+					}
+				}
+				// 1st Half
+				else if ((position[MoveToIndex(capture) >> 1] & 0x70) == 6)
+				{
+					// King captured
+					return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+				}
+
 				if (isRoot) captureChainFields.Add(MoveToIndex(capture));
 				var result = ResultingPosition(position, capture, castleOptions, posKey);	// The point of MakeCapture() and TakeBack() is that we modify the same element and dont create a new one every time
 				double score = -CC_FailsoftQuiesce(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, false, captureChainLength+1, captureChainFields);
@@ -409,7 +510,23 @@ namespace ChessV1.Stormcloud
 					// If its the final 
 					foreach (var capture in GetAllLegalMovesCapturesOnly(position, isTurnColorWhite, null))
 					{
-						if (isRoot) captureChainFields.Add(MoveToIndex(capture));
+						// Check for King Captures (Checkmates)
+						// 2nd Half
+						if ((capture & 1) == 1)
+						{
+							// King captured
+							if ((position[MoveToIndex(capture) >> 1] & 0x07) == 6)
+							{
+								return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+							}
+						}
+						// 1st Half
+						else if ((position[MoveToIndex(capture) >> 1] & 0x70) == 6)
+						{
+							// King captured
+							return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+						}
+
 						double score = PositionEvaluation(position, isTurnColorWhite).Score;
 
 						if (score >= beta) return beta;
@@ -832,28 +949,26 @@ namespace ChessV1.Stormcloud
 					// If first rank, add double
 					if (pawnLocationIndex >> 3 == 0x06 && isPieceWhite || pawnLocationIndex >> 3 == 0x01 && !isPieceWhite)       // Loc index: White: 48, 49... - 55: 00110000, 00110001, 00110010,..., so 00110xxx >> 3 = 00000110 = 6   |   Black: 8,9,10,11... - 15 00001000, 00001001, 00001010 - 00001111 -> Mask of 00001xxx
 					{
-						byte fieldIndexjump = (byte)(isPieceWhite ? fieldIndex - 8 : fieldIndex + 8);
+						fieldIndex = (byte)(isPieceWhite ? fieldIndex - 8 : fieldIndex + 8);
 						if (IsFieldEmpty(position[fieldIndex >> 1], (fieldIndex & 1) == 1))
 						{
-							add(fieldIndexjump);
+							// No need for the add method because this is guaranteed to not be a promotion move or on the last rank
+							legalMoves.Add(ToMove(pawnLocationIndex, fieldIndex));
 						}
 					}
 				}
 			}
 
-			void diagonalMove(byte delta)
+			void diagonalMove(sbyte delta)
 			{
-				byte fieldIndex2 = (byte)(isPieceWhite ? pawnLocationIndex - delta : pawnLocationIndex + delta);
+				byte fieldIndex2 = (byte)(pawnLocationIndex + delta);
 				if (!IsValidIndex(fieldIndex2)) return;
 				bool isSecondHalf = (fieldIndex2 & 1) == 1;
 				byte piece = position[fieldIndex2 >> 1];
-				if (IsSameRank64IndexFormat(fieldIndex, fieldIndex2))
+
+				if(!IsFieldEmpty(piece, isSecondHalf))
 				{
-					if (isPieceWhite && IsBlackPiece(piece, isSecondHalf))
-					{
-						legalMoves.Add(ToMove(pawnLocationIndex, fieldIndex2));
-					}
-					else if (!isPieceWhite && IsWhitePiece(piece, isSecondHalf))
+					if(isPieceWhite != IsWhitePiece(piece, isSecondHalf))
 					{
 						add(fieldIndex2);
 					}
@@ -873,8 +988,16 @@ namespace ChessV1.Stormcloud
 				else legalMoves.Add(ToMove(pawnLocationIndex, to));
 			}
 
-			diagonalMove(7);
-			diagonalMove(9);
+			if(isPieceWhite)
+			{
+				if (!IsFileH(pawnLocationIndex)) diagonalMove(-7);
+				if (!IsFileA(pawnLocationIndex)) diagonalMove(-9);
+			}
+			else
+			{
+				if (!IsFileA(pawnLocationIndex)) diagonalMove(7);
+				if (!IsFileH(pawnLocationIndex)) diagonalMove(9);
+			}
 
 			return legalMoves;
 		}
@@ -1197,21 +1320,16 @@ namespace ChessV1.Stormcloud
 			var legalMoves = new List<short>();
 			
 			// Checking in front is not necessary since they def wont be captures
-			byte fieldIndex = (byte)(isPieceWhite ? pawnLocationIndex - 8 : pawnLocationIndex + 8);
-
-			void diagonalMove(byte delta)
+			void diagonalMove(sbyte delta)
 			{
-				byte fieldIndex2 = (byte)(isPieceWhite ? pawnLocationIndex - delta : pawnLocationIndex + delta);
+				byte fieldIndex2 = (byte)(pawnLocationIndex + delta);
 				if (!IsValidIndex(fieldIndex2)) return;
 				bool isSecondHalf = (fieldIndex2 & 1) == 1;
 				byte piece = position[fieldIndex2 >> 1];
-				if (IsSameRank64IndexFormat(fieldIndex, fieldIndex2))
+
+				if (!IsFieldEmpty(piece, isSecondHalf))
 				{
-					if (isPieceWhite && IsBlackPiece(piece, isSecondHalf))
-					{
-						legalMoves.Add(ToMove(pawnLocationIndex, fieldIndex2));
-					}
-					else if (!isPieceWhite && IsWhitePiece(piece, isSecondHalf))
+					if (isPieceWhite != IsWhitePiece(piece, isSecondHalf))
 					{
 						add(fieldIndex2);
 					}
@@ -1220,8 +1338,6 @@ namespace ChessV1.Stormcloud
 
 			void add(byte to)
 			{
-				// Only check the capture chain if it exists
-				if (captureChainFields != null) if(!captureChainFields.Contains(to)) return;
 				if (IsEdgeRank64IndexFormat(to))   // We assume its the correct final rank since pawns shouldnt go backwards
 				{
 					byte colorMask = (byte)(isPieceWhite ? 0x00 : 0x08);
@@ -1233,8 +1349,16 @@ namespace ChessV1.Stormcloud
 				else legalMoves.Add(ToMove(pawnLocationIndex, to));
 			}
 
-			diagonalMove(7);
-			diagonalMove(9);
+			if (isPieceWhite)
+			{
+				if (!IsFileH(pawnLocationIndex)) diagonalMove(-7);
+				if (!IsFileA(pawnLocationIndex)) diagonalMove(-9);
+			}
+			else
+			{
+				if (!IsFileA(pawnLocationIndex)) diagonalMove(7);
+				if (!IsFileH(pawnLocationIndex)) diagonalMove(9);
+			}
 
 			return legalMoves;
 		}
@@ -1527,14 +1651,14 @@ namespace ChessV1.Stormcloud
 
 		// Check if the first bit of each half is 0 (indicates white piece)
 		static bool IsWhitePiece(byte piece) => (piece & 0x88) == 0 && (piece & 0xFF) != 0x00 /* not empty */;
-		static bool IsWhitePiece(byte piece, bool isSecondHalf) => isSecondHalf ? IsWhitePieceFirstHalf(piece) : IsWhitePieceSecondHalf(piece);
+		static bool IsWhitePiece(byte piece, bool isSecondHalf) => isSecondHalf ? IsWhitePieceSecondHalf(piece) : IsWhitePieceFirstHalf(piece);
 		static bool IsWhitePieceFirstHalf(byte piece) => (piece & 0x80) == 0 && (piece & 0xF0) != 0;
 		static bool IsWhitePieceSecondHalf(byte piece) => (piece & 0x08) == 0 && (piece & 0x0F) != 0;
 		static bool IsBlackPiece(byte piece) => (piece & 0x88) != 0 && (piece & 0xFF) != 0x00 /* not empty */;
-		static bool IsBlackPiece(byte piece, bool isSecondHalf) => isSecondHalf ? IsBlackPieceFirstHalf(piece) : IsBlackPieceSecondHalf(piece);
-		static bool IsBlackPieceFirstHalf(byte piece) => (piece & 0x80) == 0x80 && (piece & 0xF0) != 0;
-		static bool IsBlackPieceSecondHalf(byte piece) => (piece & 0x08) == 0x08 && (piece & 0x0F) != 0;
-		static bool IsFieldEmpty(byte piece, bool isSecondHalf) => isSecondHalf ? IsFieldEmptyFirstHalf(piece) : IsFieldEmptySecondHalf(piece);
+		static bool IsBlackPiece(byte piece, bool isSecondHalf) => isSecondHalf ? IsBlackPieceSecondHalf(piece) : IsBlackPieceFirstHalf(piece);
+		static bool IsBlackPieceFirstHalf(byte piece) => (piece & 0x80) == 0x80;	// Per default, if there is a color bit 1 there is a piece
+		static bool IsBlackPieceSecondHalf(byte piece) => (piece & 0x08) == 0x08;	// Aint to such thing as an empty black field
+		static bool IsFieldEmpty(byte piece, bool isSecondHalf) => isSecondHalf ? IsFieldEmptySecondHalf(piece) : IsFieldEmptyFirstHalf(piece);
 		static bool IsFieldEmptyFirstHalf(byte piece) => (piece & 0xF0) == 0;
 		static bool IsFieldEmptySecondHalf(byte piece) => (piece & 0x0F) == 0;
 		static bool IsOppositeColorOrEmpty(byte ogPiece, bool isOGsecondHalf, byte targetPiece, bool isTargetSecondHalf)
@@ -1961,3 +2085,28 @@ namespace ChessV1.Stormcloud
 		};
 	}
 }
+
+/*
+ From old pawn method:
+
+			void diagonalMove(sbyte delta)
+			{
+				byte fieldIndex2 = (byte)(pawnLocationIndex + delta);
+				if (!IsValidIndex(fieldIndex2)) return;
+				bool isSecondHalf = (fieldIndex2 & 1) == 1;
+				byte piece = position[fieldIndex2 >> 1];
+				if (IsSameRank64IndexFormat(fieldIndex, fieldIndex2))
+				{
+					if (isPieceWhite && IsBlackPiece(piece, isSecondHalf))
+					{
+						legalMoves.Add(ToMove(pawnLocationIndex, fieldIndex2));
+					}
+					else if (!isPieceWhite && IsWhitePiece(piece, isSecondHalf))
+					{
+						add(fieldIndex2);
+					}
+				}
+			}
+
+ 
+ */

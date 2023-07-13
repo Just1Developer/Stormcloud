@@ -13,7 +13,7 @@ namespace ChessV1
 		// TODO Undo -> Buggy (Should do normal moves just fine, but messes up in Atomic, castleing, en passant, etc.
 		// Nvm it hella buggy; Imma leave it in but its hella buggy fr fr
 
-		private bool DisregardTurnsDebug = true;
+		private bool DisregardTurnsDebug = false;
 
 		public Turn Turn { get; private set; } = Turn.White;
 		public ChessMode ChessMode { get; set; } = ChessMode.Normal;
@@ -56,6 +56,7 @@ namespace ChessV1
 
 		public Chessboard(int DisplaySize, bool IsWhite = true) // 0 = white, 1 = black
 		{
+			LocalEngine = new Stormcloud.Stormcloud3(false);
 			DoubleBuffered = true;
 			SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 
@@ -228,7 +229,7 @@ namespace ChessV1
 			int delta = DisplaySize / 8;
 
 			List<int> legalKnightMoves = new List<int>();
-			if (StormcloudPosition == null) StormcloudPosition = ConvertToHexPositionArray(this.Pieces);
+			if (StormcloudPosition == null) StormcloudPosition = ConvertToHexPositionArray(this.Pieces, Turn);
 			if(SelectedField >= 0)
 			{
 				foreach (short mov in Stormcloud.Stormcloud3.GetLegalMovesPawn((byte[]) StormcloudPosition.Clone(), (byte) SelectedField, true))
@@ -313,29 +314,52 @@ namespace ChessV1
 				Turn = Turn.White;
 			}
 			Form1.self.newTurn(Turn);
-			StormcloudPosition = ConvertToHexPositionArray(this.Pieces);
-			Form1.self.SetScore(Stormcloud.Stormcloud3.MaterialEvaluation(StormcloudPosition));
+			StormcloudPosition = ConvertToHexPositionArray(this.Pieces, Turn);
+			LocalEngine.Debug_StartEvaluationTestSingleThread(StormcloudPosition, Turn == Turn.White);
+			//Form1.self.SetScore(Stormcloud.Stormcloud3.MaterialEvaluation(StormcloudPosition));
 			Form1.self.SetPosKey(ConvertToHexPositionArrayString(StormcloudPosition));
 		}
+
+		Stormcloud.Stormcloud3 LocalEngine;
 
 		#region Stormcloud Conversion
 
 		byte[] StormcloudPosition = null;
 
-		private static byte[] ConvertToHexPositionArray(Dictionary<int, PieceType> pieces)
+		private static byte[] ConvertToHexPositionArray(Dictionary<int, PieceType> pieces, Turn turn)
 		{
+			int start, delta, delta2;
+			Func<int, bool> func;
+			if (turn == Turn.White)
+			{
+				start = 0;
+				func = new Func<int, bool>((i) => { return i < 64; });
+				delta = 2;
+				delta2 = 1;
+			}
+			else
+			{
+				start = 63;
+				func = new Func<int, bool>((i) => { return i >= 0; });
+				delta = -2;
+				delta2 = -1;
+			}
 			byte[] pos = new byte[32];
-			for (int i = 0; i < 64; i+=2)
+			byte index = 0;
+			// Process array backwards if color is black
+			for (int i = start; func(i); i+=delta)
 			{
 				PieceType type1 = PieceType.None, type2 = PieceType.None;
 				if (pieces.ContainsKey(i)) type1 = pieces[i];
-				if (pieces.ContainsKey(i + 1)) type2 = pieces[i + 1];
-				pos[i / 2] = (byte)((PieceHexValue[type1] & 0xF0) + (PieceHexValue[type2] & 0x0F));
+				if (pieces.ContainsKey(i + delta2)) type2 = pieces[i + delta2];
+				pos[index >> 1] = (byte)((PieceHexValue[type1] & 0xF0) + (PieceHexValue[type2] & 0x0F));
+				index += 2;
 			}
+			System.Diagnostics.Debug.WriteLine($">>> Position Converted: Turn: {turn} | Key: {Stormcloud.Stormcloud3.GeneratePositionKey(pos)}");
 			return pos;
 		}
 
-		private static string ConvertToHexPositionArrayString(Dictionary<int, PieceType> pieces) => ConvertToHexPositionArrayString(ConvertToHexPositionArray(pieces));
+		private static string ConvertToHexPositionArrayString(Dictionary<int, PieceType> pieces, Turn turn) => ConvertToHexPositionArrayString(ConvertToHexPositionArray(pieces, turn));
 		private static string ConvertToHexPositionArrayString(byte[] position)
 		{
 			System.Text.StringBuilder b = new System.Text.StringBuilder("byte[] testPos = new byte[] { ");
