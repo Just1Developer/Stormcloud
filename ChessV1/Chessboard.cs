@@ -232,7 +232,7 @@ namespace ChessV1
 			if (StormcloudPosition == null) StormcloudPosition = ConvertToHexPositionArray(this.Pieces, Turn);
 			if(SelectedField >= 0)
 			{
-				foreach (short mov in Stormcloud.Stormcloud3.GetLegalMovesPawn((byte[]) StormcloudPosition.Clone(), (byte) SelectedField, true))
+				foreach (short mov in Stormcloud.Stormcloud3.GetLegalMovesPiece(StormcloudPosition, (byte) SelectedField, Turn == Turn.White))
 				{
 					legalKnightMoves.Add((mov >> 4) & 0x003F);	// Last 6 bits
 				}
@@ -256,9 +256,9 @@ namespace ChessV1
 				if (Pieces.ContainsKey(field) && (SelectedField != field || !holding))
 					g.DrawImage(PieceImages[Pieces[field]], new RectangleF(current, new Size(delta, delta)));
 
-				if (LegalMoves != null && LegalMoves.Contains(field))
-					if (IsOpponentPiece(field) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(field)) g.DrawEllipse(new Pen(LegalMoveColor, delta / 12), new Rectangle(new Point(current.X + delta / 2 - delta / 4, current.Y + delta / 2 - delta / 4), new Size(delta / 2, delta / 2)));
-					else g.FillEllipse(LegalMoveColor, new Rectangle(new Point(current.X + delta / 2 - delta / 8, current.Y + delta / 2 - delta / 8), new Size(delta / 4, delta / 4)));
+				//if (LegalMoves != null && LegalMoves.Contains(field))
+				//	if (IsOpponentPiece(field) || (Turn == Turn.White ? EnPassantBlack : EnPassantWhite).Contains(field)) g.DrawEllipse(new Pen(LegalMoveColor, delta / 12), new Rectangle(new Point(current.X + delta / 2 - delta / 4, current.Y + delta / 2 - delta / 4), new Size(delta / 2, delta / 2)));
+				//	else g.FillEllipse(LegalMoveColor, new Rectangle(new Point(current.X + delta / 2 - delta / 8, current.Y + delta / 2 - delta / 8), new Size(delta / 4, delta / 4)));
 
 				g.DrawString($"{field}", new Font(Font.FontFamily, 13f, FontStyle.Bold), new SolidBrush(Color.Red), rect);
 
@@ -297,6 +297,10 @@ namespace ChessV1
 					Checkmate();	// Same as if he just took the King, so before the Color Change
 					return;
 				}
+
+			// From further down:
+			
+			//Form1.self.SetScore(Stormcloud.Stormcloud3.MaterialEvaluation(StormcloudPosition));
 			}*/
 			if (Turn == Turn.White)
 			{
@@ -314,10 +318,19 @@ namespace ChessV1
 				Turn = Turn.White;
 			}
 			Form1.self.newTurn(Turn);
+			SelectedField = -1;
+			Refresh();
 			StormcloudPosition = ConvertToHexPositionArray(this.Pieces, Turn);
-			LocalEngine.Debug_StartEvaluationTestSingleThread(StormcloudPosition, Turn == Turn.White);
-			//Form1.self.SetScore(Stormcloud.Stormcloud3.MaterialEvaluation(StormcloudPosition));
 			Form1.self.SetPosKey(ConvertToHexPositionArrayString(StormcloudPosition));
+			var bestmove = LocalEngine.Debug_StartEvaluationTestSingleThread(StormcloudPosition, Turn == Turn.White);
+			if (Turn == Turn.Black)
+			{
+				MovePiece(63-bestmove[0], 63-bestmove[1]);
+			}
+			else if(Turn == Turn.White)
+			{
+				MovePiece(bestmove[0], bestmove[1]);
+			}
 		}
 
 		Stormcloud.Stormcloud3 LocalEngine;

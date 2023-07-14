@@ -1,0 +1,137 @@
+﻿
+Some of the log to debug (13.07.2023 ~22:00):
+
+King-Related bugs in the evaluation / algorithm: Kings aren't seen as they should be.
+
+==> Bishop has some issues I think, on scholars mate the queen would not have any moves to go to h5
+=> Also, why, after Qh5, is h5 highlighted for the pawn. The engine still thinks h6 is better, and this was right after the bug fix after it thought hxh5 was best, but
+	this still shouldn't be shown here
+	And on scholars mate where f6 hangs the king, it only shows f6 and not f6f5 as moves
+
+	Soo idk, see here for legal moves screenshot: 
+	Queen, after f6, where the King hangs, has as legal moves: g6, h6, g4, g5, f3, h3.	Missing: To the left, the last 2 bishop left bottom moves, and obv the king. Is the position lacking?
+
+
+>>> Position Converted: Turn: Black | Key: CABDEBAC99990999000000000000900500001000000000001111011142306324
+posKey: CABDEBAC99990999000000000000900500001000000000001111011142306324
+Starting Stormcloud Calc...
+Depth: 2 | Time: 0s | Score: 0 | Move: h6   ||   h7 -> h6   ||   Pawn on h7 to Empty on h6
+Depth: 3 | Time: 0,0009975s | Score: 0 | Move: h6   ||   h7 -> h6   ||   Pawn on h7 to Empty on h6
+Depth: 4 | Time: 0,005015s | Score: -1 | Move: h6   ||   h7 -> h6   ||   Pawn on h7 to Empty on h6
+Depth: 5 | Time: 0,0301958s | Score: -1 | Move: h6   ||   h7 -> h6   ||   Pawn on h7 to Empty on h6
+Depth: 6 | Time: 0,1479076s | Score: -4 | Move: h6   ||   h7 -> h6   ||   Pawn on h7 to Empty on h6
+Depth: 7 | Time: 0,8876543s | Score: -4 | Move: h6   ||   h7 -> h6   ||   Pawn on h7 to Empty on h6
+Depth: 8 | Time: 4,3074772s | Score: -4 | Move: h6   ||   h7 -> h6   ||   Pawn on h7 to Empty on h6
+>>> Position Converted: Turn: White | Key: CABDEBAC99990990000000090000900500001000000000001111011142306324
+posKey: CABDEBAC99990990000000090000900500001000000000001111011142306324
+Starting Stormcloud Calc...
+Depth: 2 | Time: 0s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 3 | Time: 0,0009972s | Score: 1 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 4 | Time: 0,0075489s | Score: 1 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 5 | Time: 0,0389243s | Score: 4 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 6 | Time: 0,2513313s | Score: 4 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 7 | Time: 1,3782826s | Score: 4 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 8 | Time: 9,334029s | Score: 4 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+>>> Position Converted: Turn: Black | Key: CABDEBAC99990990000000090000900500301000000000001111011142306024
+posKey: CABDEBAC99990990000000090000900500301000000000001111011142306024
+Starting Stormcloud Calc...
+Depth: 2 | Time: 0s | Score: 0 | Move: b6   ||   b7 -> b6   ||   Pawn on b7 to Empty on b6
+Depth: 3 | Time: 0,000998s | Score: 0 | Move: b6   ||   b7 -> b6   ||   Pawn on b7 to Empty on b6
+Depth: 4 | Time: 0,0070093s | Score: 0 | Move: b6   ||   b7 -> b6   ||   Pawn on b7 to Empty on b6
+Depth: 5 | Time: 0,0399184s | Score: 0 | Move: b6   ||   b7 -> b6   ||   Pawn on b7 to Empty on b6
+Depth: 6 | Time: 0,2425886s | Score: 0 | Move: f6   ||   f7 -> f6   ||   Pawn on f7 to Empty on f6
+Depth: 7 | Time: 1,540369s | Score: 0 | Move: d6   ||   d7 -> d6   ||   Pawn on d7 to Empty on d6
+Depth: 8 | Time: 9,7439479s | Score: -1 | Move: f6   ||   f7 -> f6   ||   Pawn on f7 to Empty on f6
+>>> Position Converted: Turn: White | Key: CABDEBAC99990090000009090000900500301000000000001111011142306024
+posKey: CABDEBAC99990090000009090000900500301000000000001111011142306024
+Starting Stormcloud Calc...
+Depth: 2 | Time: 0s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 3 | Time: 0,0029923s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 4 | Time: 0,0154703s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 5 | Time: 0,1017268s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 6 | Time: 0,6402901s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 7 | Time: 3,2363455s | Score: 1 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 8 | Time: 21,0556945s | Score: 1 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Das Programm "[39460] ChessV1.exe" wurde mit Code 0 (0x0) beendet.
+
+
+
+Info: Position: new byte[] { 0xCA, 0xBD, 0xEB, 0xAC, 0x99, 0x99, 0x00, 0x90, 0x00, 0x00, 0x09, 0x09, 0x00, 0x00, 0x90, 0x05, 0x00, 0x30, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x01, 0x11, 0x42, 0x30, 0x60, 0x24 };
+Info: This is the position from scholar's mate where Qxe8# is an option
+Log From Analysis: Legal moves aren't working as expected
+
+D >> Test Eval mat: 0 | Moves: 36
+Legal Move 1 >> Qg6
+Legal Move 2 >> Qg4
+Legal Move 3 >> Qf3
+Legal Move 4 >> Qxh6
+Legal Move 5 >> Qh4
+Legal Move 6 >> Qh3
+
+Legal Move 7 >> Bd5
+Legal Move 8 >> Be6
+Legal Move 9 >> Bf7
+Legal Move 10 >> Bxg8
+Legal Move 11 >> Bb5
+Legal Move 12 >> Ba6
+Legal Move 13 >> Bb3
+Legal Move 14 >> Bd3
+Legal Move 15 >> Be2
+
+Legal Move 16 >> a3
+Legal Move 17 >> a4
+Legal Move 18 >> b3
+Legal Move 19 >> b4
+Legal Move 20 >> c3
+Legal Move 21 >> d3
+Legal Move 22 >> d4
+Legal Move 23 >> f3
+Legal Move 24 >> f4
+Legal Move 25 >> g3
+Legal Move 26 >> g4
+Legal Move 27 >> h3
+Legal Move 28 >> h4
+Legal Move 29 >> Na3
+Legal Move 30 >> Nc3
+Legal Move 31 >> Ke2
+Legal Move 32 >> Kd1
+Legal Move 33 >> Kf1
+Legal Move 34 >> Nf3
+Legal Move 35 >> Nh3
+Legal Move 36 >> Ne2
+posKey: CABDEBAC99990090000009090000900500301000000000001111011142306024
+Starting Stormcloud Calc...
+Depth: 2 | Time: 0,0120029s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 3 | Time: 0,009971s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 4 | Time: 0,0419186s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 5 | Time: 0,2912199s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 6 | Time: 2,0714915s | Score: 0 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 7 | Time: 8,785477s | Score: 1 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Depth: 8 | Time: 50,7287045s | Score: 1 | Move: Qf3   ||   h5 -> f3   ||   Queen on h5 to Empty on f3
+Loading Images... (E:\Coding\C#\Forms\Stormcloud\ChessV1\bin\Debug/Chessfiles/)
+Loading Audio files... (E:\Coding\C#\Forms\Stormcloud\ChessV1\bin\Debug/Chessfiles/)
+Loading Images... (E:\Coding\C#\Forms\Stormcloud\ChessV1\bin\Debug/Chessfiles/)
+Loading Audio files... (E:\Coding\C#\Forms\Stormcloud\ChessV1\bin\Debug/Chessfiles/)
+Starting Calculation...
+>>> Position Converted: Turn: White | Key: CABDEBAC99999999000000000000000000000000000000001111111142356324
+
+
+
+Chess.com prefix for file:
+
+[Event ""]
+[Site "?"]
+[Date "????.??.??"]
+[Round ""]
+[White "Stormcloud 3 Alpha"]
+[Black "Stormcloud 3 Alpha"]
+[Result "1/2-1/2"]
+[WhiteElo "420"]
+[BlackElo "420"]
+[BlackUrl "https://images.chesscomfiles.com/uploads/v1/user/299838877.c51d93b6.161x161o.ee4e42f566bb.jpg"]
+[BlackCountry "54"]
+[BlackTitle "GM"]
+[WhiteUrl "https://images.chesscomfiles.com/uploads/v1/user/299838877.c51d93b6.161x161o.ee4e42f566bb.jpg"]
+[WhiteCountry "54"]
+[WhiteTitle "GM"]
+[ECO ""]

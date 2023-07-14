@@ -203,6 +203,7 @@ namespace ChessV1
 			{
 				Catfish_UI_BestMove.Text = bestMove;
 				Catfish_UI_BestMoveScore.Text = $"Eval: {(bestMoveScore > 0 ? $"+{bestMoveScore}" : $"{bestMoveScore}")} | Depth: {bestMoveDepth}";
+				Refresh();
 			};
 			t.Interval = 150;
 			t.Start();
