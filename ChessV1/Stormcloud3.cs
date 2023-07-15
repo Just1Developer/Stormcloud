@@ -80,7 +80,9 @@ namespace ChessV1.Stormcloud
 			//byte[] position = new byte[] { 0xC0, 0x00, 0xE0, 0x0C, 0x99, 0x90, 0x09, 0x99, 0x00, 0xAB, 0xBA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xD1, 0x91, 0x00, 0x00, 0x25, 0x30, 0x10, 0x11, 0x00, 0x00, 0x01, 0x40, 0x00, 0x60, 0x24, };
 			
 			// Scholar's mate execution Qxe8# is the best move
-			byte[] position = new byte[] { 0xCA, 0xBD, 0xEB, 0xAC, 0x99, 0x99, 0x00, 0x90, 0x00, 0x00, 0x09, 0x09, 0x00, 0x00, 0x90, 0x05, 0x00, 0x30, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x01, 0x11, 0x42, 0x30, 0x60, 0x24 };
+			//byte[] position = new byte[] { 0xCA, 0xBD, 0xEB, 0xAC, 0x99, 0x99, 0x00, 0x90, 0x00, 0x00, 0x09, 0x09, 0x00, 0x00, 0x90, 0x05, 0x00, 0x30, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x01, 0x11, 0x42, 0x30, 0x60, 0x24 };
+
+			byte[] position = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
 
 			/*
 			 * Depth: 8 | Time: 55,7723242s | Score: -2 | Move: Queen on d3 takes Queen on c4   ||   d3 -> c4   ||   Queen on d3 takes Queen on c4
@@ -91,23 +93,68 @@ namespace ChessV1.Stormcloud
 			double Test_Eval = PositionEvaluation(position, EvaluationResultWhiteTurn).Score;
 			var moves = GetAllLegalMoves(position, true);
 			System.Diagnostics.Debug.WriteLine("D >> Test Eval mat: " + Test_Eval + " | Moves: " + moves.Count);
-			/*
+			
 			int i = 0;
 			foreach (var move in moves)
 			{
 				System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToStringPro1(position, move)}");
 			}
-			*/
+			
 
 			Debug_StartEvaluationTestSingleThread(position, true);
 		}
 
 		public Stormcloud3(bool ignored)
-		{ }
+		{
+			/*
+			byte[] position = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
+			position = new byte[] {
+				0xCA, 0xBD, 0xEB, 0xAC,
+				0x90, 0x09, 0x99, 0x99,
+				0x00, 0x00, 0x00, 0x00,
+				0x09, 0x90, 0x00, 0x00,
+				0x01, 0x00, 0x00, 0x00,
+				0x30, 0x00, 0x00, 0x00,
+				0x10, 0x11, 0x11, 0x11,
+				0x42, 0x05, 0x63, 0x24
+			};
+
+			var moves = GetAllLegalMoves(position, true);
+
+			int i = 0;
+			foreach (var move in moves)
+			{
+				if(move == 0x2005 || true)
+				{
+					System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToStringPro1(position, move)} | Binary: {Convert.ToString(move, 2)}");
+					System.Diagnostics.Debug.WriteLine($"Resulting Key: {i} >> {ResultingPosition(position, move, 0x00, null).Item2}");
+				}
+			}
+			*/
+
+			byte[] position = new byte[] {
+				0xCA, 0xBD, 0xEB, 0xAC,
+				0x90, 0x99, 0x99, 0x99,
+				0x00, 0x00, 0x00, 0x00,
+				0x09, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x10, 0x11, 0x11, 0x11,
+				0x42, 0x35, 0x63, 0x24
+			};
+			string key = GeneratePositionKey(position);
+			//short m = (short) 0xEA80;
+			//string move = MoveToStringPro1(position, m);
+
+			//var result = ...
+
+			System.Diagnostics.Debug.WriteLine($"Previous Key: {key} | Move: ");
+		}
 
 		public Stormcloud3(int GameDepth)	// 2nd constructor
 		{
 			// Play autonomous game
+			//*
 			byte[] position = {
 				0xCA, 0xBD, 0xEB, 0xAC,
 				0x99, 0x99, 0x99, 0x99,
@@ -118,6 +165,10 @@ namespace ChessV1.Stormcloud
 				0x11, 0x11, 0x11, 0x11,
 				0x42, 0x35, 0x63, 0x24
 			};
+			//*/
+
+			//byte[] position = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
+
 			bool TurnColorWhite = true;
 			string key = GeneratePositionKey(position);
 			byte castle = 0xFF;
@@ -129,13 +180,14 @@ namespace ChessV1.Stormcloud
 			while (true)
 			{
 				//Debug_StartEvaluationTestSingleThread(position, TurnColorWhite, 4);
-				/*var score = */CC_FailsoftAlphaBeta(position, TurnColorWhite, castle, key, GameDepth);
+				var score = CC_FailsoftAlphaBeta(position, TurnColorWhite, castle, key, GameDepth);
 				byte to = position[MoveToIndex(CC_Failsoft_BestMove) >> 1];
 				string moveString = MoveToStringPro1(position, CC_Failsoft_BestMove);
 
-				//System.Diagnostics.Debug.WriteLine($"Depth: {GameDepth} | Score: {score} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(position, CC_Failsoft_BestMove)}");
+				System.Diagnostics.Debug.WriteLine($"Depth: {GameDepth} | Score: {score} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(position, CC_Failsoft_BestMove)}");
 
 				var result = ResultingPosition(position, CC_Failsoft_BestMove, castle, key);
+				System.Diagnostics.Debug.WriteLine($">>>>>   OldKey: {key} | Move: {moveString} | Move: {Convert.ToString(CC_Failsoft_BestMove, 2)} | NewKey: {result.Item2}");
 				/*
 				if(moves.Count >= 9)
 				{
@@ -151,9 +203,10 @@ namespace ChessV1.Stormcloud
 					if (move != null)
 					{
 						moves.Add(move);
-						System.Diagnostics.Debug.WriteLine($"{moves.Count}. {move} ");
-						if (moves.Count > 8)
+						System.Diagnostics.Debug.WriteLine($"{moves.Count}. {move} | Key: {key}");
+						if (moves.Count > 6)
 						{
+							/*	Idk if this is correct
 							if (moves[moves.Count - 6] == moves[moves.Count - 3] &&
 								moves[moves.Count - 5] == moves[moves.Count - 2] &&
 								moves[moves.Count - 4] == move)
@@ -161,12 +214,10 @@ namespace ChessV1.Stormcloud
 								System.Diagnostics.Debug.WriteLine("Draw by Threefold repetition.");
 								break;
 							}
-							else if (moves[moves.Count - 8] == moves[moves.Count - 4] &&
-								moves[moves.Count - 7] == moves[moves.Count - 3] &&
-								moves[moves.Count - 6] == moves[moves.Count - 2] &&
-								moves[moves.Count - 5] == move)	// move = Count - 1
+							else */if (moves[moves.Count - 6] == moves[moves.Count - 4] && moves[moves.Count - 4] == moves[moves.Count - 2] &&
+								moves[moves.Count - 5] == moves[moves.Count - 3] && moves[moves.Count - 3] == move)	// move = Count - 1
 							{
-								System.Diagnostics.Debug.WriteLine("Draw by Fourfold repetition.");
+								System.Diagnostics.Debug.WriteLine("Draw by repetition.");
 								break;
 							}
 						}
@@ -245,7 +296,7 @@ namespace ChessV1.Stormcloud
 			while (Debug_Depth <= Final_Depth)	// Og: 8 but ingame i cant wait for that
 			{
 				start = DateTime.Now;
-				double score = CC_FailsoftAlphaBeta(startPosition, isWhitesTurn, 0xFF, posKey, Debug_Depth);
+				double score = CC_FailsoftAlphaBeta(startPosition, isWhitesTurn, 0x00, posKey, Debug_Depth);
 				string moveString = MoveToStringPro1(startPosition, CC_Failsoft_BestMove);
 				Form1.bestMove = moveString;
 				Form1.bestMoveScore = score;
@@ -310,10 +361,10 @@ namespace ChessV1.Stormcloud
 			double score = 0.0;
 			byte result = IsWhitesTurn ? EvaluationResultBlackTurn : EvaluationResultWhiteTurn;     // Default Value
 
-			double materialAdvantage = IsWhitesTurn ? MaterialEvaluation(Position) : -MaterialEvaluation(Position);
+			double materialAdvantage = IsWhitesTurn ? Advanced_MaterialEvaluation(Position) : -Advanced_MaterialEvaluation(Position);
 
 			score += materialAdvantage;
-			score += (0.2 * (AllLegalNextMoves.Count - 10));    // less than 10 moves is negative, more than 10 is positive. Mobile positions are preferred
+			score += (0.1 * (AllLegalNextMoves.Count - 8));    // less than 10 moves is negative, more than 10 is positive. Mobile positions are preferred
 
 			// ...
 
@@ -326,6 +377,33 @@ namespace ChessV1.Stormcloud
 
 			return new Tuple<double, byte, List<short>>(score, result, AllLegalNextMoves);
 		}
+		public static double Advanced_MaterialEvaluation(byte[] Position)
+		{
+			double score = 0.0;
+			foreach (byte doublePiece in Position)
+			{
+				if (IsWhitePieceFirstHalf(doublePiece)) score += BytePieceValue_Middlegame((byte)((doublePiece & firstHalfMask) >> 4));    // Shift by 4 to shift bits to second half
+				else score -= BytePieceValue_Middlegame((byte)((doublePiece & firstHalfMask) >> 4));
+
+				if (IsWhitePieceSecondHalf(doublePiece)) score += BytePieceValue_Middlegame((byte)(doublePiece & secondHalfMask));
+				else score -= BytePieceValue_Middlegame((byte)(doublePiece & secondHalfMask));
+			}
+			return score;
+		}
+		private static double BytePieceValue_Middlegame(byte piece2ndHalf)
+			=> BytePieceValues_Middlegame[piece2ndHalf & 0x07]; // Only last 3 bits => Mask 00000111 => 7
+		private static double[] BytePieceValues_Middlegame =
+		{
+			// Value, Representation	| Hex  | 2nd Bit Half | Hex Value | Hex Value (Black)
+			0,		// Empty			| 0x00 | 000		  | 0		  | (8)
+			3,		// Pawn				| 0x01 | 001		  | 1		  | 9
+			10,		// Knight			| 0x02 | 010		  | 2		  | A
+			11,		// Bishop			| 0x03 | 011		  | 3		  | B
+			23,		// Rook				| 0x04 | 100		  | 4		  | C
+			54,		// Queen			| 0x05 | 101		  | 5		  | D
+			9999,	// King				| 0x06 | 110		  | 6		  | E
+			3,		// En Passant		| 0x07 | 111		  | 7		  | F
+		};
 
 		/**
 		 * Evaluation Results work like this:
@@ -467,9 +545,11 @@ namespace ChessV1.Stormcloud
 			int fromRank = 8 - from / 8;	// 7 -> 1
 			char toFile = (char)(to % 8 + 97);
 			int toRank = 8 - to / 8;
+			string promotion = "";
+			if ((value & PieceMask) != 0) promotion = "=" + PieceNamePro((byte) (value & 0x0007));
 			string fromFile2 = /*fromRank == toRank ||*/ nameFrom == "" && nameTo != "-" /*pawn*/ ? "" + fromFile : "";	// This aint right
 			string fromRank2 = fromFile == toFile ? "" + fromRank : "";	// This aint right
-			return $"{nameFrom}{fromFile2}{/*fromRank2*/ ""}{(nameTo != "-" ? "x" : "")}{toFile}{toRank}";
+			return $"{nameFrom}{fromFile2}{/*fromRank2*/ ""}{(nameTo != "-" ? "x" : "")}{toFile}{toRank}{promotion}";
 		}
 
 		private static string PieceName(byte piece)
@@ -500,12 +580,40 @@ namespace ChessV1.Stormcloud
 			return "-";
 		}
 
+
+		#region Alpha Beta Pruning 1
+
+		// History Heuristic: This can be implemented as a 2D table, indexed by the piece and the destination square, which keeps track of how often each move has caused a beta-cutoff.
+		private int[][] HistoryHeuristic;	// Todo 2D table, I'm not satisfied with this
+
+		// Killer Heuristic: You could keep an array of "killer moves" for each depth in the search tree. Each entry in the array can store
+		// two moves, as it is commonly observed that there are seldom more than two distinct killer moves at each level of the tree.
+		private List<short[]> KillerHeuristic = new List<short[]>();
+
+		private Dictionary<string, double> TranspositionTable = new Dictionary<string, double>();
+
+		List<short> OrderMoves(List<short> Moves)
+		{
+			Moves.OrderByDescending(x => scoreOf(x));	// Todo this
+
+			double scoreOf(short x)
+			{
+				double score = 0;
+				score += HistoryHeuristic[x].Length;
+				return score;
+			}
+
+			return Moves;
+		}
+
 		short CC_Failsoft_BestMove = 0;
 
-		double CC_FailsoftAlphaBeta(byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depth)
-			=> CC_FailsoftAlphaBeta(double.NegativeInfinity, double.PositiveInfinity, position, isTurnColorWhite, castleOptions, posKey, depth, null, true);
+		// Todo re-do threefold repetition
 
-		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, List<short> AllLegalMoves = null, bool isRoot = false)
+		double CC_FailsoftAlphaBeta(byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depth)
+			=> CC_FailsoftAlphaBeta(double.NegativeInfinity, double.PositiveInfinity, position, isTurnColorWhite, castleOptions, posKey, depth, new short[] { 0, 0, 0, 0, 0, 0 }, null, true);
+
+		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, short[] moveHistory, List<short> AllLegalMoves = null, bool isRoot = false)
 		{
 			double bestscore = int.MinValue;
 			if (depthleft == 0) return CC_FailsoftQuiesce(alpha, beta, position, isTurnColorWhite, castleOptions, posKey, true);
@@ -521,7 +629,15 @@ namespace ChessV1.Stormcloud
 			{
 				var result = ResultingPosition(position, move, castleOptions, posKey);
 
-				// Todo: King capture detection doesn't quite work yet. Also, capture king is not the best move on scholars mate, engine even opens up the king >> coloring? Can the queen not take the king there?
+				short[] newHistory = { moveHistory[1], moveHistory[2], moveHistory[3], moveHistory[4], moveHistory[5], move };
+
+				// We don't have to pay attention to null moves since it fills up backwards and at least the last entry is not a null move. So, first move will almost be draw but the first move (current entry) prevents that
+				if(newHistory[0] == newHistory[2] && newHistory[2] == newHistory[4] &&
+					newHistory[1] == newHistory[3] && newHistory[3] == newHistory[5])
+				{
+					// Threefold repetition
+					return 0.0;
+				}
 
 				// Check for King Captures (Checkmates)
 				// 2nd Half
@@ -542,7 +658,7 @@ namespace ChessV1.Stormcloud
 
 				var followUpMoves = GetAllLegalMoves(result.Item1, !isTurnColorWhite);
 
-				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, depthleft - 1, followUpMoves);
+				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, depthleft - 1, newHistory, followUpMoves);
 				if (score >= beta)
 				{
 					if(isRoot)
@@ -614,6 +730,7 @@ namespace ChessV1.Stormcloud
 		private bool IsRootTurnColorWhite;
 
 		// The key if isRoot is that only the root call can edit capture chains
+		// Since captures can't be repeats, repetition does not apply to this.
 		double CC_FailsoftQuiesce(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, bool isRoot = false, int captureChainLength = 0, List<byte> captureChainFields = null)
 		{
 			// https://www.chessprogramming.org/Quiescence_Search
@@ -690,6 +807,15 @@ namespace ChessV1.Stormcloud
 
 			return alpha;
 		}
+
+
+		/*
+		protected class TranspositionTable
+		{
+
+		}*/
+
+		#endregion
 	}
 
 	// Old Search Algorithm
@@ -1617,27 +1743,6 @@ namespace ChessV1.Stormcloud
 							legalMoves.Add(ToMove(bishopLocationIndex, index));
 					return !IsFieldEmpty(piece, isSecondHalf2);    // If field is empty => dont break, if field is empty => break
 				}
-				/*	// Check if the above works as intended					// Todo
-				byte piece2 = position[index >> 1];
-				if (isPieceWhite)
-				{
-					if (!IsWhitePiece(piece2, secondHalf))
-					{
-						if (!captureChainFields.Contains(index)) return false;	// Insert here because return value is important
-						legalMoves.Add(ToMove(bishopLocationIndex, index));
-						return false;
-					}
-				}
-				if (!isPieceWhite)
-				{
-					if (!IsBlackPiece(piece2, secondHalf))
-					{
-						if (!captureChainFields.Contains(index)) return false;
-						legalMoves.Add(ToMove(bishopLocationIndex, index));
-						return false;
-					}
-				}
-				*/
 				return true;
 			}
 
@@ -1909,7 +2014,6 @@ namespace ChessV1.Stormcloud
 			byte toIndex = (byte) (moveTo >> 1);   // equivalent to moveTo / 2
 
 			byte fromByte = Position[fromIndex];
-			byte toByte = Position[toIndex];
 			byte piece;
 
 			byte[] newPosition = (byte[])Position.Clone();
@@ -1951,36 +2055,47 @@ namespace ChessV1.Stormcloud
 			}
 			else
 			{
-				if ((moveFrom & 1) == 1)     // equivalent to moveFrom % 2 == 1 => uneven number, second half is piece, erase piece, so erase 2nd half
+
+				// V2: Immediate Transfer, no questions asked
+				if ((moveFrom & 1) == 1)
 				{
-					// promotion piece is stored at #3 of the move array, if it exists
-					if ((move & PieceMask) != 0) piece = (byte)((move & PieceMask) | (byte)((fromByte & 0x08) << 4));   // add color bit of fromByte for piece color (2nd half since there is the piece)
-					else piece = (byte)(fromByte & PieceMask);
-					fromByte &= firstHalfMask; // Keep only first 4 bits
+					newPosition[fromIndex] &= firstHalfMask;
+					if ((move & PieceMask) != 0) piece = (byte) (((byte)move & secondHalfMask) << 4);
+					else piece = (byte) ((fromByte & secondHalfMask) << 4);
+					// 2nd Half
+					if ((moveTo & 1) == 1)
+					{
+						// 2nd Half
+						newPosition[toIndex] &= firstHalfMask;		// Erase second half
+						newPosition[toIndex] |= (byte) (piece >> 4);	// Copy piece (loc in first half) into second half of toByte
+					}
+					else
+					{
+						// 1st Half
+						newPosition[toIndex] &= secondHalfMask;		// Erase first half
+						newPosition[toIndex] |= piece;	// Copy piece into first half
+					}
 				}
 				else
 				{
-					if ((move & PieceMask) != 0) piece = (byte)((move & PieceMask) | (byte)((fromByte & 0x80) << 4)); // add color bit of fromByte for piece color (1st half since there is the piece)		1000 mask to get color bit and then do an or to maybe apply it
-					else piece = (byte)((fromByte & firstHalfMask) << 4);
-					fromByte &= secondHalfMask; // Keep only second 4 bits => erase first 4 bits
-												//fromByte >>= bitsPerHalf; // Shift right by 4 bits to keep only first 4 bits			=> this is still from inverted version
-				}
+					newPosition[fromIndex] &= secondHalfMask;   // Erase old first half
+					if ((move & PieceMask) != 0) piece = (byte) (((byte)move & secondHalfMask) << 4);
+					else piece = (byte) (fromByte & secondHalfMask);
 
-				// piece is xxxx0000
-
-				if ((moveTo & 1) == 1)     // equivalent to moveTo % 2 == 1
-				{
-					toByte &= firstHalfMask; // Keep only first 4 bits
-					toByte += piece;
+					// 2nd Half
+					if ((moveTo & 1) == 1)
+					{
+						// 2nd Half
+						newPosition[toIndex] &= firstHalfMask;
+						newPosition[toIndex] |= (byte) (piece >> 4);    // Copy first half of piece into second half of toByte
+					}
+					else
+					{
+						// 1st Half
+						newPosition[toIndex] &= secondHalfMask;     // Erase first half
+						newPosition[toIndex] |= piece;   // Copy first half of piece into first half
+					}
 				}
-				else
-				{
-					toByte &= secondHalfMask; // Keep only second 4 bits => erase first 4 bits
-											  //toByte >>= bitsPerHalf; // Shift right by 4 bits to keep only first 4 bits
-					toByte += (byte)(piece >> 4);
-				}
-				newPosition[fromIndex] = fromByte;
-				newPosition[toIndex] = toByte;
 			}
 
 			// remove previous en passants

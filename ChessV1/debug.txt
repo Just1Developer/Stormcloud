@@ -135,3 +135,50 @@ Chess.com prefix for file:
 [WhiteCountry "54"]
 [WhiteTitle "GM"]
 [ECO ""]
+
+
+
+Uhh new issue:
+
+Starting Game (15.07.2023 03:03:12)...
+1. Kg2 Rxf1
+2. Kxf1 Rb2
+3. a8=N Kf4
+4. h3 h4
+5. -xh4 Ra1
+6. Ke2 Rxe2
+7. -xe2 Ne8
+8. -xe8 g5
+9. -xg5 Kxf3
+10. -xf3 Ra2
+11. -xa2 -a2
+12. h4 -xh4
+13. -h4 -h4
+14. -h4 -h4
+15. -h4 -h4
+16. -h4 -h4
+17. -h4 -h4
+18. -h4 -h4
+Draw by repetition.
+The Game:
+1. Kg2 Rxf1
+2. Kxf1 Rb2
+3. a8=N Kf4
+4. h3 h4
+5. -xh4 Ra1
+6. Ke2 Rxe2
+7. -xe2 Ne8
+8. -xe8 g5
+9. -xg5 Kxf3
+10. -xf3 Ra2
+11. -xa2 -a2
+12. h4 -xh4
+13. -h4 -h4
+14. -h4 -h4
+15. -h4 -h4
+16. -h4 -h4
+17. -h4 -h4
+18. -h4 -h4
+Das Programm "[52608] ChessV1.exe" wurde mit Code 0 (0x0) beendet.
+
+What the fuck...
