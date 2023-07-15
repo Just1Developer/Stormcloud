@@ -7,10 +7,11 @@ using System.Threading.Tasks;
 
 namespace ChessV1.Stormcloud
 {
+	// Todo scan for checks in next moves in advanced eval + the moves are for the opponent, not you
 
-	// Todo rename file to Stormcloud3
+	// Todo check if repetition in evaluation works, because somewhy it draws with +60
 
-	// Represent Moves as short or int instead of byte arrays?
+	// Represent Moves as ushort or int instead of byte arrays?
 	// Yes: Short: 16 bit -> 6 bit: from | 6 bit: to | 4 bit resulting piece.
 	// Example: Short: 001000 010000 1001 => a7 -> a6, black pawn: move title: a6
 
@@ -18,13 +19,13 @@ namespace ChessV1.Stormcloud
 	// Todo add castleOptions to position Key
 
 	/*
-	 * If we store at the back of the short
+	 * If we store at the back of the ushort
 	 * From: byte GetFrom(byte move) => (byte) (move >> 10);
 	 * To: byte GetTo(byte move) => (byte) ((move >> 4) & 0x3F);	// Mask for last 6 bit
 	 * Piece: byte GetPiece(byte move) => (byte) (move & 0x0F);		// Mask for last 4 bit (obv)
 	 * 
 	 * Construction like this: (GPT-4 but i knew too):
-	 * short GetMoveOf(byte fromIndex, byte toIndex, byte piece) => (short) ((fromIndex << 10) | (toIndex << 4) | (pieceType >> 4));	// Piece is usually stored in first half of the byte
+	 * ushort GetMoveOf(byte fromIndex, byte toIndex, byte piece) => (ushort) ((fromIndex << 10) | (toIndex << 4) | (pieceType >> 4));	// Piece is usually stored in first half of the byte
 	 */
 
 	/*
@@ -118,20 +119,24 @@ namespace ChessV1.Stormcloud
 				0x10, 0x11, 0x11, 0x11,
 				0x42, 0x05, 0x63, 0x24
 			};
+			//*/
 
-			var moves = GetAllLegalMoves(position, true);
+			byte[] position = { 0x00, 0x00, 0x0E, 0x0C, 0x09, 0x09, 0x00, 0x09, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x90, 0x19, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x00, 0x0D, 0x06, 0x00, 0x00, 0x00, 0x00, 0x04 };
+
+			var moves = GetAllLegalMoves(position, false);
 
 			int i = 0;
-			foreach (var move in moves)
+			foreach (var move2 in moves)
 			{
-				if(move == 0x2005 || true)
+				if(move2 == 0x2005 || true)
 				{
-					System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToStringPro1(position, move)} | Binary: {Convert.ToString(move, 2)}");
-					System.Diagnostics.Debug.WriteLine($"Resulting Key: {i} >> {ResultingPosition(position, move, 0x00, null).Item2}");
+					System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToStringPro1(position, move2)} | Binary: {Convert.ToString(move2, 2)}");
+					System.Diagnostics.Debug.WriteLine($"Resulting Key: {i} >> {ResultingPosition(position, move2, 0x00, null).Item2}");
 				}
 			}
-			*/
+			//*/
 
+			/*
 			byte[] position = new byte[] {
 				0xCA, 0xBD, 0xEB, 0xAC,
 				0x90, 0x99, 0x99, 0x99,
@@ -143,12 +148,22 @@ namespace ChessV1.Stormcloud
 				0x42, 0x35, 0x63, 0x24
 			};
 			string key = GeneratePositionKey(position);
-			//short m = (short) 0xEA80;
-			//string move = MoveToStringPro1(position, m);
+			ushort m = 0xEA80;
+			string move = MoveToStringPro1(position, m);
 
-			//var result = ...
+			var result = ResultingPosition(position, m, 0xFF, key);
 
-			System.Diagnostics.Debug.WriteLine($"Previous Key: {key} | Move: ");
+			System.Diagnostics.Debug.WriteLine($"Previous Key: {key} | Move: {move} | newKey: {result.Item2}");
+			//*/
+
+			for (int depth = 2; depth <= 6; depth++)
+			{
+				var score = CC_FailsoftAlphaBeta(position, false, 0x00, GeneratePositionKey(position), depth);
+				string move = MoveToStringPro1(position, CC_Failsoft_BestMove);
+
+				System.Diagnostics.Debug.WriteLine($"Depth: {depth}  |  BestMove: {move}  |  {MoveToStringCas(position, CC_Failsoft_BestMove)}  |  Score: {score}");
+				break;
+			}
 		}
 
 		public Stormcloud3(int GameDepth)	// 2nd constructor
@@ -181,13 +196,14 @@ namespace ChessV1.Stormcloud
 			{
 				//Debug_StartEvaluationTestSingleThread(position, TurnColorWhite, 4);
 				var score = CC_FailsoftAlphaBeta(position, TurnColorWhite, castle, key, GameDepth);
-				byte to = position[MoveToIndex(CC_Failsoft_BestMove) >> 1];
+				byte toIndex = MoveToIndex(CC_Failsoft_BestMove);
+				byte toByte = position[toIndex >> 1];
 				string moveString = MoveToStringPro1(position, CC_Failsoft_BestMove);
 
 				System.Diagnostics.Debug.WriteLine($"Depth: {GameDepth} | Score: {score} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(position, CC_Failsoft_BestMove)}");
 
 				var result = ResultingPosition(position, CC_Failsoft_BestMove, castle, key);
-				System.Diagnostics.Debug.WriteLine($">>>>>   OldKey: {key} | Move: {moveString} | Move: {Convert.ToString(CC_Failsoft_BestMove, 2)} | NewKey: {result.Item2}");
+				//System.Diagnostics.Debug.WriteLine($">>>>>   OldKey: {key} | Move: {moveString} | Move: {Convert.ToString(CC_Failsoft_BestMove, 2)} | NewKey: {result.Item2}");
 				/*
 				if(moves.Count >= 9)
 				{
@@ -198,7 +214,29 @@ namespace ChessV1.Stormcloud
 				key = result.Item2;
 				castle = result.Item3;
 
+				//*
 				if(TurnColorWhite)
+				{
+					move = moveString;
+				}
+				else
+				{
+					moves.Add($"{move} {moveString}");
+					System.Diagnostics.Debug.WriteLine($"{moves.Count}. {move} {moveString} | Key: {key}");
+					if (moves.Count > 6)
+					{
+						if (moves[moves.Count - 6] == moves[moves.Count - 4] && moves[moves.Count - 4] == moves[moves.Count - 2] &&
+							moves[moves.Count - 5] == moves[moves.Count - 3] && moves[moves.Count - 3] == move)    // move = Count - 1
+						{
+							System.Diagnostics.Debug.WriteLine("Draw by repetition.");
+							break;
+						}
+					}
+				}
+				//*/
+
+				/*
+				if (TurnColorWhite)
 				{
 					if (move != null)
 					{
@@ -214,7 +252,7 @@ namespace ChessV1.Stormcloud
 								System.Diagnostics.Debug.WriteLine("Draw by Threefold repetition.");
 								break;
 							}
-							else */if (moves[moves.Count - 6] == moves[moves.Count - 4] && moves[moves.Count - 4] == moves[moves.Count - 2] &&
+							else * /if (moves[moves.Count - 6] == moves[moves.Count - 4] && moves[moves.Count - 4] == moves[moves.Count - 2] &&
 								moves[moves.Count - 5] == moves[moves.Count - 3] && moves[moves.Count - 3] == move)	// move = Count - 1
 							{
 								System.Diagnostics.Debug.WriteLine("Draw by repetition.");
@@ -228,23 +266,25 @@ namespace ChessV1.Stormcloud
 				{
 					move += " " + moveString;
 				}
+				//*/
+
 				TurnColorWhite = !TurnColorWhite;
 
-				if ((to & 0x07) == 6 || (to & 0x70) == 6)
+				if ((toByte & 0x07) == 0x06 || (toByte & 0x70) == 0x60)
 				{
 					string KingColor = "-";
 
-					if((to & 1) == 1)
+					if((toIndex & 1) == 1)
 					{
 						// 2nd half
-						if ((to & 0x0F) == 0x0E) KingColor = "Black";
-						else if ((to & 0x0F) == 0x06) KingColor = "White";
+						if ((toByte & 0x0F) == 0x0E) KingColor = "Black";
+						else if ((toByte & 0x0F) == 0x06) KingColor = "White";
 					}
 					else
 					{
 						// 2nd half
-						if ((to & 0xF0) == 0xE0) KingColor = "Black";
-						else if ((to & 0xF0) == 0x60) KingColor = "White";
+						if ((toByte & 0xF0) == 0xE0) KingColor = "Black";
+						else if ((toByte & 0xF0) == 0x60) KingColor = "White";
 					}
 
 					if(KingColor != "-")
@@ -348,6 +388,41 @@ namespace ChessV1.Stormcloud
 		}
 
 		// Todo remove not legal moves here
+		/*
+	 * (  1/4, -7/24, 1/4 )
+	 * (  1/6, 1/4, 1/6 )
+	 * (  1/4, -7/24, 1/4 )*/
+		private static readonly double[,] Matrix_PawnStructure =
+		{
+			{ 0.31, -7/24, 0.31, },
+			{ 1/6,  0.07,  1/6,  },
+			{ 0.31, -7/24, 0.31, }
+		};
+
+		public static readonly double[,] Matrix_FieldWeights =
+		{
+			{  0.08, 0.03, 0.035, 0.3,  0.2,  0.035, 0.03, 0.08, },
+			{  0.1,  0.1,  0.12,  0.13, 0.13, 0.12,  0.1,  0.1,  },
+			{  0.2,  0.47, 0.75,  0.8,  0.8,  0.75,  0.47, 0.2,  },
+			{  0.3,  0.54, 0.87,  1.2,  1.2,  0.87,  0.54, 0.3,  },
+			{  0.3,  0.54, 0.87,  1.2,  1.2,  0.87,  0.54, 0.3,  },
+			{  0.2,  0.47, 0.75,  0.8,  0.8,  0.75,  0.47, 0.2,  },
+			{  0.1,  0.1,  0.12,  0.13, 0.13, 0.12,  0.1,  0.1,  },
+			{  0.08, 0.03, 0.035, 0.3,  0.2,  0.035, 0.03, 0.08, }
+		};
+
+		#region Weights
+
+		private const double WEIGHT_POSITION_MATRIX_COMPLETE = 0.4;
+		private const double WEIGHT_POSITION_MATRIX_PRESSURE_AMOUNT = 0.75;		// Pressure: How many pieces are looking at a given square
+		private const double WEIGHT_POSITION_MATRIX_PRESSURE_PIECEVALUE = 0.75;		// Pressure: How much a piece looking at a square is worth as material
+		private const double WEIGHT_POSITION_MATRIX_ACTIVITY = 0.75;		// How active a piece is - I'm not sure I'm going to keep this
+		private const double WEIGHT_POSITION_MATRIX_PAWN_STRUCTURE = 0.8;
+		private const double WEIGHT_MATRIX_FIELD_VALUES = 0.9;
+		private const double WEIGHT_LEGAL_MOVES_AMOUNT = 0.1;
+		private const double WEIGHT_MATERIAL_ADVANTAGE = 1.05;	// Turn this down as more matrices come into play
+
+		#endregion
 
 		/// <summary>
 		/// Returns Tuple<Score, EvalResult, AllActuallyLegalMoves, (CastleOptionsActual)>
@@ -356,15 +431,24 @@ namespace ChessV1.Stormcloud
 		/// <param name="IsWhitesTurn"></param>
 		/// <param name="CastleOptions"></param>
 		/// <returns></returns>
-		Tuple<double, byte, List<short>> AdvancedPositionEvaluation(byte[] Position, bool IsWhitesTurn, byte CastleOptions, List<short> AllLegalNextMoves)
+		Tuple<double, byte, List<ushort>> AdvancedPositionEvaluation(byte[] Position, bool IsWhitesTurn, byte CastleOptions, List<ushort> AllLegalNextMoves, string positionkey = null)
 		{
+
+			if (positionkey == null) positionkey = GeneratePositionKey(Position);
+			if (TranspositionTable.ContainsKey(positionkey)) return TranspositionTable[positionkey];
+
 			double score = 0.0;
 			byte result = IsWhitesTurn ? EvaluationResultBlackTurn : EvaluationResultWhiteTurn;     // Default Value
 
 			double materialAdvantage = IsWhitesTurn ? Advanced_MaterialEvaluation(Position) : -Advanced_MaterialEvaluation(Position);
 
-			score += materialAdvantage;
-			score += (0.1 * (AllLegalNextMoves.Count - 8));    // less than 10 moves is negative, more than 10 is positive. Mobile positions are preferred
+			score += materialAdvantage * WEIGHT_MATERIAL_ADVANTAGE;
+			score += (WEIGHT_LEGAL_MOVES_AMOUNT * (AllLegalNextMoves.Count - 8));    // less than 10 moves is negative, more than 10 is positive. Mobile positions are preferred
+
+			var valueMatrix = Matrix.Multiply(MatrixEvaluation(Position, IsWhitesTurn), Matrix_FieldWeights, WEIGHT_MATRIX_FIELD_VALUES);
+			double valueMatrixValue = Matrix.Sum(valueMatrix) * WEIGHT_POSITION_MATRIX_COMPLETE;
+
+			score += valueMatrixValue;
 
 			// ...
 
@@ -375,8 +459,144 @@ namespace ChessV1.Stormcloud
 			if (Draw) result = EvaluationResultDraw;
 			else if (GameOver) result = (result & EvalResultWhiteMask) != 0 ? EvaluationResultWhiteWon : EvaluationResultBlackWon;
 
-			return new Tuple<double, byte, List<short>>(score, result, AllLegalNextMoves);
+			var tupleResult = new Tuple<double, byte, List<ushort>>(score, result, AllLegalNextMoves);
+			try
+			{
+				// In case the table is full at a higher depth while not optimized
+				TranspositionTable.Add(positionkey, tupleResult);
+			} catch (OutOfMemoryException)
+			{
+				// When we sort better moves first, this could be better
+				// Since end position quality should be at around the same, many positions in there will
+				// not be reached again after a while, so resetting the Table is a good practice
+				System.Diagnostics.Debug.WriteLine("Out of Memory: Transposition Table full. Clearing out Table...");
+				TranspositionTable.Clear();
+				GC.Collect();
+				TranspositionTable.Add(positionkey, tupleResult);
+			}
+			return tupleResult;
 		}
+
+		public static double[,] MatrixEvaluation(byte[] Position, bool IsWhitesTurn)
+		{
+			double[,] ValueMatrix =
+			{
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+			};
+
+			for (byte i = 0; i < Position.Length; ++i)
+			{
+
+				if ((Position[i] & 0xF0) != 0) if ((Position[i] & 0x80) == 0 == IsWhitesTurn) ApplyMatrices(Position, (byte) (i << 1), false, (byte) (Position[i] & 0x70), ref ValueMatrix);
+				if ((Position[i] & 0x0F) != 0) if ((Position[i] & 0x08) == 0 == IsWhitesTurn) ApplyMatrices(Position, (byte) ((i << 1) | 1), true, (byte) (Position[i] & 0x07), ref ValueMatrix);
+
+			}
+
+			return ValueMatrix;
+		}
+
+		private static void ApplyMatrices(byte[] position, byte index, bool isSecondHalf, byte centerPiece, ref double[,] CurrentValueMatrix)
+		{
+			// Modify ValueMatrix here
+			if (centerPiece == 1)
+			{
+				// Pawn. Apply pawn matrices
+
+				{
+					// Structure Matrix
+					// First is Rank: 00111000 mask: 0x38
+					// Second is File: 00000111 mask: 0x07
+					byte maxOutburstLR = (byte)(Matrix_PawnStructure.GetLength(0) / 2); // 3 / 2 => 1.5 => 1, so +/- 1
+					byte loc1 = (byte) (index & 0x38), loc2 = (byte) (index & 0x07);
+					for (sbyte i1 = (sbyte) -maxOutburstLR; i1 <= maxOutburstLR; ++i1)
+					{
+						for (sbyte i2 = (sbyte)-maxOutburstLR; i2 <= maxOutburstLR; ++i2)
+						{
+							if (loc1 + i1 < 0) break;	// Inside this loop, i1 is never gonna change, meaning its always invalid, meaning we can break
+							if (loc1 + i1 >= 8 /* Value Matrix Dimension Bound */) break;	// Inside this loop, i1 is never gonna change, meaning its always invalid, meaning we can break
+							if (loc2 + i2 < 0) continue;
+							if (loc2 + i2 >= 8) continue;
+							CurrentValueMatrix[loc1 + i1, loc2 + i2] += Matrix_PawnStructure[maxOutburstLR + i1, maxOutburstLR + i2] * WEIGHT_POSITION_MATRIX_PAWN_STRUCTURE;
+							// Alternative: Loops go from 0 to <= maxOutburstLR
+							// CurrentValueMatrix[loc1 - maxOutburstLR + i1, loc2 - maxOutburstLR + i2] += Matrix_PawnStructure[i1, i2];
+						}
+					}
+				}
+
+				return;
+			}
+		}
+
+		internal class Matrix
+		{
+			/*
+			internal double[,] ValueMatrix;
+			byte ValidPiece = 0;
+			List<byte> ValidPieces = null;
+			byte matrixSize;
+
+			public Matrix(double[,] ValueMatrix, byte ValidPiece)
+			{
+				this.ValueMatrix = ValueMatrix;
+				this.ValidPiece = ValidPiece;
+				matrixSize = (byte) Math.Sqrt(ValueMatrix.Length);
+			}
+			public Matrix(double[,] ValueMatrix, List<byte> ValidPieces)
+			{
+				this.ValueMatrix = ValueMatrix;
+				this.ValidPieces = ValidPieces;
+				matrixSize = (byte)Math.Sqrt(ValueMatrix.Length);
+			}
+
+			public bool IsValidPiece(byte piece)
+			{
+				if (piece == 0) return false;
+				if (piece == ValidPiece) return true;
+				if (ValidPieces == null) return false;
+				return ValidPieces.Contains(piece);
+			}
+			*/
+
+			public static double[,] Multiply(double[,] Matrix1, double[,] Matrix2, double weight = 1)
+			{
+				byte SideLength = (byte) Matrix1.GetLength(0);
+				double[,] ResultMatrix = new double[Matrix1.Length,Matrix1.Length];
+				if (Matrix1.Length != Matrix2.Length) return ResultMatrix;
+
+				for (int i = 0; i < SideLength; i++)
+				{
+					for (int i2 = 0; i2 < SideLength; i2++)
+					{
+						ResultMatrix[i, i2] = Matrix1[i, i2] * Matrix2[i, i2] * weight;
+					}
+				}
+
+				return ResultMatrix;
+			}
+			public static double Sum(double[,] Matrix)
+			{
+				double sum = 0;
+				byte SideLength = (byte)Matrix.GetLength(0);
+
+				for (int i = 0; i < SideLength; i++)
+				{
+					for (int i2 = 0; i2 < SideLength; i2++)
+					{
+						sum += Matrix[i, i2] * Matrix[i, i2];
+					}
+				}
+
+				return sum;
+			}
+		}
+
 		public static double Advanced_MaterialEvaluation(byte[] Position)
 		{
 			double score = 0.0;
@@ -390,6 +610,7 @@ namespace ChessV1.Stormcloud
 			}
 			return score;
 		}
+
 		private static double BytePieceValue_Middlegame(byte piece2ndHalf)
 			=> BytePieceValues_Middlegame[piece2ndHalf & 0x07]; // Only last 3 bits => Mask 00000111 => 7
 		private static double[] BytePieceValues_Middlegame =
@@ -428,10 +649,9 @@ namespace ChessV1.Stormcloud
 
 		const byte firstHalfMask = 0xF0;	/// First meaning the first 4 bits from the left
 		const byte secondHalfMask = 0x0F;
-		const short PieceMask = 0x000F;
+		const ushort PieceMask = 0x000F;
 
-		// Todo OG: private
-		public static double MaterialEvaluation(byte[] Position)
+		private static double MaterialEvaluation(byte[] Position)
 		{
 			double score = 0.0;
 			foreach (byte doublePiece in Position)
@@ -480,9 +700,31 @@ namespace ChessV1.Stormcloud
 			return false;
 		}
 	}
+	
+	internal enum Piece
+	{
+		EMPTY = 0x00,
+		WHITEPAWN = 0x01,
+		WHITEKNIGHT = 0x02,
+		WHITEBISHOP = 0x03,
+		WHITEROOK = 0x04,
+		WHITEQUEEN = 0x05,
+		WHITEKING = 0x06,
+		WHITEENPASSANT = 0x07,
+		BLACKPAWN = 0x09,
+		BLACKKNIGHT = 0x0A,
+		BLACKBISHOP = 0x0B,
+		BLACKROOK = 0x0C,
+		BLACKQUEEN = 0x0D,
+		BLACKKING = 0x0E,
+		BLACKENPASSANT = 0x0F,
+	}
 
 	partial class Stormcloud3 // Advanced Alpha Beta Pruning Search Algorithm
 	{
+
+		#region Alpha Beta Pruning 1
+
 		/*
 		 * Fail-Soft Alpha Beta: https://www.chessprogramming.org/Alpha-Beta#Outside_the_Bounds
 		 * cc = copycat = code copied / adjusted from pseudo-c-code from the internet
@@ -503,100 +745,20 @@ namespace ChessV1.Stormcloud
 		}
 		 */
 
-		public static string MoveToString1(short value)
-		{
-			byte from = MoveFromIndex(value);
-			byte to = MoveToIndex(value);
-			char fromFile = (char) (from % 8 + 97);
-			int fromRank = 8 - from / 8;
-			char toFile = (char) (to % 8 + 97);
-			int toRank = 8 - to / 8;
-			return $"{fromFile}{fromRank} -> {toFile}{toRank}";
-		}
-
-		// Empty moves are possible
-
-		public static string MoveToStringCas(byte[] position, short value)
-		{
-			byte from = MoveFromIndex(value);
-			byte to = MoveToIndex(value);
-			//System.Diagnostics.Debug.WriteLine($"Debug: from: {Convert.ToString(from, 2)} | to {Convert.ToString(to, 2)} | short: {Convert.ToString(value, 2)} | 0x{value.ToString("X2")}");
-			byte pieceFrom = position[from >> 1];
-			byte pieceTo = position[to >> 1];
-			string nameFrom = (from & 1) == 1 ? PieceName(pieceFrom) : PieceName((byte) (pieceFrom >> 4));
-			string nameTo = (to & 1) == 1 ? PieceName(pieceTo) : PieceName((byte) (pieceTo >> 4));
-			char fromFile = (char)(from % 8 + 97);
-			int fromRank = 8 - from / 8;	// 7 -> 1
-			char toFile = (char)(to % 8 + 97);
-			int toRank = 8 - to / 8;
-			return $"{nameFrom} on {fromFile}{fromRank} {(nameTo == "Empty" ? "to" : "takes")} {nameTo} on {toFile}{toRank}";
-		}
-
-		public static string MoveToStringPro1(byte[] position, short value)
-		{
-			byte from = MoveFromIndex(value);
-			byte to = MoveToIndex(value);
-			//System.Diagnostics.Debug.WriteLine($"Debug: from: {Convert.ToString(from, 2)} | to {Convert.ToString(to, 2)} | short: {Convert.ToString(value, 2)} | 0x{value.ToString("X2")}");
-			byte pieceFrom = position[from >> 1];
-			byte pieceTo = position[to >> 1];
-			string nameFrom = (from & 1) == 1 ? PieceNamePro(pieceFrom) : PieceNamePro((byte) (pieceFrom >> 4));
-			string nameTo = (to & 1) == 1 ? PieceNamePro(pieceTo) : PieceNamePro((byte) (pieceTo >> 4));
-			char fromFile = (char)(from % 8 + 97);
-			int fromRank = 8 - from / 8;	// 7 -> 1
-			char toFile = (char)(to % 8 + 97);
-			int toRank = 8 - to / 8;
-			string promotion = "";
-			if ((value & PieceMask) != 0) promotion = "=" + PieceNamePro((byte) (value & 0x0007));
-			string fromFile2 = /*fromRank == toRank ||*/ nameFrom == "" && nameTo != "-" /*pawn*/ ? "" + fromFile : "";	// This aint right
-			string fromRank2 = fromFile == toFile ? "" + fromRank : "";	// This aint right
-			return $"{nameFrom}{fromFile2}{/*fromRank2*/ ""}{(nameTo != "-" ? "x" : "")}{toFile}{toRank}{promotion}";
-		}
-
-		private static string PieceName(byte piece)
-		{
-			switch ((byte) (piece & 0x07))
-			{
-				case 0x01: return "Pawn";
-				case 0x02: return "Knight";
-				case 0x03: return "Bishop";
-				case 0x04: return "Rook";
-				case 0x05: return "Queen";
-				case 0x06: return "King";
-			}
-			return "Empty";
-		}
-
-		private static string PieceNamePro(byte piece)
-		{
-			switch ((byte) (piece & 0x07))
-			{
-				case 0x01: return "";
-				case 0x02: return "N";
-				case 0x03: return "B";
-				case 0x04: return "R";
-				case 0x05: return "Q";
-				case 0x06: return "K";
-			}
-			return "-";
-		}
-
-
-		#region Alpha Beta Pruning 1
-
 		// History Heuristic: This can be implemented as a 2D table, indexed by the piece and the destination square, which keeps track of how often each move has caused a beta-cutoff.
 		private int[][] HistoryHeuristic;	// Todo 2D table, I'm not satisfied with this
 
 		// Killer Heuristic: You could keep an array of "killer moves" for each depth in the search tree. Each entry in the array can store
 		// two moves, as it is commonly observed that there are seldom more than two distinct killer moves at each level of the tree.
-		private List<short[]> KillerHeuristic = new List<short[]>();
+		private List<ushort[]> KillerHeuristic = new List<ushort[]>();
 
-		private Dictionary<string, double> TranspositionTable = new Dictionary<string, double>();
+		private Dictionary<string, Tuple<double, byte, List<ushort>>> TranspositionTable = new Dictionary<string, Tuple<double, byte, List<ushort>>>();
 
-		List<short> OrderMoves(List<short> Moves)
+		List<ushort> OrderMoves(List<ushort> Moves)
 		{
 			Moves.OrderByDescending(x => scoreOf(x));	// Todo this
 
-			double scoreOf(short x)
+			double scoreOf(ushort x)
 			{
 				double score = 0;
 				score += HistoryHeuristic[x].Length;
@@ -606,15 +768,17 @@ namespace ChessV1.Stormcloud
 			return Moves;
 		}
 
-		short CC_Failsoft_BestMove = 0;
+		ushort CC_Failsoft_BestMove = 0;
+		bool IsOGTurnColorWhite = true;
 
 		// Todo re-do threefold repetition
 
 		double CC_FailsoftAlphaBeta(byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depth)
-			=> CC_FailsoftAlphaBeta(double.NegativeInfinity, double.PositiveInfinity, position, isTurnColorWhite, castleOptions, posKey, depth, new short[] { 0, 0, 0, 0, 0, 0 }, null, true);
+			=> CC_FailsoftAlphaBeta(double.NegativeInfinity, double.PositiveInfinity, position, isTurnColorWhite, castleOptions, posKey, depth, new ushort[12] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, null, true);
 
-		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, short[] moveHistory, List<short> AllLegalMoves = null, bool isRoot = false)
+		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, ushort[] moveHistory, List<ushort> AllLegalMoves = null, bool isRoot = false)
 		{
+			if (isRoot) IsOGTurnColorWhite = isTurnColorWhite;
 			double bestscore = int.MinValue;
 			if (depthleft == 0) return CC_FailsoftQuiesce(alpha, beta, position, isTurnColorWhite, castleOptions, posKey, true);
 
@@ -629,36 +793,54 @@ namespace ChessV1.Stormcloud
 			{
 				var result = ResultingPosition(position, move, castleOptions, posKey);
 
-				short[] newHistory = { moveHistory[1], moveHistory[2], moveHistory[3], moveHistory[4], moveHistory[5], move };
+				ushort[] newHistory = { moveHistory[1], moveHistory[2], moveHistory[3], moveHistory[4], moveHistory[5], moveHistory[6], moveHistory[7], moveHistory[8], moveHistory[9], moveHistory[10], moveHistory[11], move };
 
 				// We don't have to pay attention to null moves since it fills up backwards and at least the last entry is not a null move. So, first move will almost be draw but the first move (current entry) prevents that
-				if(newHistory[0] == newHistory[2] && newHistory[2] == newHistory[4] &&
-					newHistory[1] == newHistory[3] && newHistory[3] == newHistory[5])
+				if(newHistory[0] == newHistory[4] && newHistory[4] == newHistory[8] &&
+					newHistory[2] == newHistory[6] && newHistory[6] == newHistory[10] &&
+					newHistory[1] == newHistory[5] && newHistory[5] == newHistory[9] &&
+					newHistory[3] == newHistory[7] && newHistory[7] == newHistory[11])
 				{
 					// Threefold repetition
 					return 0.0;
 				}
 
+				byte destination = MoveToIndex(move);
+				var followUpMoves = GetAllLegalMoves(result.Item1, !isTurnColorWhite);
+				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, depthleft - 1, newHistory, followUpMoves);
+
+				//if (isRoot)
+				//{
+				//	System.Diagnostics.Debug.WriteLine($"Move: {MoveToStringPro1(position, move)}  |  {MoveToStringCas(position, move)}  |  Piece: {Convert.ToString(position[MoveToIndex(move) >> 1], 2)} | {PieceName((byte)((position[MoveToIndex(move) >> 1] & 0x70) >> 4))}-{PieceName((byte)(position[MoveToIndex(move) >> 1] & 0x07))}");
+				//	System.Diagnostics.Debug.WriteLine($"King captured: {((destination & 1) == 1) && (position[MoveToIndex(move) >> 1] & 0x07) == 6 || (destination & 1) == 0 && (position[MoveToIndex(move) >> 1] & 0x70) == 0x60}  |  Move: {Convert.ToString(move, 2)}  |  Destination: {destination}  |  1. {(destination & 1) == 1} 2. {(position[MoveToIndex(move) >> 1] & 0x07) == 6} 3. {(destination & 1) == 0} 4. {(position[MoveToIndex(move) >> 1] & 0x70) == 0x60}");
+				//}
+
 				// Check for King Captures (Checkmates)
 				// 2nd Half
-				if ((move & 1) == 1)
+				if ((destination & 1) == 1)
 				{
 					// King captured
-					if ((position[MoveToIndex(move) >> 1] & 0x07) == 6)
+					if ((position[destination >> 1] & 0x07) == 6)
 					{
-						return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+						//System.Diagnostics.Debug.WriteLine($"Returning...");
+						//System.Diagnostics.Debug.WriteLine($"[R1] Move: {MoveToStringPro1(position, move)}  |  {MoveToStringCas(position, move)}  |  Piece: {Convert.ToString(position[MoveToIndex(move) >> 1], 2)} | {PieceName((byte)((position[MoveToIndex(move) >> 1] & 0x70) >> 4))}-{PieceName((byte)(position[MoveToIndex(move) >> 1] & 0x07))}");
+						//System.Diagnostics.Debug.WriteLine($"[R1] King captured: {((destination & 1) == 1) && (position[MoveToIndex(move) >> 1] & 0x07) == 6 || (destination & 1) == 0 && (position[MoveToIndex(move) >> 1] & 0x70) == 0x60}  |  Move: {Convert.ToString(move, 2)}  |  Destination: {destination}  |  1. {(destination & 1) == 1} 2. {(position[MoveToIndex(move) >> 1] & 0x07) == 6} 3. {(destination & 1) == 0} 4. {(position[MoveToIndex(move) >> 1] & 0x70) == 0x60}");
+						//return isTurnColorWhite == IsOGTurnColorWhite ? double.NegativeInfinity : double.PositiveInfinity;
+						score = isTurnColorWhite == IsOGTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
 					}
 				}
 				// 1st Half
-				else if ((position[MoveToIndex(move) >> 1] & 0x70) == 6)
+				else if ((position[destination >> 1] & 0x70) == 0x60)
 				{
 					// King captured
-					return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+					//System.Diagnostics.Debug.WriteLine($"Returning...");
+					//System.Diagnostics.Debug.WriteLine($"[R2] Move: {MoveToStringPro1(position, move)}  |  {MoveToStringCas(position, move)}  |  Piece: {Convert.ToString(position[MoveToIndex(move) >> 1], 2)} | {PieceName((byte)((position[MoveToIndex(move) >> 1] & 0x70) >> 4))}-{PieceName((byte)(position[MoveToIndex(move) >> 1] & 0x07))}");
+					//System.Diagnostics.Debug.WriteLine($"[R2] King captured: {((destination & 1) == 1) && (position[MoveToIndex(move) >> 1] & 0x07) == 6 || (destination & 1) == 0 && (position[MoveToIndex(move) >> 1] & 0x70) == 0x60}  |  Move: {Convert.ToString(move, 2)}  |  Destination: {destination}  |  1. {(destination & 1) == 1} 2. {(position[MoveToIndex(move) >> 1] & 0x07) == 6} 3. {(destination & 1) == 0} 4. {(position[MoveToIndex(move) >> 1] & 0x70) == 0x60}");
+
+					//return isTurnColorWhite == IsOGTurnColorWhite ? double.NegativeInfinity : double.PositiveInfinity;
+					score = isTurnColorWhite == IsOGTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
 				}
 
-				var followUpMoves = GetAllLegalMoves(result.Item1, !isTurnColorWhite);
-
-				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, depthleft - 1, newHistory, followUpMoves);
 				if (score >= beta)
 				{
 					if(isRoot)
@@ -679,6 +861,12 @@ namespace ChessV1.Stormcloud
 						}
 					}
 				}
+			}
+
+			if (isRoot)
+			{
+				TranspositionTable.Clear();
+				GC.Collect();
 			}
 			return bestscore;
 		}
@@ -715,7 +903,7 @@ namespace ChessV1.Stormcloud
 		 * Depth: 8 | Time: 27,7719654s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
 		 * 
 		 * Improved Quiesce with post-capture-chain stuff + post-chain-chain-length-threshold:
-		 * Depth: 8 | Time: 16,8250764s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3	(probably because the capture chains were all short)
+		 * Depth: 8 | Time: 16,8250764s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3	(probably because the capture chains were all ushort)
 		 * 
 		 * Improved Quiesce with this: if ((captureChainLength >= 3 || captureChainLength % 2 == 1) && IsRootTurnColorWhite == isTurnColorWhite):
 		 * Depth: 8 | Time: 17,3345857s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3		(could work, lets try)
@@ -734,7 +922,7 @@ namespace ChessV1.Stormcloud
 		double CC_FailsoftQuiesce(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, bool isRoot = false, int captureChainLength = 0, List<byte> captureChainFields = null)
 		{
 			// https://www.chessprogramming.org/Quiescence_Search
-			List<short> AllCaptures = GetAllLegalMovesCapturesOnly(position, isTurnColorWhite, captureChainFields);
+			List<ushort> AllCaptures = GetAllLegalMovesCapturesOnly(position, isTurnColorWhite, captureChainFields);
 			double stand_pat = AdvancedPositionEvaluation(position, isTurnColorWhite, 0xFF /* Todo */, AllCaptures).Item1;
 			if (stand_pat >= beta) return stand_pat;
 			if (alpha < stand_pat) alpha = stand_pat;
@@ -745,6 +933,10 @@ namespace ChessV1.Stormcloud
 
 			foreach (var capture in AllCaptures)
 			{
+				if (isRoot) captureChainFields.Add(MoveToIndex(capture));
+				var result = ResultingPosition(position, capture, castleOptions, posKey);   // The point of MakeCapture() and TakeBack() is that we modify the same element and dont create a new one every time
+				double score = -CC_FailsoftQuiesce(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, false, captureChainLength + 1, captureChainFields);
+
 				// Check for King Captures (Checkmates)
 				// 2nd Half
 				if ((capture & 1) == 1)
@@ -752,19 +944,15 @@ namespace ChessV1.Stormcloud
 					// King captured
 					if ((position[MoveToIndex(capture) >> 1] & 0x07) == 6)
 					{
-						return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+						score = isTurnColorWhite == IsOGTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
 					}
 				}
 				// 1st Half
 				else if ((position[MoveToIndex(capture) >> 1] & 0x70) == 6)
 				{
 					// King captured
-					return isTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
+					score = isTurnColorWhite == IsOGTurnColorWhite ? double.PositiveInfinity : double.NegativeInfinity;
 				}
-
-				if (isRoot) captureChainFields.Add(MoveToIndex(capture));
-				var result = ResultingPosition(position, capture, castleOptions, posKey);	// The point of MakeCapture() and TakeBack() is that we modify the same element and dont create a new one every time
-				double score = -CC_FailsoftQuiesce(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, false, captureChainLength+1, captureChainFields);
 
 				if (score >= beta) return beta;
 				if (score > alpha) alpha = score;
@@ -822,7 +1010,7 @@ namespace ChessV1.Stormcloud
 	partial class Stormcloud3	// Search Algorithm
 	{
 		private ConcurrentQueue<OldSearch_SearchNode> OldSearch_SearchNodes = new ConcurrentQueue<OldSearch_SearchNode>();	// We're using a queue so that we can use just one, right?
-		private ConcurrentDictionary<short, double> OldSearch_Temp_InitialMoveScores = new ConcurrentDictionary<short, double>();   // Calculating (Live) (just clone when necessary)
+		private ConcurrentDictionary<ushort, double> OldSearch_Temp_InitialMoveScores = new ConcurrentDictionary<ushort, double>();   // Calculating (Live) (just clone when necessary)
 
 		private ConcurrentDictionary<string, double> OldSearch_PositionDataCacheDirectEvaluation = new ConcurrentDictionary<string, double>();
 
@@ -837,7 +1025,7 @@ namespace ChessV1.Stormcloud
 
 		// ToDo Actually process position keys and values and stuff
 
-		private short TargetDepth = 100, CurrentDepth = 1;
+		private ushort TargetDepth = 100, CurrentDepth = 1;
 
 		private void OldSearch_StartProcessingInitialEntry(byte[] startPosition, bool isWhiteStart)
 		{
@@ -892,8 +1080,8 @@ namespace ChessV1.Stormcloud
 			bool NodeTurnColorIsWhite = node.PositionData.Turn == EvaluationResultWhiteTurn;
 
 			var AllNextOpponentMovesAndPositions = GetAllLegalMoveAndResultingPositionPairs(node.Position, !NodeTurnColorIsWhite, node.PositionData.Castle);
-			var OpponentMoveScores = new Dictionary<short, double>();//new List<KeyValuePair<byte[], double>>();
-			var OpponentMoveFollowUps = new Dictionary<short, List<short>>();
+			var OpponentMoveScores = new Dictionary<ushort, double>();//new List<KeyValuePair<byte[], double>>();
+			var OpponentMoveFollowUps = new Dictionary<ushort, List<ushort>>();
 
 
 			if (isNodeOfStartPosition)
@@ -909,7 +1097,7 @@ namespace ChessV1.Stormcloud
 			foreach (var move in AllNextOpponentMovesAndPositions)
 			{
 				double score = 0;
-				var moves = new List<short>();
+				var moves = new List<ushort>();
 				foreach (var pos in GetAllLegalMoveAndResultingPositionPairs(move.Result, NodeTurnColorIsWhite, move.CastleOptions))
 				{
 					score += PositionEvaluation(pos.Result, new OldSearch_PositionData()).Score;
@@ -919,7 +1107,7 @@ namespace ChessV1.Stormcloud
 				OpponentMoveFollowUps.Add(move.Move, moves);
 			}
 
-			short bestMove = 0x0000;
+			ushort bestMove = 0x0000;
 			double maxScore = double.NegativeInfinity;
 
 			foreach (var pair in OpponentMoveScores)
@@ -964,7 +1152,7 @@ namespace ChessV1.Stormcloud
 
 		private void OldSearch_ProcessNewDepth()
 		{
-			short CurrentDepth = this.CurrentDepth;
+			ushort CurrentDepth = this.CurrentDepth;
 			this.CurrentDepth++;
 			var scores = OldSearch_Temp_InitialMoveScores.ToDictionary(entry => entry.Key, entry => entry.Value);
 			if(OldSearch_Temp_InitialMoveScores.Count == 0)
@@ -985,17 +1173,17 @@ namespace ChessV1.Stormcloud
 
 	struct OldSearch_MoveResultingPositionPair
 	{
-		public short Move; // key
+		public ushort Move; // key
 		public byte[] Result; // value
 		public byte CastleOptions;	// Castle options
 
-		public OldSearch_MoveResultingPositionPair(short move, byte[] result)
+		public OldSearch_MoveResultingPositionPair(ushort move, byte[] result)
 		{
 			Move = move;
 			Result = result;
 			CastleOptions = 0x0F;
 		}
-		public OldSearch_MoveResultingPositionPair(short move, byte[] result, byte castleoptions)
+		public OldSearch_MoveResultingPositionPair(ushort move, byte[] result, byte castleoptions)
 		{
 			Move = move;
 			Result = result;
@@ -1009,7 +1197,7 @@ namespace ChessV1.Stormcloud
 		// Position data
 		OldSearch_SearchNode ParentNode;	// Save pointer to previous node in search tree for forced checkmate backtracking
 		internal OldSearch_PositionData PositionData;
-		public short InitialMove;
+		public ushort InitialMove;
 		public int CurrentDepth;
 		public int FutureDepth = -2;
 
@@ -1020,7 +1208,7 @@ namespace ChessV1.Stormcloud
 					// ToDo Auto-Generate Position Data
 				}, parentNode)
 		{ }
-		public OldSearch_SearchNode(byte[] Position, short initialMove)
+		public OldSearch_SearchNode(byte[] Position, ushort initialMove)
 			: this(Position,
 				  new OldSearch_PositionData(true, Stormcloud3.GeneratePositionKey(Position))
 				{
@@ -1041,7 +1229,7 @@ namespace ChessV1.Stormcloud
 				FutureDepth = ParentNode.FutureDepth - 1;
 			}
 		}
-		public OldSearch_SearchNode(byte[] Position, OldSearch_PositionData PositionData, short initialMove)
+		public OldSearch_SearchNode(byte[] Position, OldSearch_PositionData PositionData, ushort initialMove)
 		{
 			if (Position == null) this.Position = new byte[32];
 			else this.Position = Position;
@@ -1070,7 +1258,7 @@ namespace ChessV1.Stormcloud
 			}
 		}
 
-		public OldSearch_SearchNode Result(short move)
+		public OldSearch_SearchNode Result(ushort move)
 		{
 			var newPosition = Stormcloud3.ResultingPosition(Position, move, PositionData.Castle);
 			OldSearch_PositionData newData = PositionData.Next(newPosition.Item2);
@@ -1078,7 +1266,7 @@ namespace ChessV1.Stormcloud
 			return new OldSearch_SearchNode(newPosition.Item1, newData, this);
 		}
 
-		void SetInitialMove(short move = 0)	// Move = 0 represents 0x0000 meaning square 0 -> square 0
+		void SetInitialMove(ushort move = 0)	// Move = 0 represents 0x0000 meaning square 0 -> square 0
 		{
 			if (move == 0) InitialMove = move;
 			else if (ParentNode != null) InitialMove = ParentNode.InitialMove;
@@ -1150,7 +1338,7 @@ namespace ChessV1.Stormcloud
 		private static List<OldSearch_MoveResultingPositionPair> GetAllLegalMoveAndResultingPositionPairs(byte[] Position, bool isTurnColorWhite, byte CastleOptions)
 		{
 			var movePairs = new List<OldSearch_MoveResultingPositionPair>();
-			foreach (short move in GetAllLegalMoves(Position, isTurnColorWhite))
+			foreach (ushort move in GetAllLegalMoves(Position, isTurnColorWhite))
 			{
 				var _out = ResultingPosition(Position, move, CastleOptions);
 				movePairs.Add(new OldSearch_MoveResultingPositionPair(move, _out.Item1, _out.Item3));
@@ -1165,9 +1353,9 @@ namespace ChessV1.Stormcloud
 		/// </summary>
 		/// <param name="Position"> The Position, a size 32 byte array. </param>
 		/// <returns> List of all legal moves. </returns>
-		private static List<short> GetAllLegalMoves(byte[] Position, bool isTurnColorWhite)              // Todo perhaps discard of this? Or move part of the other function in here
+		private static List<ushort> GetAllLegalMoves(byte[] Position, bool isTurnColorWhite)              // Todo perhaps discard of this? Or move part of the other function in here
 		{
-			var moves = new List<short>();
+			var moves = new List<ushort>();
 			byte colorMask1 = isTurnColorWhite ? (byte) 0 : (byte) 0x80;
 			byte colorMask2 = isTurnColorWhite ? (byte) 0 : (byte) 0x08;
 			for (byte i = 0; i < 64; i += 2)
@@ -1179,7 +1367,7 @@ namespace ChessV1.Stormcloud
 			return moves;
 		}
 
-		public static List<short> GetLegalMovesPiece(byte[] position, byte pieceLocationIndex, bool isTurnColorWhite)
+		public static List<ushort> GetLegalMovesPiece(byte[] position, byte pieceLocationIndex, bool isTurnColorWhite)
 		{
 			byte piece = position[pieceLocationIndex >> 1];
 			bool isPieceWhite;
@@ -1194,7 +1382,7 @@ namespace ChessV1.Stormcloud
 				isPieceWhite = (piece & 0x80) == 0; // 4th bit is 0
 				piece &= 0x70; // Even index => 1st half
 			}
-			if(isPieceWhite != isTurnColorWhite) return new List<short>();
+			if(isPieceWhite != isTurnColorWhite) return new List<ushort>();
 
 			// Todo look for checks
 			if (piece == 0x10) return GetLegalMovesPawn(position, pieceLocationIndex, isPieceWhite);
@@ -1204,7 +1392,7 @@ namespace ChessV1.Stormcloud
 			if (piece == 0x50) return GetLegalMovesQueen(position, pieceLocationIndex, isPieceWhite);
 			if (piece == 0x60) return GetLegalMovesKing(position, pieceLocationIndex, isPieceWhite);
 
-			return new List<short>();
+			return new List<ushort>();
 		}
 
 		/// <summary>
@@ -1214,9 +1402,9 @@ namespace ChessV1.Stormcloud
 		/// <param name="pawnLocationIndex"> The location index of the pawn (64-format). </param>
 		/// <param name="isPieceWhite"> If the pawn is white or not. Not really necessary, but the method that calls this already knows so why calculate it again? </param>
 		/// <returns> List of all legal moves of this pawn. </returns>
-		public static List<short> GetLegalMovesPawn(byte[] position, byte pawnLocationIndex, bool isPieceWhite)	// 0x09 = black pawn (1001)
+		public static List<ushort> GetLegalMovesPawn(byte[] position, byte pawnLocationIndex, bool isPieceWhite)	// 0x09 = black pawn (1001)
 		{
-			var legalMoves = new List<short>();
+			var legalMoves = new List<ushort>();
 			
 			// Check if field infront is clear
 			byte fieldIndex = (byte) (isPieceWhite ? pawnLocationIndex - 8 : pawnLocationIndex + 8);
@@ -1287,10 +1475,10 @@ namespace ChessV1.Stormcloud
 		/// <param name="position"></param>
 		/// <param name="knightLocationIndex">Location Index in 64-format.</param>
 		/// <returns></returns>
-		public static List<short> GetLegalMovesKnight(byte[] position, byte knightLocationIndex, bool isPieceWhite)
+		public static List<ushort> GetLegalMovesKnight(byte[] position, byte knightLocationIndex, bool isPieceWhite)
 		{
 			byte[] possibleMoves = KnightPossibleMoves[knightLocationIndex];
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 
 			foreach (byte possibleMove in possibleMoves)
 			{
@@ -1311,11 +1499,11 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<short> GetLegalMovesBishop(byte[] position, byte bishopLocationIndex, bool isPieceWhite)
+		public static List<ushort> GetLegalMovesBishop(byte[] position, byte bishopLocationIndex, bool isPieceWhite)
 			=> GetLegalMovesBishop(position, bishopLocationIndex, isPieceWhite, (bishopLocationIndex & 1) == 1);
-		public static List<short> GetLegalMovesBishop(byte[] position, byte bishopLocationIndex, bool isPieceWhite, bool isSecondHalf)
+		public static List<ushort> GetLegalMovesBishop(byte[] position, byte bishopLocationIndex, bool isPieceWhite, bool isSecondHalf)
 		{
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 
 			// Up right
 			byte index = bishopLocationIndex;
@@ -1385,11 +1573,11 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<short> GetLegalMovesRook(byte[] position, byte rookLocationIndex, bool isPieceWhite)
+		public static List<ushort> GetLegalMovesRook(byte[] position, byte rookLocationIndex, bool isPieceWhite)
 			=> GetLegalMovesRook(position, rookLocationIndex, isPieceWhite, (rookLocationIndex & 1) == 1);
-		public static List<short> GetLegalMovesRook(byte[] position, byte rookLocationIndex, bool isPieceWhite, bool isSecondHalf)
+		public static List<ushort> GetLegalMovesRook(byte[] position, byte rookLocationIndex, bool isPieceWhite, bool isSecondHalf)
 		{
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 			bool isSecondHalf2 = isSecondHalf;
 
 			byte index = rookLocationIndex;
@@ -1446,9 +1634,9 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<short> GetLegalMovesQueen(byte[] position, byte queenLocationIndex, bool isPieceWhite)
+		public static List<ushort> GetLegalMovesQueen(byte[] position, byte queenLocationIndex, bool isPieceWhite)
 		{
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 			bool isSecondHalf = (queenLocationIndex & 1) == 1;
 
 			legalMoves.AddRange(GetLegalMovesBishop(position, queenLocationIndex, isPieceWhite, isSecondHalf));
@@ -1457,9 +1645,9 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<short> GetLegalMovesKing(byte[] position, byte kingLocationIndex, bool isPieceWhite)
+		public static List<ushort> GetLegalMovesKing(byte[] position, byte kingLocationIndex, bool isPieceWhite)
 		{
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 			bool isSecondHalf = (kingLocationIndex & 1) == 1;
 
 			if(!IsRank8(kingLocationIndex))
@@ -1559,9 +1747,9 @@ namespace ChessV1.Stormcloud
 		/// </summary>
 		/// <param name="Position"> The Position, a size 32 byte array. </param>
 		/// <returns> List of all legal moves. </returns>
-		private List<short> GetAllLegalMovesCapturesOnly(byte[] Position, bool isTurnColorWhite, List<byte> captureChainFields)              // Todo perhaps discard of this? Or move part of the other function in here
+		private List<ushort> GetAllLegalMovesCapturesOnly(byte[] Position, bool isTurnColorWhite, List<byte> captureChainFields)              // Todo perhaps discard of this? Or move part of the other function in here
 		{
-			var moves = new List<short>();
+			var moves = new List<ushort>();
 			byte colorMask1 = isTurnColorWhite ? (byte)0 : (byte)0x80;
 			byte colorMask2 = isTurnColorWhite ? (byte)0 : (byte)0x08;
 			for (byte i = 0; i < 64; i += 2)
@@ -1573,7 +1761,7 @@ namespace ChessV1.Stormcloud
 			return moves;
 		}
 
-		public static List<short> GetLegalMovesPieceCapturesOnly(byte[] position, byte pieceLocationIndex, bool isTurnColorWhite, List<byte> captureChainFields)
+		public static List<ushort> GetLegalMovesPieceCapturesOnly(byte[] position, byte pieceLocationIndex, bool isTurnColorWhite, List<byte> captureChainFields)
 		{
 			byte piece = position[pieceLocationIndex >> 1];
 			bool isPieceWhite;
@@ -1588,7 +1776,7 @@ namespace ChessV1.Stormcloud
 				isPieceWhite = (piece & 0x80) == 0; // 4th bit is 0
 				piece &= 0x70; // Even index => 1st half
 			}
-			if (isPieceWhite != isTurnColorWhite) return new List<short>();
+			if (isPieceWhite != isTurnColorWhite) return new List<ushort>();
 
 			// Todo look for checks
 			if (piece == 0x10) return GetLegalMovesPawnCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
@@ -1598,7 +1786,7 @@ namespace ChessV1.Stormcloud
 			if (piece == 0x50) return GetLegalMovesQueenCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
 			if (piece == 0x60) return GetLegalMovesKingCapturesOnly(position, pieceLocationIndex, isPieceWhite, captureChainFields);
 
-			return new List<short>();
+			return new List<ushort>();
 		}
 
 		/// <summary>
@@ -1608,9 +1796,9 @@ namespace ChessV1.Stormcloud
 		/// <param name="pawnLocationIndex"> The location index of the pawn (64-format). </param>
 		/// <param name="isPieceWhite"> If the pawn is white or not. Not really necessary, but the method that calls this already knows so why calculate it again? </param>
 		/// <returns> List of all legal moves of this pawn. </returns>
-		public static List<short> GetLegalMovesPawnCapturesOnly(byte[] position, byte pawnLocationIndex, bool isPieceWhite, List<byte> captureChainFields) // 0x09 = black pawn (1001)
+		public static List<ushort> GetLegalMovesPawnCapturesOnly(byte[] position, byte pawnLocationIndex, bool isPieceWhite, List<byte> captureChainFields) // 0x09 = black pawn (1001)
 		{
-			var legalMoves = new List<short>();
+			var legalMoves = new List<ushort>();
 			
 			// Checking in front is not necessary since they def wont be captures
 			void diagonalMove(sbyte delta)
@@ -1662,10 +1850,10 @@ namespace ChessV1.Stormcloud
 		/// <param name="position"></param>
 		/// <param name="knightLocationIndex">Location Index in 64-format.</param>
 		/// <returns></returns>
-		public static List<short> GetLegalMovesKnightCapturesOnly(byte[] position, byte knightLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+		public static List<ushort> GetLegalMovesKnightCapturesOnly(byte[] position, byte knightLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
 		{
 			byte[] possibleMoves = KnightPossibleMoves[knightLocationIndex];
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 
 			foreach (byte possibleMove in possibleMoves)
 			{
@@ -1683,11 +1871,11 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<short> GetLegalMovesBishopCapturesOnly(byte[] position, byte bishopLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+		public static List<ushort> GetLegalMovesBishopCapturesOnly(byte[] position, byte bishopLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
 			=> GetLegalMovesBishopCapturesOnly(position, bishopLocationIndex, isPieceWhite, (bishopLocationIndex & 1) == 1, captureChainFields);
-		public static List<short> GetLegalMovesBishopCapturesOnly(byte[] position, byte bishopLocationIndex, bool isPieceWhite, bool isSecondHalf, List<byte> captureChainFields)
+		public static List<ushort> GetLegalMovesBishopCapturesOnly(byte[] position, byte bishopLocationIndex, bool isPieceWhite, bool isSecondHalf, List<byte> captureChainFields)
 		{
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 
 			byte index = bishopLocationIndex;
 			bool isSecondHalf2 = isSecondHalf;
@@ -1750,11 +1938,11 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<short> GetLegalMovesRookCapturesOnly(byte[] position, byte rookLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+		public static List<ushort> GetLegalMovesRookCapturesOnly(byte[] position, byte rookLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
 			=> GetLegalMovesRookCapturesOnly(position, rookLocationIndex, isPieceWhite, (rookLocationIndex & 1) == 1, captureChainFields);
-		public static List<short> GetLegalMovesRookCapturesOnly(byte[] position, byte rookLocationIndex, bool isPieceWhite, bool isSecondHalf, List<byte> captureChainFields)
+		public static List<ushort> GetLegalMovesRookCapturesOnly(byte[] position, byte rookLocationIndex, bool isPieceWhite, bool isSecondHalf, List<byte> captureChainFields)
 		{
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 			bool isSecondHalf2 = isSecondHalf;
 
 			byte index = rookLocationIndex;
@@ -1809,9 +1997,9 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<short> GetLegalMovesQueenCapturesOnly(byte[] position, byte queenLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+		public static List<ushort> GetLegalMovesQueenCapturesOnly(byte[] position, byte queenLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
 		{
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 			bool isSecondHalf = (queenLocationIndex & 1) == 1;
 
 			legalMoves.AddRange(GetLegalMovesBishopCapturesOnly(position, queenLocationIndex, isPieceWhite, isSecondHalf, captureChainFields));
@@ -1820,9 +2008,9 @@ namespace ChessV1.Stormcloud
 			return legalMoves;
 		}
 
-		public static List<short> GetLegalMovesKingCapturesOnly(byte[] position, byte kingLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
+		public static List<ushort> GetLegalMovesKingCapturesOnly(byte[] position, byte kingLocationIndex, bool isPieceWhite, List<byte> captureChainFields)
 		{
-			List<short> legalMoves = new List<short>();
+			List<ushort> legalMoves = new List<ushort>();
 			bool isSecondHalf = (kingLocationIndex & 1) == 1;
 
 			if (!IsRank8(kingLocationIndex))
@@ -1957,11 +2145,11 @@ namespace ChessV1.Stormcloud
 		private static bool CanCastleBlackQueenside(byte castleOptions) => (castleOptions & 0x22) == 0x22;
 		private static bool CanCastleBlackKingside(byte castleOptions) => (castleOptions & 0x11) == 0x11;
 
-		private static byte MoveFromIndex(short move) => (byte)((move >> 10) & 0x3F);            // Binary mask: 1111 1100 0000 0000 (not necessary) | Neutralize 128- and 64-bit since their default is 1 (we're shifting to the left)
-		private static byte MoveToIndex(short move) => (byte)((move & 0x03F0) >> 4);    // Binary mask: 0000 0011 1111 (0000)
-		private static byte MovePieceByte(short move) => (byte)(move & 0x000F);     // Binary mask: 0000 0000 0000 1111
-		private static short ToMovePieceUpper(byte From, byte To, byte PieceType) => (short) ((From << 10) | (To << 4) | (PieceType >> 4));       // We trust that the upper most bits of To will always be 0 (128 and 64 bit)
-		private static short ToMove(byte From, byte To, byte PieceType = 0x00) => (short) ((From << 10) | (To << 4) | PieceType);     // We trust that the upper most bits of To will always be 0 (128 and 64 bit)
+		private static byte MoveFromIndex(ushort move) => (byte)((move >> 10) & 0x3F);            // Binary mask: 1111 1100 0000 0000 (not necessary) | Neutralize 128- and 64-bit since their default is 1 (we're shifting to the left)
+		private static byte MoveToIndex(ushort move) => (byte)((move & 0x03F0) >> 4);    // Binary mask: 0000 0011 1111 (0000)
+		private static byte MovePieceByte(ushort move) => (byte)(move & 0x000F);     // Binary mask: 0000 0000 0000 1111
+		private static ushort ToMovePieceUpper(byte From, byte To, byte PieceType) => (ushort) ((From << 10) | (To << 4) | (PieceType >> 4));       // We trust that the upper most bits of To will always be 0 (128 and 64 bit)
+		private static ushort ToMove(byte From, byte To, byte PieceType = 0x00) => (ushort) ((From << 10) | (To << 4) | PieceType);     // We trust that the upper most bits of To will always be 0 (128 and 64 bit)
 
 		private static bool IsRank8(byte posIndex) => (posIndex >> 3) == 0;
 		private static bool IsRank1(byte posIndex) => (posIndex >> 3) == 7;
@@ -2003,7 +2191,7 @@ namespace ChessV1.Stormcloud
 		/// <param name="move"></param>
 		/// <param name="differentPiece0xX0"></param>
 		/// <returns></returns>
-		public static Tuple<byte[], string, byte> ResultingPosition(byte[] Position, short move, byte castleOptions, string currentKey = null)
+		public static Tuple<byte[], string, byte> ResultingPosition(byte[] Position, ushort move, byte castleOptions, string currentKey = null)
 		{
 			// Input Validation not needed, as this is an internal process
 
@@ -2078,9 +2266,17 @@ namespace ChessV1.Stormcloud
 				}
 				else
 				{
+					//System.Diagnostics.Debug.WriteLine($"Movefrom & 1 == 0");
+
+					//System.Diagnostics.Debug.WriteLine($"oldpos[from]: = {Convert.ToString(newPosition[fromIndex], 2)}");
 					newPosition[fromIndex] &= secondHalfMask;   // Erase old first half
+					//System.Diagnostics.Debug.WriteLine($"newpos[from]: = {Convert.ToString(newPosition[fromIndex], 2)}");
 					if ((move & PieceMask) != 0) piece = (byte) (((byte)move & secondHalfMask) << 4);
-					else piece = (byte) (fromByte & secondHalfMask);
+					else piece = (byte) (fromByte & firstHalfMask);
+
+					//System.Diagnostics.Debug.WriteLine($"move: = {Convert.ToString(move, 2)}");
+					//System.Diagnostics.Debug.WriteLine($"(move & PieceMask): = {Convert.ToString((move & PieceMask), 2)}");
+					//System.Diagnostics.Debug.WriteLine($"piece: = {Convert.ToString(piece, 2)}");
 
 					// 2nd Half
 					if ((moveTo & 1) == 1)
@@ -2150,12 +2346,12 @@ namespace ChessV1.Stormcloud
 						// Clear Index not necessary as its guaranteed empty
 						// add en passant to 2nd part of the byte and add the coloring bit if piece is also that color
 						newPosition[enPassantIndex] += (byte) (0x07 + ((piece >> 4) & 0x08));
-						if (s != null) s[(moveFrom + moveTo) >> 1] = '0';	// set to empty
+						if (s != null) s[(moveFrom + moveTo) >> 1] = newPosition[enPassantIndex].ToString("X2")[1];	// set to empty
 					}
 					else
 					{
 						newPosition[enPassantIndex] += (byte)(0x70 + (piece & 0x80));
-						if (s != null) s[(moveFrom + moveTo) >> 1] = '0';   // set to empty
+						if (s != null) s[(moveFrom + moveTo) >> 1] = newPosition[enPassantIndex].ToString("X2")[0];   // set to empty
 					}
 				}
 			}
@@ -2235,7 +2431,7 @@ namespace ChessV1.Stormcloud
 			return new Tuple<byte[], string, byte>(newPosition, currentKey, castleOptions);
 		}
 
-		public static byte ResultingCastle(byte[] position, byte oldCastle, bool isTurnColorWhite, List<short> AllCurrentLegalMoves = null)
+		public static byte ResultingCastle(byte[] position, byte oldCastle, bool isTurnColorWhite, List<ushort> AllCurrentLegalMoves = null)
 		{
 			if(AllCurrentLegalMoves == null) AllCurrentLegalMoves = GetAllLegalMoves(position, isTurnColorWhite);
 			return oldCastle;
@@ -2402,5 +2598,91 @@ namespace ChessV1.Stormcloud
 			// From Field 63: 46, 53
 			new byte[2] { 46, 53 }
 		};
+	}
+
+	partial class Stormcloud3		// UI / Output stuff
+	{
+		
+		#region Moves To String
+
+		public static string MoveToString1(ushort value)
+		{
+			byte from = MoveFromIndex(value);
+			byte to = MoveToIndex(value);
+			char fromFile = (char)(from % 8 + 97);
+			int fromRank = 8 - from / 8;
+			char toFile = (char)(to % 8 + 97);
+			int toRank = 8 - to / 8;
+			return $"{fromFile}{fromRank} -> {toFile}{toRank}";
+		}
+
+		// Empty moves are possible
+
+		public static string MoveToStringCas(byte[] position, ushort value)
+		{
+			byte from = MoveFromIndex(value);
+			byte to = MoveToIndex(value);
+			//System.Diagnostics.Debug.WriteLine($"Debug: from: {Convert.ToString(from, 2)} | to {Convert.ToString(to, 2)} | ushort: {Convert.ToString(value, 2)} | 0x{value.ToString("X2")}");
+			byte pieceFrom = position[from >> 1];
+			byte pieceTo = position[to >> 1];
+			string nameFrom = (from & 1) == 1 ? PieceName(pieceFrom) : PieceName((byte)(pieceFrom >> 4));
+			string nameTo = (to & 1) == 1 ? PieceName(pieceTo) : PieceName((byte)(pieceTo >> 4));
+			char fromFile = (char)(from % 8 + 97);
+			int fromRank = 8 - from / 8;    // 7 -> 1
+			char toFile = (char)(to % 8 + 97);
+			int toRank = 8 - to / 8;
+			return $"{nameFrom} on {fromFile}{fromRank} {(nameTo == "Empty" ? "to" : "takes")} {nameTo} on {toFile}{toRank}";
+		}
+
+		public static string MoveToStringPro1(byte[] position, ushort value)
+		{
+			byte from = MoveFromIndex(value);
+			byte to = MoveToIndex(value);
+			//System.Diagnostics.Debug.WriteLine($"Debug: from: {Convert.ToString(from, 2)} | to {Convert.ToString(to, 2)} | ushort: {Convert.ToString(value, 2)} | 0x{value.ToString("X2")}");
+			byte pieceFrom = position[from >> 1];
+			byte pieceTo = position[to >> 1];
+			string nameFrom = (from & 1) == 1 ? PieceNamePro(pieceFrom) : PieceNamePro((byte)(pieceFrom >> 4));
+			string nameTo = (to & 1) == 1 ? PieceNamePro(pieceTo) : PieceNamePro((byte)(pieceTo >> 4));
+			char fromFile = (char)(from % 8 + 97);
+			int fromRank = 8 - from / 8;    // 7 -> 1
+			char toFile = (char)(to % 8 + 97);
+			int toRank = 8 - to / 8;
+			string promotion = "";
+			if ((value & PieceMask) != 0) promotion = "=" + PieceNamePro((byte)(value & 0x0007));
+			string fromFile2 = /*fromRank == toRank ||*/ nameFrom == "" && nameTo != "-" /*pawn*/ ? "" + fromFile : ""; // This aint right
+			string fromRank2 = fromFile == toFile ? "" + fromRank : ""; // This aint right
+			return $"{nameFrom}{fromFile2}{/*fromRank2*/ ""}{(nameTo != "-" ? "x" : "")}{toFile}{toRank}{promotion}";
+		}
+
+		private static string PieceName(byte piece)
+		{
+			switch ((byte)(piece & 0x07))
+			{
+				case 0x01: return "Pawn";
+				case 0x02: return "Knight";
+				case 0x03: return "Bishop";
+				case 0x04: return "Rook";
+				case 0x05: return "Queen";
+				case 0x06: return "King";
+			}
+			return "Empty";
+		}
+
+		private static string PieceNamePro(byte piece)
+		{
+			switch ((byte)(piece & 0x07))
+			{
+				case 0x01: return "";
+				case 0x02: return "N";
+				case 0x03: return "B";
+				case 0x04: return "R";
+				case 0x05: return "Q";
+				case 0x06: return "K";
+			}
+			return "-";
+		}
+
+		#endregion
+
 	}
 }
