@@ -368,7 +368,7 @@ namespace ChessV1
 				pos[index >> 1] = (byte)((PieceHexValue[type1] & 0xF0) + (PieceHexValue[type2] & 0x0F));
 				index += 2;
 			}
-			System.Diagnostics.Debug.WriteLine($">>> Position Converted: Turn: {turn} | Key: {Stormcloud.Stormcloud3.GeneratePositionKey(pos)}");
+			System.Diagnostics.Debug.WriteLine($">>> Position Converted: Turn: {turn} | Key: {Stormcloud.Stormcloud3.GeneratePositionKey(pos, 0xFF)}");
 			return pos;
 		}
 

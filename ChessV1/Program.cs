@@ -17,8 +17,8 @@ namespace ChessV1
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 			//new Stormcloud.Stormcloud3();
-			new Stormcloud.Stormcloud3(false);
-			//new Stormcloud.Stormcloud3(5);
+			//new Stormcloud.Stormcloud3(false);
+			new Stormcloud.Stormcloud3(5);
 			//Application.Run(new Form1());
 		}
 	}
