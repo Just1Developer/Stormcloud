@@ -430,8 +430,8 @@ namespace ChessV1.Stormcloud
 				}
 
 				int depth = 4;
-				var score = 0;// CC_FailsoftAlphaBeta(pos, IsWhitesTurn, 0x00, key, depth);
-				System.Diagnostics.Debug.WriteLine($"Score: {CC_GetScore(score, depth)}  |  BestMove {MoveToStringPro1(pos, CC_Failsoft_BestMove)}  |  {MoveToStringCas(pos, CC_Failsoft_BestMove)}  |  Checked: {inCheck}");
+				var score = CC_FailsoftAlphaBeta(pos, IsWhitesTurn, 0x00, key, depth);
+				System.Diagnostics.Debug.WriteLine($"Score: {CC_GetScore(score)}  |  BestMove {MoveToStringPro1(pos, CC_Failsoft_BestMove)}  |  {MoveToStringCas(pos, CC_Failsoft_BestMove)}  |  Checked: {inCheck}");
 				System.Diagnostics.Debug.WriteLine($"");
 				System.Diagnostics.Debug.WriteLine($"------------------------------------------------------------------------------------------------------------------------");
 				System.Diagnostics.Debug.WriteLine($"");
@@ -491,7 +491,7 @@ namespace ChessV1.Stormcloud
 		public Stormcloud3(int GameDepth)   // 2nd constructor
 		{
 			// Play autonomous game
-			/*
+			//*
 			byte[] position = {
 				0xCA, 0xBD, 0xEB, 0xAC,
 				0x99, 0x99, 0x99, 0x99,
@@ -528,7 +528,7 @@ namespace ChessV1.Stormcloud
 			};
 			//*/
 			//*/
-			//* 1 move further | Mirrored for black : M2
+			/* 1 move further | Mirrored for black : M2
 			byte[] position = {
 				0xE0, 0x00, 0x00, 0x00,
 				0x99, 0x00, 0x04, 0x00,
@@ -568,27 +568,18 @@ namespace ChessV1.Stormcloud
 			System.Diagnostics.Debug.WriteLine("Starting Game (" + DateTime.Now + ")...");
 			while (true)
 			{
-				//Debug_StartEvaluationTestSingleThread(position, TurnColorWhite, 4);
 				var score = CC_FailsoftAlphaBeta(position, TurnColorWhite, castle, key, GameDepth);
 				byte toIndex = MoveToIndex(CC_Failsoft_BestMove);
 				byte toByte = position[toIndex >> 1];
 				string moveString = MoveToStringPro1(position, CC_Failsoft_BestMove);
 
-				System.Diagnostics.Debug.WriteLine($"Depth: {GameDepth} | Score: {CC_GetScore(score, GameDepth)} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(position, CC_Failsoft_BestMove)}");
+				System.Diagnostics.Debug.WriteLine($"Depth: {GameDepth} | Score: {CC_GetScore(score)} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(position, CC_Failsoft_BestMove)}");
 
 				var result = ResultingPosition(position, CC_Failsoft_BestMove, castle, key);
-				//System.Diagnostics.Debug.WriteLine($">>>>>   OldKey: {key} | Move: {moveString} | Move: {Convert.ToString(CC_Failsoft_BestMove, 2)} | NewKey: {result.Item2}");
-				/*
-				if(moves.Count >= 9)
-				{
-					System.Diagnostics.Debug.WriteLine($"Debug >> {moves.Count} | Move: {moveString} | Key: {key} | NewKey: {result.Item2}");
-				}
-				*/
 				position = result.Item1;
 				key = result.Item2;
 				castle = result.Item3;
 
-				//*
 				if (TurnColorWhite)
 				{
 					move = moveString;
@@ -607,40 +598,6 @@ namespace ChessV1.Stormcloud
 						}
 					}
 				}
-				//*/
-
-				/**
-				if (TurnColorWhite)
-				{
-					if (move != null)
-					{
-						moves.Add(move);
-						System.Diagnostics.Debug.WriteLine($"{moves.Count}. {move} | Key: {key}");
-						if (moves.Count > 6)
-						{
-							/*	Idk if this is correct
-							if (moves[moves.Count - 6] == moves[moves.Count - 3] &&
-								moves[moves.Count - 5] == moves[moves.Count - 2] &&
-								moves[moves.Count - 4] == move)
-							{
-								System.Diagnostics.Debug.WriteLine("Draw by Threefold repetition.");
-								break;
-							}
-							else * /if (moves[moves.Count - 6] == moves[moves.Count - 4] && moves[moves.Count - 4] == moves[moves.Count - 2] &&
-								moves[moves.Count - 5] == moves[moves.Count - 3] && moves[moves.Count - 3] == move)	// move = Count - 1
-							{
-								System.Diagnostics.Debug.WriteLine("Draw by repetition.");
-								break;
-							}
-						}
-					}
-					move = moveString;
-				}
-				else
-				{
-					move += " " + moveString;
-				}
-				//*/
 
 				TurnColorWhite = !TurnColorWhite;
 
@@ -680,8 +637,6 @@ namespace ChessV1.Stormcloud
 			}
 		}
 
-		// Todo castle, checks, mate
-		// Out of memory at depth 10 (or 11 idk doesn't show) at around 3.5 GB ram usage
 		void OldSearch_StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
 		{
 			OldSearch_SearchNode startNode = new OldSearch_SearchNode(startPosition, new OldSearch_PositionData());
@@ -691,23 +646,14 @@ namespace ChessV1.Stormcloud
 			//StartProcessingMultiThread();
 		}
 
-		//System.Threading.Thread Debug_SearchThread = null;
-		//int Debug_Depth = 2;
-
-		// Though its a bugged position, pawn captures seem to ignore color (9 -> C), (black pawn -> black rook)
-
 		public int[] Debug_StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn, int Final_Depth = 8)
 		{
-			//if(Debug_SearchThread != null) Debug_SearchThread.Abort();
 			IsRootTurnColorWhite = isWhitesTurn;
 			string posKey = GeneratePositionKey(startPosition, 0xFF);
-			//System.Diagnostics.Debug.WriteLine("posKey: " + posKey);
 			DateTime start;
-			//Debug_SearchThread = new System.Threading.Thread(() =>
-			//{
 			System.Diagnostics.Debug.WriteLine("Starting Stormcloud Calc...");
 			int Debug_Depth = 2;
-			while (Debug_Depth <= Final_Depth)  // Og: 8 but ingame i cant wait for that
+			while (Debug_Depth <= Final_Depth)
 			{
 				start = DateTime.Now;
 				double score = CC_FailsoftAlphaBeta(startPosition, isWhitesTurn, 0x00, posKey, Debug_Depth);
@@ -715,12 +661,10 @@ namespace ChessV1.Stormcloud
 				Form1.bestMove = moveString;
 				Form1.bestMoveScore = score;
 				Form1.bestMoveDepth = Debug_Depth;
-				System.Diagnostics.Debug.WriteLine($"Depth: {Debug_Depth} | Time: {(DateTime.Now - start).TotalSeconds}s | Score: {CC_GetScore(score, Debug_Depth)} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(startPosition, CC_Failsoft_BestMove)}");
+				System.Diagnostics.Debug.WriteLine($"Depth: {Debug_Depth} | Time: {(DateTime.Now - start).TotalSeconds}s | Score: {CC_GetScore(score)} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(startPosition, CC_Failsoft_BestMove)}");
 				Debug_Depth++;
 			}
 			return new int[] { MoveFromIndex(CC_Failsoft_BestMove), MoveToIndex(CC_Failsoft_BestMove) };
-			//});
-			//Debug_SearchThread.Start();
 		}
 
 		#endregion
@@ -1198,27 +1142,12 @@ namespace ChessV1.Stormcloud
 
 			#endregion
 
-			bool broadcast;
-
 			for (short i = 0; i < AllLegalNextOwnMoves.Count; ++i)
 			{
-				broadcast = MoveToStringPro1(Position, AllLegalNextOwnMoves[i]) == "Kg1";
 				var checkAppliedRes = ResultingPosition(Position, AllLegalNextOwnMoves[i], CastleOptions, positionkey);
-				//if (!IsInCheck(checkAppliedRes.Item1, checkAppliedRes.Item2, IsNextTurnWhitesTurn)) continue;
 
 				// Copy paste code from method here to add snipped for castle prevention
 				var AllLegalNextOpponentMoves2 = GetAllLegalMoves(checkAppliedRes.Item1, !IsNextTurnWhitesTurn);
-
-				if (broadcast && false)
-				{
-					System.Diagnostics.Debug.WriteLine($"Move: Kg1, key pre: {positionkey}, key post: {checkAppliedRes.Item2}, All Legal Moves:");
-					int i3 = 0;
-					foreach (var move in AllLegalNextOpponentMoves2)
-					{
-						System.Diagnostics.Debug.WriteLine($"Legal Move {++i3}: {MoveToStringPro1(checkAppliedRes.Item1, move)}");
-					}
-				}
-
 
 				foreach (ushort OpponentMove in AllLegalNextOpponentMoves2)
 				{
@@ -1335,11 +1264,8 @@ namespace ChessV1.Stormcloud
 			}
 
 			var AllLegalNextOpponentMoves = GetAllLegalMoves(Position, !IsNextTurnWhitesTurn);
-			//int i2 = 1;
-			//System.Diagnostics.Debug.WriteLine($": {positionkey}");
 			foreach (ushort OpponentMove in AllLegalNextOpponentMoves)
 			{
-				//System.Diagnostics.Debug.WriteLine($"OpponentMove: {i2++}: {MoveToStringPro1(Position, OpponentMove)}");
 				byte dest = MoveToIndex(OpponentMove);
 				if (IsNextTurnWhitesTurn)
 				{
@@ -1485,25 +1411,7 @@ namespace ChessV1.Stormcloud
 
 		#region Fail-soft Alpha Beta Pruning
 
-		/*
-		 * Fail-Soft Alpha Beta: https://www.chessprogramming.org/Alpha-Beta#Outside_the_Bounds
-		 * cc = copycat = code copied / adjusted from pseudo-c-code from the internet
-		int alphaBeta( int alpha, int beta, int depthleft ) {
-			int bestscore = -oo;
-			if( depthleft == 0 ) return quiesce( alpha, beta );
-			for ( all moves)  {
-				score = -alphaBeta( -beta, -alpha, depthleft - 1 );
-				if( score >= beta )
-					return score;  // fail-soft beta-cutoff
-				if( score > bestscore ) {
-					bestscore = score;
-					if( score > alpha )
-						alpha = score;
-				}
-			}
-			return bestscore;
-		}
-		 */
+		// Fail-Soft Alpha Beta: https://www.chessprogramming.org/Alpha-Beta#Outside_the_Bounds
 
 		// History Heuristic: This can be implemented as a 2D table, indexed by the piece and the destination square, which keeps track of how often each move has caused a beta-cutoff.
 		private int[][] HistoryHeuristic;	// Todo 2D table, I'm not satisfied with this
@@ -1526,37 +1434,19 @@ namespace ChessV1.Stormcloud
 			}
 		}
 
-		string CC_GetScore(double score, int maxDepth = 100)	// anticipate 100, normal scores are nowhere near that
+		string CC_GetScore(double score)
 		{
-			if (Math.Abs(score) >= PositiveKingCaptureEvalValue - maxDepth) return $"M{CC_ForcedMate/*(int) Math.Abs(PositiveKingCaptureEvalValue - score)*/}";
+			if (Math.Abs(score) >= PositiveKingCaptureEvalValue) return $"M{CC_ForcedMate}";
 			return score < 0 ? "" + score : "+" + score;
 		}
 
-		const double PositiveKingCaptureEvalValue = 999999999;	// double.PositiveInfinity;
-		const double NegativeKingCaptureEvalValue = -999999999; // double.NegativeInfinity;
+		const double PositiveKingCaptureEvalValue = 999999999;
+		const double NegativeKingCaptureEvalValue = -999999999;
 
 		ushort CC_Failsoft_BestMove = 0;
 		bool IsOGTurnColorWhite = true;
 		int CC_ForcedMate;
 		int CC_FinalDepth;
-
-		/** GPT-4
-		 * Let's say your maximum evaluation score is M (excluding infinity). This is the score for a checkmate.
-		 *
-		 * Now, for a mate in N moves, you can return a score of M - N for the side that has the forced mate, and -M + N for the other side.
-		 * So, a mate in 1 move would be M - 1 (just slightly less than a completed checkmate), a mate in 2 moves would be M - 2, a mate in 3 moves
-		 * would be M - 3, and so on. Similarly, if the opponent could prolong the mate by 1 move, it would be -M + 1, if they could prolong by 2 moves,
-		 * it would be -M + 2, and so on.
-		 * 
-		 * This way, quicker mates are rewarded more than slower mates, and moves that prolong the mate are punished,
-		 * but not as severely as actually getting checkmated.
-		 * 
-		 * Remember to adjust these scores appropriately during the minimax search. In particular, note that a score of M - N for a mate in N moves is actually
-		 * a lower score than M, so you should be minimizing the score when searching for the best move for the side that is getting mated, and maximizing it for
-		 * the side that has the forced mate.
-		 */
-
-		//double CC_ForcedMate2;
 
 		// Todo re-do threefold repetition
 
@@ -1570,7 +1460,7 @@ namespace ChessV1.Stormcloud
 		/// <param name="depth"></param>
 		/// <returns></returns>
 		double CC_FailsoftAlphaBeta(byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depth)
-			=> CC_FailsoftAlphaBeta(NegativeKingCaptureEvalValue-1, PositiveKingCaptureEvalValue+1,/*double.NegativeInfinity, double.PositiveInfinity,*/ position, isTurnColorWhite, castleOptions, posKey, depth, new ushort[12] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, null, false, true);
+			=> CC_FailsoftAlphaBeta(NegativeKingCaptureEvalValue-1, PositiveKingCaptureEvalValue+1, position, isTurnColorWhite, castleOptions, posKey, depth, new ushort[12] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, null, false, true);
 
 		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, ushort[] moveHistory, List<ushort> AllLegalMoves = null, bool isInCheck = false, bool isRoot = false)
 		{
@@ -1587,8 +1477,6 @@ namespace ChessV1.Stormcloud
 			{
 				AllLegalMoves = GetAllLegalMoves(position, isTurnColorWhite);
 				isInCheck = CutLegalMoves_IsInCheck(position, isTurnColorWhite, castleOptions, ref AllLegalMoves, posKey);
-				AllLegalMoves.Remove(0xF6C0);	// Remove Nf1->e3, since that is the 'best move' (its not)
-				// f1 = 61 = 111101, e3 = 44 = 101100 => 1111 0110 1100 0000 = F6C0
 			}
 
 			if (AllLegalMoves.Count == 0)
@@ -1597,23 +1485,16 @@ namespace ChessV1.Stormcloud
 				{
 					// Checkmate.
 					setForcedMate();
-					if (IsOGTurnColorWhite == isTurnColorWhite && isRoot) CC_Failsoft_BestMove = 0;	// PositiveKingCaptureEvalValue/* see explanation for CC_ForcedMate2 */;    // Stalemate
-					return ReturnMateWithForcedBalance();//NegativeKingCaptureEvalValue;    // Stalemate
+					if (IsOGTurnColorWhite == isTurnColorWhite && isRoot) CC_Failsoft_BestMove = 0;
+					return ReturnMateWithForcedBalance();
 				}
 				return 0.0;	// Stalemate
 			}
 
 			void setForcedMate()
 			{
-				if (CC_ForcedMate < CC_FinalDepth - depthleft) CC_ForcedMate = CC_FinalDepth - depthleft;   // If it happened at a higher depth, it means there is a combo that will get us there, meaning the old forced mate number is outdated
-				/*if (isTurnColorWhite == IsOGTurnColorWhite)
-				{
-					CC_ForcedMate2 = PositiveKingCaptureEvalValue - CC_FinalDepth + depthleft;
-				}
-				else
-				{
-					CC_ForcedMate2 = NegativeKingCaptureEvalValue + CC_FinalDepth - depthleft;
-				}*/
+				// If it happened at a higher depth, it means there is a combo that will get us there, meaning the old forced mate number is outdated
+				if (CC_ForcedMate < CC_FinalDepth - depthleft) CC_ForcedMate = CC_FinalDepth - depthleft;
 			}
 
 			double ReturnMateWithForcedBalance()
@@ -1628,37 +1509,7 @@ namespace ChessV1.Stormcloud
 
 			foreach (var move in AllLegalMoves)
 			{
-				/*
-				if (isRoot)
-				{
-					if (MoveToStringPro1(position, move) == "Ne3") { System.Diagnostics.Debug.WriteLine($"Skipping Ne3"); continue; }
-					if (MoveToStringPro1(position, move) == "Nd2") { System.Diagnostics.Debug.WriteLine($"Skipping Nd2"); continue; }
-				}*/
 				var result = ResultingPosition(position, move, castleOptions, posKey);
-				/*if (isRoot)
-				{
-					if (MoveToStringPro1(position, move) == "Ng3")
-					{
-						System.Diagnostics.Debug.WriteLine($"Ng3 Result Key: {result.Item2}");
-						// White
-						int i = 0;
-						var moves = GetAllLegalMoves(result.Item1, true);
-						CutLegalMoves_IsInCheck(result.Item1, true, 0x00, ref moves, result.Item2);
-						foreach (var move2 in moves)
-						{
-							System.Diagnostics.Debug.WriteLine($"White Legal Move {++i} >> {MoveToStringPro1(result.Item1, move2)}  |  {MoveToStringCas(result.Item1, move2)}");
-						}
-						// Black
-						i = 0;
-						moves = GetAllLegalMoves(result.Item1, false);
-						CutLegalMoves_IsInCheck(result.Item1, false, 0x00, ref moves, result.Item2);
-						foreach (var move2 in moves)
-						{
-							System.Diagnostics.Debug.WriteLine($"Black Legal Move {++i} >> {MoveToStringPro1(result.Item1, move2)}  |  {MoveToStringCas(result.Item1, move2)}");
-						}
-					}
-				}*/
-
 				ushort[] newHistory = { moveHistory[1], moveHistory[2], moveHistory[3], moveHistory[4], moveHistory[5], moveHistory[6], moveHistory[7], moveHistory[8], moveHistory[9], moveHistory[10], moveHistory[11], move };
 
 				// We don't have to pay attention to null moves since it fills up backwards and at least the last entry is not a null move. So, first move will almost be draw but the first move (current entry) prevents that
@@ -1683,52 +1534,30 @@ namespace ChessV1.Stormcloud
 					return 0.0;
 				}
 
-				//if(isRoot) System.Diagnostics.Debug.WriteLine($"Move String: {MoveToStringPro1(position, move)}  |  Move bin: {Convert.ToString(move, 2)}  |  From bin: {Convert.ToString(MoveFromIndex(move), 2)}  |  To Bin: {Convert.ToString(MoveToIndex(move), 2)}  |  Dest bin: {Convert.ToString(destination, 2)}");
-
-				/*
-				bool Debug_isMove = /*move == 0xF3E0 &&* / isRoot; //MoveToStringPro1(position, 0xF3E0) == "Rxg1" && isRoot;	// Direct move
-				if(Debug_isMove)
-				{
-					System.Diagnostics.Debug.WriteLine($"Rxg1 Found! >> Move String: {MoveToStringPro1(position, move)}  |  Move bin: {Convert.ToString(move, 2)}  |  From bin: {Convert.ToString(MoveFromIndex(move), 2)}  |  To Bin: {Convert.ToString(MoveToIndex(move), 2)}  |  Dest bin: {Convert.ToString(destination, 2)}");
-					System.Diagnostics.Debug.WriteLine("FromByte = 0x" + position[MoveFromIndex(move) >> 1].ToString("X2"));
-					System.Diagnostics.Debug.WriteLine("ToByte = 0x" + position[MoveToIndex(move) >> 1].ToString("X2"));
-					System.Diagnostics.Debug.WriteLine("DestByte = 0x" + position[destination >> 1].ToString("X2"));
-					System.Diagnostics.Debug.WriteLine($"(position[destination >> 1] & 0x07) = {position[destination >> 1] & 0x07} == 0x06 => {(position[destination >> 1] & 0x07) == 0x06}");
-					System.Diagnostics.Debug.WriteLine($"(position[destination >> 1] & 0x70) = {position[destination >> 1] & 0x70} == 0x60 => {(position[destination >> 1] & 0x70) == 0x60}");
-				}
-				*/
-
-				// King Capture Detection aint working....
-
 				// Check for King Captures (Checkmates)
 				// 2nd Half
 				if ((destination & 1) == 1)
 				{
-					//if(Debug_isMove) System.Diagnostics.Debug.WriteLine("& 1 == 1");
 					// King captured
 					if ((position[destination >> 1] & 0x07) == 0x06)
 					{
-						//if (Debug_isMove) System.Diagnostics.Debug.WriteLine("Returning...");
 						return KingCaptured();
 					}
 				}
 				// 1st Half
 				else if ((position[destination >> 1] & 0x70) == 0x60)
 				{
-					//if (Debug_isMove) System.Diagnostics.Debug.WriteLine("& 1 == 0 and King, Returning...");
 					// King captured
 					return KingCaptured();
 				}
 				else if (!EnoughCheckmatingMaterial(result.Item1))
 				{
 					// Draw by insufficient material
-					//if (Debug_isMove) System.Diagnostics.Debug.WriteLine("Returning 0 from Root due to insufficient Checkmating material");
 					return 0.0;
 				}
 
 				double KingCaptured()
 				{
-					//if(isRoot) System.Diagnostics.Debug.WriteLine("King Captured Called. ");
 					setForcedMate();
 					// King Taken and its our move, so we took the king.
 					// This is good for us.
@@ -1738,33 +1567,18 @@ namespace ChessV1.Stormcloud
 						{
 							CC_Failsoft_BestMove = move;
 						}
-						// When this is negative, it backs off from checkmate.
-						// So: If I reverse it, it only targets one king. I reverse it, it wants to kill the black king, i reverse it again, the white king.
-						// I think like this it refuses to kill either king?
-						//return PositiveKingCaptureEvalValue; //999999999;  //double.PositiveInfinity;	// King committed suicide so I swapped it so this is the -99.. value. In a test-run at depth 5 it seems to... survive? (move 9, no suicide)
 					}
-					/*
-					else
-					{
-						// When this is negative, the Black King commits suicide
-						//return NegativeKingCaptureEvalValue; //999999999; //double.NegativeInfinity;	// Putting both to -999... -> Doesn't want to kill the king in my 1 example, putting both to +999 does. Leaving them at different levels leads to (what i think) that noone wants to capture, because they repeat moves at -124 advantage
-					}*/
 					return ReturnMateWithForcedBalance();
 				}
 
-				//Console.WriteLine($"Before CC_FailsoftAlphaBeta call: alpha={alpha}, beta={beta}, depth={CC_FinalDepth - depthleft + 1}, moveStr={MoveToStringCas(position, move)}, move={Convert.ToString(move, 2)}");
 				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, result.Item1, !isTurnColorWhite, result.Item3, result.Item2, depthleft - 1, newHistory, followUpMoves, isInCheck);
-				//Console.WriteLine($"Depth: {CC_FinalDepth - depthleft + 1}  |  Score after move {Convert.ToString(move, 2)}: {score}");
-
+				
 				if (score >= beta)
 				{
 					if(isRoot)
 					{
 						CC_Failsoft_BestMove = move;
 					}
-					// Infinity is not caused by Quiesce, I implemented a method that screamed when the score of it was infinity, it never screamed and I still got infinity
-					//System.Diagnostics.Debug.WriteLine($"Depth: {CC_FinalDepth - depthleft + 1}  |  Returning beta: {score} >= {beta} == true");
-					//System.Diagnostics.Debug.WriteLine($"Depth: {CC_FinalDepth - depthleft + 1}  |  CC_ForcedMate: {CC_ForcedMate}  |  NotInf: {!double.IsInfinity(score)}  |  score < positive {score < PositiveKingCaptureEvalValue}  |  score > negative {score > NegativeKingCaptureEvalValue}");
 					if (!double.IsInfinity(score) && score < PositiveKingCaptureEvalValue && score > NegativeKingCaptureEvalValue) CC_ForcedMate = -1;  // Remove forced mate
 					return score;
 				}
@@ -1822,15 +1636,14 @@ namespace ChessV1.Stormcloud
 					// King captured
 					if ((position[MoveToIndex(capture) >> 1] & 0x07) == 6)
 					{
-						return isTurnColorWhite == IsOGTurnColorWhite ? PositiveKingCaptureEvalValue : NegativeKingCaptureEvalValue; // isTurnColorWhite == IsOGTurnColorWhite ? 999999999 : -999999999; //double.PositiveInfinity : double.NegativeInfinity;
+						return PositiveKingCaptureEvalValue;
 					}
 				}
 				// 1st Half
 				else if ((position[MoveToIndex(capture) >> 1] & 0x70) == 6)
 				{
 					// King captured
-					return isTurnColorWhite == IsOGTurnColorWhite ? PositiveKingCaptureEvalValue : NegativeKingCaptureEvalValue; //double.PositiveInfinity;
-					//return isTurnColorWhite == IsOGTurnColorWhite ? 999999999 : -999999999; //double.PositiveInfinity : double.NegativeInfinity;
+					return PositiveKingCaptureEvalValue;
 				}
 
 				#endregion
@@ -1882,58 +1695,6 @@ namespace ChessV1.Stormcloud
 
 			return alpha;
 		}
-
-		/*
-		 * -- Benchmarks --
-		 * 
-		 * -- Depth 4:
-		 * 
-		 * 
-		 * No Quiesce (via || true statement in first if):
-		 * Depth: 4 | Time: 0,0084995s | Score: 8 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
-		 * 
-		 * Old Quiesce:
-		 * Depth 4 | ~380 secs
-		 * 
-		 * Improved Quiesce:
-		 * Depth: 4 | Time: 0,0180641s | Score: 8 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
-		 * 
-		 * Improved Quiesce with post-capture-chain stuff:
-		 * Depth: 4 | Time: 0,0198224s | Score: 8 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
-		 * 
-		 * 
-		 * -- Depth 8:
-		 * 
-		 * 
-		 * No Quiesce (via || true statement in first if):
-		 * Depth: 8 | Time: 9,4162471s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
-		 * 
-		 * Improved Quiesce:
-		 * Depth: 8 | Time: 16,9334008s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
-		 * 
-		 * Improved Quiesce with post-capture-chain stuff:
-		 * Depth: 8 | Time: 27,7719654s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3
-		 * 
-		 * Improved Quiesce with post-capture-chain stuff + post-chain-chain-length-threshold:
-		 * Depth: 8 | Time: 16,8250764s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3	(probably because the capture chains were all ushort)
-		 * 
-		 * Improved Quiesce with this: if ((captureChainLength >= 3 || captureChainLength % 2 == 1) && IsRootTurnColorWhite == isTurnColorWhite):
-		 * Depth: 8 | Time: 17,3345857s | Score: 1009 | Move: Pawn on c2 to Empty on c3   ||   c2 -> c3   ||   Pawn on c2 to Empty on c3		(could work, lets try)
-		 * 
-		 * Old Quiesce:
-		 * Unknown
-		 * 
-		 * => This is still way too slow, but it is a correct algorithm.
-		 * 
-		 */
-
-
-
-		/*
-		protected class TranspositionTable
-		{
-
-		}*/
 
 		#endregion
 	}
