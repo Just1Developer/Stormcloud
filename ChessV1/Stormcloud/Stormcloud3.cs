@@ -14,6 +14,7 @@ namespace Stormcloud
 	 * This has been a valuable experience to code, and I have no intention of stopping.
 	 * 
 	 * A current top game of Stormcloud 3 is this [Depth: 4 | Time: ~1 hour 10 minutes]:
+	 * Game (No Notations):
 		1. e3 Nf6
 		2. Qe2 d5
 		3. Qb5+ c6
@@ -42,7 +43,42 @@ namespace Stormcloud
 		26. Rd6+ Be6
 		27. Rxe6+ b5
 		28. Rh6#
+	
+	 * Game (Notations):
+		1. e3 Nf6				Book		|		 Book
+		2. Qe2 d5				Inaccuracy	|		 Good
+		3. Qb5+ c6				Inaccuracy	|	Excellent		
+		4. Qc5 e5				Inaccuracy	|		 Best
+		5. Qc3 d4				Best		|		 Good
+		6. exd4 Qd5				Good		|	  Mistake
+		7. dxe5 Ne4				Best		|		 Best
+		8. Qe3 Bc5				Mistake		|  Great Move
+		9. Qf3 Nd7				Blunder		|		 Miss
+		10. d4 Bxd4				Miss		|  Inaccuracy
+		11. Nh3 Qa5+			Mistake		|		 Miss
+		12. Bd2 Bxf2+			Blunder		|		 Miss
+		13. Nxf2 Qxd2+			Best		|	  Mistake
+		14. Nxd2 f5				Forced		|  Inaccuracy
+		15. Ndxe4 Nxe5			Excellent	|	Excellent
+		16. Qc3 Nd3+			Excellent	|	Excellent
+		17. Qxd3 c5				Excellent	|		 Good
+		18. Nd6+ Kd7			Good		|		 Good
+		19. Nxf5+ Ke8			Excellent	|		 Best
+		20. Qe3+ Kf7			Best		|		 Best
+		21. Nd6+ Kg6			Excellent	|	Excellent
+		22. Qe4+ Kh5			Excellent	|	Excellent
+		23. Rd1 c4				Excellent	|	Excellent
+		24. Bxc4 g6				Excellent	|	Excellent
+		25. Nf7+ g5				Best		|		 Best
+		26. Rd6+ Be6			Best		|		 Best
+		27. Rxe6+ b5			Best		|		 Best
+		28. Rh6#				Best		|			-
 	 * Note that this sequence of moves has been slightly modified due to move to string bugs related to displaying check and mate delayed.
+	 * 
+	 * https://www.chess.com/analysis/game/pgn/48sWGBnMV8?tab=analysis
+	 * 
+	 * White: Accuracy: 57.6, Elo: 400
+	 * Black: Accuracy: 54.6, Elo: 100
 	 */
 
 	/*
@@ -74,7 +110,6 @@ namespace Stormcloud
 	{
 		#region Evaluation Weights
 
-
 		#region Matrix Weights
 
 		private const double WEIGHT_POSITION_MATRIX_COMPLETE = 0.8;
@@ -102,10 +137,6 @@ namespace Stormcloud
 		private const byte PriorityPoints_Checks = 4;       // Apparently, Non-Capturing Checks tend to be good moves
 		private const byte PriorityPoints_Promotion = 5;        // Apparently, Non-Capturing Checks tend to be good moves
 		private const byte PriorityPoints_Castle = 2;       // Apparently, Non-Capturing Checks tend to be good moves
-
-		#endregion
-
-		#region Other.. Weights?
 
 		#endregion
 
