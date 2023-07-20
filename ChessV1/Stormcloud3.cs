@@ -5,28 +5,44 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ChessV1.Stormcloud
+namespace ChessUI.Stormcloud
 {
-	// Todo I think the eval bug comes from something regarding legal moves,
-	// because it captured the King with infinite score when it was a direct capture.
 
-	// Todo draws dont work anymore in testgame constructor
-	// Todo add if legal for en passant. I think en passant adding / processing / removing is not working correctly, and thats why the engine prefers one-movers
-
-	// Todo Target matrix
-
-	// Todo CutLegalMoves_IsInCheck: perhaps allow legal moves that end the game (king capture) even though oneself is in check
-
-	// Todo scan for checks in next moves in advanced eval + the moves are for the opponent, not you
-
-	// Todo check if repetition in evaluation works, because somewhy it draws with +60 -> King doesnt wanna be captured
-
-	// Represent Moves as ushort or int instead of byte arrays?
-	// Yes: Short: 16 bit -> 6 bit: from | 6 bit: to | 4 bit resulting piece.
-	// Example: Short: 001000 010000 1001 => a7 -> a6, black pawn: move title: a6
-
-	// Castle: Maybe first half of the byte means temporary no? (attacked)
-	// Todo add castleOptions to position Key
+	/**
+	 * This Version of Stormcloud is discontinued. Development will continue in Stormcloud 4 using advanced techniques to significantly enhance speed of the Engine.
+	 * This has been a valuable experience to code, and I have no intention of stopping.
+	 * 
+	 * A current top game of Stormcloud 3 is this [Depth: 4 | Time: ~1 hour 10 minutes]:
+		1. e3 Nf6
+		2. Qe2 d5
+		3. Qb5+ c6
+		4. Qc5 e5
+		5. Qc3 d4
+		6. exd4 Qd5
+		7. dxe5 Ne4
+		8. Qe3 Bc5
+		9. Qf3 Nd7
+		10. d4 Bxd4
+		11. Nh3 Qa5+
+		12. Bd2 Bxf2+
+		13. Nxf2 Qxd2+
+		14. Nxd2 f5
+		15. Nxe4 Nxe5
+		16. Qc3 Nd3+
+		17. Qxd3 c5
+		18. Nd6+ Kd7
+		19. Nxf5+ Ke8
+		20. Qe3+ Kf7
+		21. Nd6+ Kg6
+		22. Qe4+ Kh5
+		23. Rd1 c4
+		24. Bxc4 g6
+		25. Nf7+ g5
+		26. Rd6+ Be6
+		27. Rxe6+ b5
+		28. Rh6#
+	 * Note that this sequence of moves has been slightly modified due to move to string bugs related to displaying check and mate delayed.
+	 */
 
 	/*
 	 * If we store at the back of the ushort
@@ -50,627 +66,6 @@ namespace ChessV1.Stormcloud
 	 * Field Coverage Matrices for every piece type
 	 */
 
-	partial class Stormcloud3	// Testing and Debugging
-	{
-
-		#region Debug_DeleteMe_Unsafe
-
-		public static Stormcloud3 search;
-
-		public Stormcloud3()
-		{
-			search = this;
-			/*
-			byte[] position = {
-				0xCA, 0xBD, 0xEB, 0xAC,
-				0x99, 0x99, 0x99, 0x99,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x11, 0x11, 0x11, 0x11,
-				0x42, 0x35, 0x63, 0x24
-			};
-			//*/
-			/*
-			byte[] position = {
-				0xC0, 0xB0, 0xEB, 0xAC,
-				0x90, 0x09, 0x99, 0x99,
-				0x00, 0xA0, 0x00, 0x00,
-				0x50, 0x00, 0x00, 0x00,
-				0x09, 0x00, 0x00, 0x00,
-				0x00, 0x10, 0x10, 0x00,
-				0x11, 0x01, 0x01, 0x11,
-				0x42, 0x30, 0x63, 0x24
-			};
-			//*/
-
-			// Generated Testposition (by me on the board, whites queen is hanging, blacks queen too but protected and only attacked by queen)
-			//byte[] position = new byte[] { 0xC0, 0x00, 0xE0, 0x0C, 0x99, 0x90, 0x09, 0x99, 0x00, 0xAB, 0xBA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xD1, 0x91, 0x00, 0x00, 0x25, 0x30, 0x10, 0x11, 0x00, 0x00, 0x01, 0x40, 0x00, 0x60, 0x24, };
-
-			// Scholar's mate execution Qxe8# is the best move
-			//byte[] position = new byte[] { 0xCA, 0xBD, 0xEB, 0xAC, 0x99, 0x99, 0x00, 0x90, 0x00, 0x00, 0x09, 0x09, 0x00, 0x00, 0x90, 0x05, 0x00, 0x30, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x01, 0x11, 0x42, 0x30, 0x60, 0x24 };
-
-			//byte[] position = //{ 0x00, 0xBD, 0xE0, 0x0C, 0x00, 0x99, 0x09, 0x99, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4B, 0x00, 0x10, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x60, 0x01, 0x11, 0x0C, 0xA5, 0x03, 0x24 };
-			//{ 0x00, 0xBD, 0xE0, 0x0C, 0x00, 0x99, 0x09, 0x99, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4B, 0x00, 0x10, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x06, 0x01, 0x11, 0x0C, 0xA5, 0x03, 0x24 };
-
-
-			//{ 0x00, 0xBE, 0x0B, 0xAC, 0xC9, 0x99, 0x09, 0x99, 0x90, 0xA0, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x0D, 0x11, 0x00, 0x10, 0x10, 0x03, 0x11, 0x00, 0x01, 0x42, 0x05, 0x63, 0x24 };
-			//new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
-
-			/*
-			 * Depth: 8 | Time: 55,7723242s | Score: -2 | Move: Queen on d3 takes Queen on c4   ||   d3 -> c4   ||   Queen on d3 takes Queen on c4
-			 * Stockfish: -4.3 | Best Move: Qxc4 => Same move
-			 */
-
-
-			byte castle = 0xFF;
-			//* M2 (depth4) position
-			byte[] position = {
-				0x00, 0x04, 0x00, 0x00,
-				0xEC, 0x90, 0x29, 0x99,
-				0x90, 0x00, 0x00, 0x00,
-				0x10, 0x00, 0x00, 0x00,
-				0x01, 0x00, 0x01, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0xC0, 0x00, 0x11,
-				0x00, 0x00, 0x00, 0x60,
-			};
-			castle = 0x00;
-			//*/
-
-			/** Matrix Weight testing
-			double[,] Position_Material_Matrix_None =
-			{
-				{  -5, -3, -4, -9, -5, -4, -3, -5  },
-				{  -1, -1, -1, -1, -1, -1, -1, -1  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  1, 1, 1, 1, 1, 1, 1, 1  },
-				{  5, 3, 4, 9, 5, 4, 3, 5  }
-			};
-
-			double[,] Position_Material_Matrix_E4 =
-			{
-				{  -5, -3, -4, -9, -5, -4, -3, -5  },
-				{  -1, -1, -1, -1, -1, -1, -1, -1  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 1, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  1, 1, 1, 1, 0, 1, 1, 1  },
-				{  5, 3, 4, 9, 5, 4, 3, 5  }
-			};
-			double[,] Position_Material_Matrix_E4E5 =
-			{
-				{  -5, -3, -4, -9, -5, -4, -3, -5  },
-				{  -1, -1, -1, 0, -1, -1, -1, -1  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, -1, 0, 0, 0  },
-				{  0, 0, 0, 0, 1, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  1, 1, 1, 1, 0, 1, 1, 1  },
-				{  5, 3, 4, 9, 5, 4, 3, 5  }
-			};
-			double[,] Position_Material_Matrix_E3 =
-			{
-				{  -5, -3, -4, -9, -5, -4, -3, -5  },
-				{  -1, -1, -1, -1, -1, -1, -1, -1  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 1, 0, 0, 0  },
-				{  1, 1, 1, 1, 0, 1, 1, 1  },
-				{  5, 3, 4, 9, 5, 4, 3, 5  }
-			};
-			double[,] Position_Material_Matrix_G4 =
-			{
-				{  -5, -3, -4, -9, -5, -4, -3, -5  },
-				{  -1, -1, -1, -1, -1, -1, -1, -1  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  0, 0, 0, 0, 0, 0, 1, 0  },
-				{  0, 0, 0, 0, 0, 0, 0, 0  },
-				{  1, 1, 1, 1, 1, 1, 0, 1  },
-				{  5, 3, 4, 9, 5, 4, 3, 5  }
-			};
-
-			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication --: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_None, Matrix_FieldWeights))}");
-			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication E4: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_E4, Matrix_FieldWeights))}");
-			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication E4E5: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_E4E5, Matrix_FieldWeights))}");
-			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication E3: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_E3, Matrix_FieldWeights))}");
-			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication G4: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_G4, Matrix_FieldWeights))}");
-
-			//*/
-
-			double Test_Eval = PositionEvaluation(position, EvaluationResultWhiteTurn).Score;
-			var moves = GetAllLegalMoves(position, false);
-			string key = GeneratePositionKey(position, castle); // Castle
-
-
-			int i = 0;
-			System.Diagnostics.Debug.WriteLine($"Legal Moves >> {moves.Count}");
-			foreach (var move in moves)
-			{
-				string movStr = MoveToStringPro1(position, move);
-				System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {movStr}");
-			}
-
-			System.Diagnostics.Debug.WriteLine("D >> Test Eval mat: " + Test_Eval + " | Moves: " + moves.Count + " InCheck: " + CutLegalMoves_IsInCheck(position, false, 0x0F, ref moves, key));
-			double topScore = -1;
-			List<string> bestmoves = new List<string>();
-
-			System.Diagnostics.Debug.WriteLine($"Revised Legal Moves >> {moves.Count}");
-			i = 0;
-			foreach (var move in moves)
-			{
-				string movStr = MoveToStringPro1(position, move);
-				/*
-				var result = ResultingPosition(position, move, 0xFF, key);
-				StringBuilder sb = new StringBuilder();
-				foreach (byte b in result.Item1)
-				{
-					sb.Append("0x" + b.ToString("X2") + ", ");
-				}
-				double score = AdvancedPositionEvaluation(result.Item1, true, result.Item3, null, result.Item2).Item1;
-				if (score == topScore) bestmoves.Add(movStr);
-				else if (score > topScore)
-				{
-					bestmoves.Clear();
-					topScore = score;
-					bestmoves.Add(movStr);
-				}
-				*/
-				System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {movStr}");//  |  Position Score: {score} >>		{sb}");
-			}
-			System.Diagnostics.Debug.WriteLine($"----------------------------------------------------------");
-			i = 0;
-			System.Diagnostics.Debug.WriteLine($"Total Best Moves >> {bestmoves.Count}");
-			foreach (var move in bestmoves)
-			{
-				System.Diagnostics.Debug.WriteLine($"Best Move {++i} >> {move}");
-			}
-
-			System.Diagnostics.Debug.WriteLine($"----------------------------------------------------------");
-			System.Diagnostics.Debug.WriteLine($"----------------------------------------------------------");
-			System.Diagnostics.Debug.WriteLine($"----------------------------------------------------------");
-
-			//Debug_StartEvaluationTestSingleThread(position, true);
-		}
-
-		public Stormcloud3(bool ignored)
-		{
-			/*
-			byte[] position = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
-			position = new byte[] {
-				0xCA, 0xBD, 0xEB, 0xAC,
-				0x90, 0x09, 0x99, 0x99,
-				0x00, 0x00, 0x00, 0x00,
-				0x09, 0x90, 0x00, 0x00,
-				0x01, 0x00, 0x00, 0x00,
-				0x30, 0x00, 0x00, 0x00,
-				0x10, 0x11, 0x11, 0x11,
-				0x42, 0x05, 0x63, 0x24
-			};
-			//*/
-
-
-			/* M2 (depth4) position
-			byte[] position = {
-				0x00, 0x04, 0x00, 0x00,
-				0xEC, 0x90, 0x29, 0x99,
-				0x90, 0x00, 0x00, 0x00,
-				0x10, 0x00, 0x00, 0x00,
-				0x01, 0x00, 0x01, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0xC0, 0x00, 0x11,
-				0x00, 0x00, 0x00, 0x60,
-			};
-			//*/
-			/* 1 move further | Mirrored for black : M2
-			byte[] position = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0x01,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0x00, 0xCA, 0x06,
-			};
-			//*/
-			//* 1 move further | Mirrored for black : M2 | Entire Move Sequence till capture is possible
-			byte[] position = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0x01,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0x00, 0xCA, 0x06,
-			};
-			/*
-			// Rc1, since thats what it wants
-			byte[] positionB = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0x01,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0xC0, 0x0A, 0x06,
-			};
-			// Rc1, c4, since thats what it wants
-			byte[] positionC = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x90,
-				0x00, 0x90, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0x01,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0xC0, 0x0A, 0x06,
-			};
-			*/
-			// Ng3+
-			byte[] position2 = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0xA1,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0x00, 0xC0, 0x06,
-			};
-			// Kh2
-			byte[] position3 = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0xA1,
-				0x11, 0x10, 0x01, 0x46,
-				0x00, 0x00, 0xC0, 0x00,
-			};
-			// Kg1, since thats apparently another legal move
-			byte[] position7 = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0xA1,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0x00, 0xC0, 0x60,
-			};
-			// Rh1#
-			byte[] position4 = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0xA1,
-				0x11, 0x10, 0x01, 0x46,
-				0x00, 0x00, 0x00, 0x0C,
-			};
-			// Kxh1 (beyond mate)
-			byte[] position5 = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0xA1,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0x00, 0x00, 0x06,
-			};
-			// Nxh1 (beyond mate)
-			byte[] position6 = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0x01,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0x00, 0x00, 0x0A,
-			};
-			byte[][] positions = { position2 /*position, position2, /*, position2, position3, position4, position5, position6, positionB, positionC, position7*/ };
-			//*/
-			/* Both kings are backranked by rooks and only blocked by a pawn
-			byte[] position = {
-				0xE0, 0xA4, 0x00, 0x00,
-				0x99, 0x90, 0x09, 0x99,
-				0x90, 0x00, 0x00, 0x00,
-				0x10, 0x00, 0x00, 0x00,
-				0x01, 0x00, 0x01, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x11, 0x11,
-				0xC0, 0x02, 0x00, 0x06,
-			};
-			//*/
-
-			//byte[] position = { 0x00, 0x00, 0x0E, 0x0C, 0x09, 0x09, 0x00, 0x09, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x90, 0x19, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x00, 0x0D, 0x06, 0x00, 0x00, 0x00, 0x00, 0x04 };
-
-			//* Debug Testing M2 for Black
-
-			bool IsWhitesTurn = true;   // False but is negated at start of loop
-			int _posI = 1;
-			foreach (byte[] pos in positions)
-			{
-				//IsWhitesTurn = !IsWhitesTurn;
-				var moves = GetAllLegalMoves(pos, IsWhitesTurn);
-				string key = GeneratePositionKey(pos, 0x00);
-				int i = 0;
-				System.Diagnostics.Debug.WriteLine($"Position: {_posI}  |  Legal Moves: {moves.Count}  |  TurnColor: {(IsWhitesTurn ? "White" : "Black")}");
-				foreach (var move2 in moves)
-				{
-					if (move2 == 0x2005 || true)
-					{
-						System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToStringPro1(pos, move2)}  |  {MoveToStringCas(pos, move2)}");
-					}
-				}
-
-				bool inCheck = CutLegalMoves_IsInCheck(pos, IsWhitesTurn, 0x00, ref moves, key);
-				System.Diagnostics.Debug.WriteLine($"Position: {_posI}  |  Cut Legal Moves: {moves.Count}");
-				i = 0;
-				foreach (var move2 in moves)
-				{
-					if (move2 == 0x2005 || true)
-					{
-						System.Diagnostics.Debug.WriteLine($"Cut Legal Move {++i} >> {MoveToStringPro1(pos, move2)}  |  {MoveToStringCas(pos, move2)}");
-					}
-				}
-
-				int depth = 4;
-				var score = CC_FailsoftAlphaBeta(pos, IsWhitesTurn, 0x00, key, depth);
-				System.Diagnostics.Debug.WriteLine($"Score: {CC_GetScore(score)}  |  BestMove {MoveToStringPro1(pos, CC_Failsoft_BestMove)}  |  {MoveToStringCas(pos, CC_Failsoft_BestMove)}  |  Checked: {inCheck}");
-				System.Diagnostics.Debug.WriteLine($"");
-				System.Diagnostics.Debug.WriteLine($"------------------------------------------------------------------------------------------------------------------------");
-				System.Diagnostics.Debug.WriteLine($"");
-				_posI++;
-			}
-
-			//*/
-
-			/*
-			bool IsWhitesTurn = false;
-			var moves = GetAllLegalMoves(position, IsWhitesTurn);
-
-			int i = 0;
-			foreach (var move2 in moves)
-			{
-				if (move2 == 0x2005 || true)
-				{
-					System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToStringPro1(position, move2)} | Binary: {Convert.ToString(move2, 2)}");
-					System.Diagnostics.Debug.WriteLine($"Resulting Key: {i} >> {ResultingPosition(position, move2, 0x00, null).Item2}");
-				}
-			}
-
-			//*/
-
-			/*
-			byte[] position = new byte[] {
-				0xCA, 0xBD, 0xEB, 0xAC,
-				0x90, 0x99, 0x99, 0x99,
-				0x00, 0x00, 0x00, 0x00,
-				0x09, 0x00, 0x00, 0x00,
-				0x01, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x10, 0x11, 0x11, 0x11,
-				0x42, 0x35, 0x63, 0x24
-			};
-			string key = GeneratePositionKey(position);
-			ushort m = 0xEA80;
-			string move = MoveToStringPro1(position, m);
-
-			var result = ResultingPosition(position, m, 0xFF, key);
-
-			System.Diagnostics.Debug.WriteLine($"Previous Key: {key} | Move: {move} | newKey: {result.Item2}");
-			//*/
-
-			/*
-			for (int depth = 2; depth <= 6; depth++)
-			{
-				var score = CC_FailsoftAlphaBeta(position, IsWhitesTurn, 0x00, GeneratePositionKey(position, 0xFF), depth);
-				string move = MoveToStringPro1(position, CC_Failsoft_BestMove);
-
-				System.Diagnostics.Debug.WriteLine($"Depth: {depth}  |  BestMove: {move}  |  {MoveToStringCas(position, CC_Failsoft_BestMove)}  |  Score: {CC_GetScore(score)}");
-				//break;
-			}
-			//*/
-		}
-
-		public Stormcloud3(int GameDepth)   // 2nd constructor
-		{
-			// Play autonomous game
-			//*
-			byte[] position = {
-				0xCA, 0xBD, 0xEB, 0xAC,
-				0x99, 0x99, 0x99, 0x99,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x11, 0x11, 0x11, 0x11,
-				0x42, 0x35, 0x63, 0x24
-			};
-			//*/
-			/* M2 (depth4) position
-			byte[] position = {
-				0x00, 0x04, 0x00, 0x00,
-				0xEC, 0x90, 0x29, 0x99,
-				0x90, 0x00, 0x00, 0x00,
-				0x10, 0x00, 0x00, 0x00,
-				0x01, 0x00, 0x01, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0xC0, 0x00, 0x11,
-				0x00, 0x00, 0x00, 0x60,
-			};
-			//*/
-			/* 1 move further
-			byte[] position = {
-				0xE0, 0x24, 0x00, 0x00,
-				0x0C, 0x90, 0x09, 0x99,
-				0x90, 0x00, 0x00, 0x00,
-				0x10, 0x00, 0x00, 0x00,
-				0x01, 0x00, 0x01, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0xC0, 0x00, 0x11,
-				0x00, 0x00, 0x00, 0x60,
-			};
-			//*/
-			//*/
-			/* 1 move further | Mirrored for black : M2
-			byte[] position = {
-				0xE0, 0x00, 0x00, 0x00,
-				0x99, 0x00, 0x04, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x90, 0x00, 0x90,
-				0x00, 0x00, 0x00, 0x09,
-				0x00, 0x00, 0x00, 0x01,
-				0x11, 0x10, 0x01, 0x40,
-				0x00, 0x00, 0xCA, 0x06,
-			};
-			//*/
-			/* Remove the Knight and Rc1 -> Instant Capture of Black and White King possible
-			byte[] position = {
-				0xE0, 0x04, 0x00, 0x00,
-				0x0C, 0x90, 0x09, 0x99,
-				0x90, 0x00, 0x00, 0x00,
-				0x10, 0x00, 0x00, 0x00,
-				0x01, 0x00, 0x01, 0x00,
-				0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x11,
-				0x00, 0xC0, 0x00, 0x60,
-			};
-			//*/
-
-			// Direct Mate: Black captures White King: +60384
-			// Direct Mate: White captures Black King: +3072
-
-			//byte[] position = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
-
-			bool TurnColorWhite = false;
-			byte castle = 0xFF;
-			string key = GeneratePositionKey(position, castle);
-
-			string move = null;
-			List<string> moves = new List<string>();
-
-			System.Diagnostics.Debug.WriteLine("Starting Game (" + DateTime.Now + ")...");
-			while (true)
-			{
-				var score = CC_FailsoftAlphaBeta(position, TurnColorWhite, castle, key, GameDepth);
-				byte toIndex = MoveToIndex(CC_Failsoft_BestMove);
-				byte toByte = position[toIndex >> 1];
-				string moveString = MoveToStringPro1(position, CC_Failsoft_BestMove);
-
-				System.Diagnostics.Debug.WriteLine($"Depth: {GameDepth} | Score: {CC_GetScore(score)} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(position, CC_Failsoft_BestMove)}");
-
-				var result = ResultingPosition(position, CC_Failsoft_BestMove, castle, key);
-				position = result.Item1;
-				key = result.Item2;
-				castle = result.Item3;
-
-				if (TurnColorWhite)
-				{
-					move = moveString;
-				}
-				else
-				{
-					moves.Add($"{move} {moveString}");
-					System.Diagnostics.Debug.WriteLine($"{moves.Count}. {move} {moveString} | Key: {key}");
-					if (moves.Count > 6)
-					{
-						if (moves[moves.Count - 6] == moves[moves.Count - 4] && moves[moves.Count - 4] == moves[moves.Count - 2] &&
-							moves[moves.Count - 5] == moves[moves.Count - 3] && moves[moves.Count - 3] == move)    // move = Count - 1
-						{
-							System.Diagnostics.Debug.WriteLine("Draw by repetition.");
-							break;
-						}
-					}
-				}
-
-				TurnColorWhite = !TurnColorWhite;
-
-				if ((toByte & 0x07) == 0x06 || (toByte & 0x70) == 0x60)
-				{
-					string KingColor = "-";
-
-					if ((toIndex & 1) == 1)
-					{
-						// 2nd half
-						if ((toByte & 0x0F) == 0x0E) KingColor = "Black";
-						else if ((toByte & 0x0F) == 0x06) KingColor = "White";
-					}
-					else
-					{
-						// 2nd half
-						if ((toByte & 0xF0) == 0xE0) KingColor = "Black";
-						else if ((toByte & 0xF0) == 0x60) KingColor = "White";
-					}
-
-					if (KingColor != "-")
-					{
-						System.Diagnostics.Debug.WriteLine($"Win: The {KingColor} King has been captured.");
-						break;
-					}
-				}
-				if (!EnoughCheckmatingMaterial(position))
-				{
-					System.Diagnostics.Debug.WriteLine("Draw by Insufficient Checkmating Material.");
-					break;
-				}
-			}
-			System.Diagnostics.Debug.WriteLine("The Game:");
-			for (int i = 0; i < moves.Count; i++)
-			{
-				System.Diagnostics.Debug.WriteLine($"{i + 1}. {moves[i]}");
-			}
-		}
-
-		void OldSearch_StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
-		{
-			OldSearch_SearchNode startNode = new OldSearch_SearchNode(startPosition, new OldSearch_PositionData());
-			OldSearch_SearchNodes.Enqueue(startNode);
-			OldSearch_ProcessNextNode(true);
-			OldSearch_StartProcessingNodesSingleThread();
-			//StartProcessingMultiThread();
-		}
-
-		public int[] Debug_StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn, int Final_Depth = 8)
-		{
-			IsRootTurnColorWhite = isWhitesTurn;
-			string posKey = GeneratePositionKey(startPosition, 0xFF);
-			DateTime start;
-			System.Diagnostics.Debug.WriteLine("Starting Stormcloud Calc...");
-			int Debug_Depth = 2;
-			while (Debug_Depth <= Final_Depth)
-			{
-				start = DateTime.Now;
-				double score = CC_FailsoftAlphaBeta(startPosition, isWhitesTurn, 0x00, posKey, Debug_Depth);
-				string moveString = MoveToStringPro1(startPosition, CC_Failsoft_BestMove);
-				Form1.bestMove = moveString;
-				Form1.bestMoveScore = score;
-				Form1.bestMoveDepth = Debug_Depth;
-				System.Diagnostics.Debug.WriteLine($"Depth: {Debug_Depth} | Time: {(DateTime.Now - start).TotalSeconds}s | Score: {CC_GetScore(score)} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(startPosition, CC_Failsoft_BestMove)}");
-				Debug_Depth++;
-			}
-			return new int[] { MoveFromIndex(CC_Failsoft_BestMove), MoveToIndex(CC_Failsoft_BestMove) };
-		}
-
-		#endregion
-
-	}
-
 	/// <summary>
 	/// Engine Calculation using the TQA Approach from Chessboard2.cs and Alpha-Beta Pruning
 	/// </summary>
@@ -683,13 +78,29 @@ namespace ChessV1.Stormcloud
 
 		private const double WEIGHT_POSITION_MATRIX_COMPLETE = 0.8;
 		private const double WEIGHT_MATRIX_MATERIAL_VALUE = 0.86;
-		private const double WEIGHT_POSITION_MATRIX_PRESSURE_AMOUNT = 0.75;     // Pressure: How many pieces are looking at a given square
-		private const double WEIGHT_POSITION_MATRIX_PRESSURE_PIECEVALUE = 0.75;     // Pressure: How much a piece looking at a square is worth as material
+		private const double WEIGHT_MATRIX_MATERIAL_PRESSURE_VALUE_OWNCOLOR = 1.12;
+		private const double WEIGHT_MATRIX_MATERIAL_PRESSURE_VALUE_OPPONENTCOLOR = 1.1;
+		private const double WEIGHT_POSITION_MATRIX_PRESSURE_PIECEVALUE = 0.94;     // Pressure: How much a piece looking at a square is worth as material
+		private const double WEIGHT_POSITION_MATRIX_PRESSURE_AMOUNT = 1.1;     // Pressure: How many pieces are looking at a given square
+		private const double WEIGHT_POSITION_MATRIX_PRESSURE_PIECEVALUE_FIELDWEIGHT_MULTIPLIER = 1.31;     // Pressure: How much a piece looking at a square is worth as material
+		private const double WEIGHT_POSITION_MATRIX_PRESSURE_AMOUNT_FIELDWEIGHT_MULTIPLIER = 1.25;     // Pressure: How many pieces are looking at a given square
 		private const double WEIGHT_POSITION_MATRIX_ACTIVITY = 0.75;        // How active a piece is - I'm not sure I'm going to keep this
 		private const double WEIGHT_POSITION_MATRIX_PAWN_STRUCTURE = 0.8;
 		private const double WEIGHT_MATRIX_FIELD_VALUES = 0.9;
 		private const double WEIGHT_LEGAL_MOVES_AMOUNT = 0.1;
 		private const double WEIGHT_MATERIAL_ADVANTAGE = 1.85;  // Turn this down as more matrices come into play
+
+		#endregion
+
+		#region Move Ordering Weights
+
+		private const byte PriorityPoints_HistoryHeuristic = 4;
+		private const byte PriorityPoints_KillerHeuristic = 11; // was: 6
+		private const byte PriorityPoints_CaptureMVV = 3;   // Most Valuable Victim
+		private const byte PriorityPoints_CaptureLVA = 3;   // Least Valuable Aggressor
+		private const byte PriorityPoints_Checks = 4;       // Apparently, Non-Capturing Checks tend to be good moves
+		private const byte PriorityPoints_Promotion = 5;        // Apparently, Non-Capturing Checks tend to be good moves
+		private const byte PriorityPoints_Castle = 2;       // Apparently, Non-Capturing Checks tend to be good moves
 
 		#endregion
 
@@ -770,7 +181,7 @@ namespace ChessV1.Stormcloud
 		/// <param name="IsNextTurnWhitesTurn"></param>
 		/// <param name="CastleOptions"></param>
 		/// <returns></returns>
-		Tuple<double, byte, List<ushort>, bool> AdvancedPositionEvaluation(byte[] Position, bool IsNextTurnWhitesTurn, byte CastleOptions, List<ushort> AllLegalNextOwnMoves, string positionkey = null)
+		Tuple<double, byte, List<ushort>, bool> AdvancedPositionEvaluation(byte[] Position, bool IsNextTurnWhitesTurn, byte CastleOptions, List<ushort> AllLegalNextOwnMoves, List<ushort> AllOpponentLegalMoves, string positionkey = null)
 		{
 
 			if (positionkey == null) positionkey = GeneratePositionKey(Position, CastleOptions);
@@ -778,6 +189,14 @@ namespace ChessV1.Stormcloud
 			if (AllLegalNextOwnMoves == null) AllLegalNextOwnMoves = GetAllLegalMoves(Position, IsNextTurnWhitesTurn);
 
 			bool IsCheck = CutLegalMoves_IsInCheck(Position, IsNextTurnWhitesTurn, CastleOptions, ref AllLegalNextOwnMoves, positionkey);  //IsInCheck(Position, positionkey, IsNextTurnWhitesTurn);
+
+			if (AllOpponentLegalMoves == null)
+			{
+				// Opponent can't be in check here I think, because it's not the opponents turn.
+				// If it's not his turn and he's in check, it's mate
+				AllOpponentLegalMoves = GetAllLegalMoves(Position, !IsNextTurnWhitesTurn);
+				CutLegalMoves_IsInCheck(Position, !IsNextTurnWhitesTurn, CastleOptions, ref AllOpponentLegalMoves, positionkey);
+			}
 
 			/*
 			if (IsCheck)
@@ -793,7 +212,7 @@ namespace ChessV1.Stormcloud
 			score += materialAdvantage * WEIGHT_MATERIAL_ADVANTAGE;
 			//score += (WEIGHT_LEGAL_MOVES_AMOUNT * (AllLegalNextOpponentMoves.Count - 8));    // less than 10 moves is negative, more than 10 is positive. Mobile positions are preferred
 
-			var valueMatrix = Matrix.Multiply(MatrixEvaluation(Position, IsNextTurnWhitesTurn), Matrix_FieldWeights, WEIGHT_MATRIX_FIELD_VALUES);
+			var valueMatrix = Matrix.HadamardProduct(MatrixEvaluation(Position, IsNextTurnWhitesTurn, ref AllLegalNextOwnMoves, ref AllOpponentLegalMoves), Matrix_FieldWeights, WEIGHT_MATRIX_FIELD_VALUES);
 			double valueMatrixValue = Matrix.Sum(valueMatrix) * WEIGHT_POSITION_MATRIX_COMPLETE;
 
 			score += valueMatrixValue;
@@ -825,9 +244,31 @@ namespace ChessV1.Stormcloud
 			return tupleResult;
 		}
 
-		public static double[,] MatrixEvaluation(byte[] Position, bool IsWhitesTurn)
+		public static double[,] MatrixEvaluation(byte[] Position, bool IsWhitesTurn, ref List<ushort> MovesTurnColor, ref List<ushort> MovesOpponentColor)
 		{
 			double[,] ValueMatrix =
+			{
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+			};
+			double[,] RelativeAttackMatrixMaterial =
+			{
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, },
+			};
+			double[,] RelativeAttackMatrixDeltaCount =
 			{
 				{ 0, 0, 0, 0, 0, 0, 0, 0, },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, },
@@ -842,8 +283,20 @@ namespace ChessV1.Stormcloud
 			for (byte i = 0; i < Position.Length; ++i)
 			{
 
-				if ((Position[i] & 0xF0) != 0) ApplyMatrices(Position, (byte) (i << 1), false, (byte) (Position[i] & 0x70), ref ValueMatrix);
-				if ((Position[i] & 0x0F) != 0) ApplyMatrices(Position, (byte) ((i << 1) | 1), true, (byte) (Position[i] & 0x07), ref ValueMatrix);
+				if ((Position[i] & 0xF0) != 0)
+				{
+					byte piece = (byte) (Position[i] & 0x70);
+					byte index = (byte) (i << 1);
+					ApplyPieceMatrices(Position, index, false, piece, ref ValueMatrix);
+					//ApplyPressureMatrices(Position, index, false, piece, ref MovesTurnColor, ref MovesOpponentColor, ref RelativeAttackMatrix);
+				}
+				if ((Position[i] & 0x0F) != 0)
+				{
+					byte piece = (byte) (Position[i] & 0x07);
+					byte index = (byte) ((i << 1) | 1);
+					ApplyPieceMatrices(Position, index, true, piece, ref ValueMatrix);
+					//ApplyPressureMatrices(Position, index, true, piece, ref MovesTurnColor, ref MovesOpponentColor, ref RelativeAttackMatrix);
+				}
 
 			}
 			for (byte i = 0; i < Position.Length; ++i)
@@ -865,15 +318,22 @@ namespace ChessV1.Stormcloud
 				ValueMatrix[loc1, loc2] *= -1;
 			}
 
+			ApplyPressureMatrices(Position, ref MovesTurnColor, ref MovesOpponentColor, ref RelativeAttackMatrixMaterial, ref RelativeAttackMatrixDeltaCount);
+
+			Matrix.Add(ValueMatrix, RelativeAttackMatrixMaterial, out ValueMatrix, WEIGHT_POSITION_MATRIX_PRESSURE_PIECEVALUE);
+			Matrix.Add(ValueMatrix, RelativeAttackMatrixDeltaCount, out ValueMatrix, WEIGHT_POSITION_MATRIX_PRESSURE_AMOUNT);
+
 			return ValueMatrix;
 		}
 
-		private static void ApplyMatrices(byte[] position, byte index, bool isSecondHalf, byte centerPiece, ref double[,] CurrentValueMatrix)
+		// Todo King Safety Matrix by Attacked score surrounded the King
+
+		private static void ApplyPieceMatrices(byte[] position, byte index, bool isSecondHalf, byte centerPieceType, ref double[,] CurrentValueMatrix)
 		{
 			byte loc1 = (byte)((index & 0x38) >> 3), loc2 = (byte)(index & 0x07);
-			CurrentValueMatrix[loc1, loc2] += GetMatrixPieceMaterialValue(centerPiece);    // Pawn Technical Value
+			CurrentValueMatrix[loc1, loc2] += GetMatrixPieceMaterialValue(centerPieceType);    // Pawn Technical Value
 			// Modify ValueMatrix here
-			if (centerPiece == 1)
+			if (centerPieceType == 1)
 			{
 				// Pawn. Apply pawn matrices
 				{
@@ -903,37 +363,92 @@ namespace ChessV1.Stormcloud
 				return;
 			}
 
-			if(centerPiece == 2)
+			if(centerPieceType == 2)
 			{
 				// Knight. Apply knight matrices
 				return;
 			}
 
-			if(centerPiece == 3 || centerPiece == 5)
+			if(centerPieceType == 3 || centerPieceType == 5)
 			{
 				// Bishop or Queen. Apply bishop matrices
-				if(centerPiece == 3) return;
+				if(centerPieceType == 3) return;
 			}
 
-			if(centerPiece == 4 || centerPiece == 5)
+			if(centerPieceType == 4 || centerPieceType == 5)
 			{
 				// Rook or Queen. Apply rook matrices
 				return;
 			}
 
 			// Perhaps delete this or something
-			if(centerPiece == 5)
+			if(centerPieceType == 5)
 			{
 				// Queen. Apply bishop and rook matrices
 				return;
 			}
 			
-			if (centerPiece == 6)
+			if (centerPieceType == 6)
 			{
 				// King. Apply king matrices
 				return;
 			}
 		}
+
+		private static void ApplyPressureMatrices(byte[] position, ref List<ushort> MovesTurnColor, ref List<ushort> MovesOpponentColor, ref double[,] AttackTotalMaterialMatrix, ref double[,] AttackCountDiffMatrix)
+		{
+			foreach (ushort ownmove in MovesTurnColor)
+			{
+				byte fromIndex = MoveFromIndex(ownmove);
+				// Piece is stored in second Half
+				byte piece = (fromIndex & 1) == 1 ? (byte) (position[fromIndex >> 1] & secondHalfMask) : (byte) ((position[fromIndex >> 1] & firstHalfMask) >> 4);
+				byte ToIndex = MoveToIndex(ownmove);
+				byte loc1 = (byte)((ToIndex & 0x38) >> 3), loc2 = (byte)(ToIndex & 0x07);
+
+				double value = GetPressureMatrixPieceMaterialValue(piece) * WEIGHT_MATRIX_MATERIAL_PRESSURE_VALUE_OWNCOLOR;
+
+				AttackTotalMaterialMatrix[loc1, loc2] += value; // perhaps split into 2 matrices, one with amount and the other with material value? or totalMaterialValue / lowest / highest / average?
+				AttackCountDiffMatrix[loc1, loc2]++;
+			}
+
+			foreach (ushort oppmove in MovesOpponentColor)
+			{
+				byte fromIndex = MoveFromIndex(oppmove);
+				// Piece is stored in second Half
+				byte piece = (fromIndex & 1) == 1 ? (byte) (position[fromIndex >> 1] & secondHalfMask) : (byte) ((position[fromIndex >> 1] & firstHalfMask) >> 4);
+				byte ToIndex = MoveToIndex(oppmove);
+				byte loc1 = (byte)((ToIndex & 0x38) >> 3), loc2 = (byte)(ToIndex & 0x07);
+
+				double value = GetPressureMatrixPieceMaterialValue(piece) * WEIGHT_MATRIX_MATERIAL_PRESSURE_VALUE_OPPONENTCOLOR;
+
+				AttackTotalMaterialMatrix[loc1, loc2] -= value; // perhaps split into 2 matrices, one with amount and the other with material value? or totalMaterialValue / lowest / highest / average?
+				AttackCountDiffMatrix[loc1, loc2]--;
+			}
+
+			Matrix.Add(AttackTotalMaterialMatrix, Matrix.HadamardProduct(AttackTotalMaterialMatrix, Matrix_FieldWeights, WEIGHT_POSITION_MATRIX_PRESSURE_PIECEVALUE_FIELDWEIGHT_MULTIPLIER), out AttackTotalMaterialMatrix);
+			Matrix.Add(AttackCountDiffMatrix, Matrix.HadamardProduct(AttackCountDiffMatrix, Matrix_FieldWeights, WEIGHT_POSITION_MATRIX_PRESSURE_AMOUNT_FIELDWEIGHT_MULTIPLIER), out AttackCountDiffMatrix);
+		}
+
+		/// <summary>
+		/// How current material of a field is weighed in the matrix application
+		/// </summary>
+		/// <param name="piece"></param>
+		/// <returns></returns>
+		private static double GetPressureMatrixPieceMaterialValue(byte piece)
+		{
+			return PressureMatrixPieceMaterialValues[piece & 0x07] * WEIGHT_MATRIX_MATERIAL_VALUE;
+		}
+		private static readonly double[] PressureMatrixPieceMaterialValues =
+		{
+			0,		// Empty
+			2.5,	// Pawn
+			2.9,	// Knight
+			4,		// Bishop
+			5,		// Rook
+			6,		// Queen
+			4,		// King
+			0,		// En Passant
+		};
 
 		/// <summary>
 		/// How current material of a field is weighed in the matrix application
@@ -986,7 +501,8 @@ namespace ChessV1.Stormcloud
 			}
 			*/
 
-			public static double[,] Multiply(double[,] Matrix1, double[,] Matrix2, double weight = 1)
+			// HadamardProduct = Multiplication for each field, exactly what is happening here.
+			public static double[,] HadamardProduct(double[,] Matrix1, double[,] Matrix2, double weight = 1)
 			{
 				byte SideLength = (byte) Matrix1.GetLength(0);
 				double[,] ResultMatrix = new double[SideLength, SideLength];
@@ -1001,6 +517,22 @@ namespace ChessV1.Stormcloud
 					}
 				}
 				return ResultMatrix;
+			}
+			public static void HadamardProduct(double[,] Matrix1, double[,] Matrix2, out double[,] Matrix3, double weight = 1)
+			{
+				byte SideLength = (byte)Matrix1.GetLength(0);
+				double[,] ResultMatrix = new double[SideLength, SideLength];
+				if (Matrix1.Length != Matrix2.Length) { Matrix3 = ResultMatrix; return; }
+
+				for (int i = 0; i < SideLength; i++)
+				{
+					for (int i2 = 0; i2 < SideLength; i2++)
+					{
+						//System.Diagnostics.Debug.WriteLine($"i: {i} | i2: {i2} | {Matrix1[i, i2]} * {Matrix2[i, i2]} * {weight}  =  {Matrix1[i, i2] * Matrix2[i, i2]} * {weight}  =  {Matrix1[i, i2] * Matrix2[i, i2] * weight}");
+						ResultMatrix[i, i2] = Matrix1[i, i2] * Matrix2[i, i2] * weight;
+					}
+				}
+				Matrix3 = ResultMatrix;
 			}
 			public static double[,] Add(double[,] Matrix1, double[,] Matrix2, double weight = 1)
 			{
@@ -1019,6 +551,23 @@ namespace ChessV1.Stormcloud
 				}
 
 				return ResultMatrix;
+			}
+			public static void Add(double[,] Matrix1, double[,] Matrix2, out double[,] Matrix3, double weight = 1)
+			{
+				byte SideLength = (byte) Matrix1.GetLength(0);
+				double[,] ResultMatrix = new double[SideLength, SideLength];
+				if (Matrix1.Length != Matrix2.Length) { Matrix3 = ResultMatrix; return; }
+
+				for (int i = 0; i < SideLength; i++)
+				{
+					for (int i2 = 0; i2 < SideLength; i2++)
+					{
+						//System.Diagnostics.Debug.WriteLine($"i: {i} | i2: {i2} | ({Matrix1[i, i2]} + {Matrix2[i, i2]}) * {weight}  =  {Matrix1[i, i2] + Matrix2[i, i2]} * {weight}  =  {(Matrix1[i, i2] + Matrix2[i, i2]) * weight}");
+
+						ResultMatrix[i, i2] = (Matrix1[i, i2] + Matrix2[i, i2]) * weight;
+					}
+				}
+				Matrix3 = ResultMatrix;
 			}
 
 			public static double Sum(double[,] Matrix)
@@ -1281,7 +830,7 @@ namespace ChessV1.Stormcloud
 			return false;
 		}
 
-
+		/*
 		private static void CutLegalMoves(byte[] Position, bool IsNextTurnWhitesTurn, byte CastleOptions, ref List<ushort> AllLegalNextOwnMoves, string positionkey)
 		{
 			for (int i = 0; i < AllLegalNextOwnMoves.Count; ++i)
@@ -1292,6 +841,7 @@ namespace ChessV1.Stormcloud
 				i--;    // Rerun index
 			}
 		}
+		*/
 
 		private static bool IsInCheck(byte[] pos, string posKey, bool IsActuallyWhitesMoveNow)
 		{
@@ -1418,21 +968,116 @@ namespace ChessV1.Stormcloud
 
 		// Killer Heuristic: You could keep an array of "killer moves" for each depth in the search tree. Each entry in the array can store
 		// two moves, as it is commonly observed that there are seldom more than two distinct killer moves at each level of the tree.
-		private List<ushort[]> KillerHeuristic = new List<ushort[]>();
+		private Dictionary<string, List<ushort>> KillerHeuristic = new Dictionary<string, List<ushort>>();	// Saves <Depth, List<Killers>>
+		private void AddKiller(ushort move, ref byte[] position, string positionKey)
+		{
+			if ((move & PieceMask) == 0)
+			{
+				// Add piece
+				byte from = MoveFromIndex(move);
+				byte fromB = position[from >> 1];
+				move |= (byte)((from & 1) == 1 ? fromB & 0x07 : (fromB >> 4) & 0x07);
+			}
+			if (!KillerHeuristic.ContainsKey(positionKey)) KillerHeuristic.Add(positionKey, new List<ushort>(move));
+			else if (!KillerHeuristic[positionKey].Contains(move)) KillerHeuristic[positionKey].Add(move);
+		}
+		private bool IsKiller(ushort move, ref byte[] position, string positionKey)
+		{
+			if (!KillerHeuristic.ContainsKey(positionKey)) return false;
+			if ((move & PieceMask) == 0)
+			{
+				// Add piece
+				byte from = MoveFromIndex(move);
+				byte fromB = position[from >> 1];
+				move |= (byte)((from & 1) == 1 ? fromB & 0x07 : (fromB >> 4) & 0x07);
+			}
+			return KillerHeuristic[positionKey].Contains(move);
+		}
+		/*
+		private int GetKillerValue(ushort move, ref byte[] position, int TreeDepth)
+		{
+			if (!KillerHeuristic.ContainsKey(TreeDepth)) return 0;
+			if ((move & PieceMask) == 0)
+			{
+				// Add piece
+				byte from = MoveFromIndex(move);
+				byte fromB = position[from >> 1];
+				move |= (byte)((from & 1) == 1 ? fromB & 0x07 : (fromB >> 4) & 0x07);
+			}
+			if(!KillerHeuristic[TreeDepth].Contains(move)) return 0;
+			return KillerHeuristic[TreeDepth][move];
+		}
+		*/
 
 		private Dictionary<string, Tuple<double, byte, List<ushort>, bool>> TranspositionTable = new Dictionary<string, Tuple<double, byte, List<ushort>, bool>>();
 
-		private void OrderMoves(ref List<ushort> Moves)
+		#region Move Ordering
+
+		double[] PriorityPoints_MaterialValue =
+		{
+			0,
+			0.1,
+			0.33,
+			0.36,
+			0.49,
+			0.84,
+			10,
+			0.1
+		};
+
+		private void OrderMoves(ref List<ushort> Moves, byte[] CurrentPosition, string positionKey)
 		{
 			Moves.OrderByDescending(x => scoreOf(x));	// Todo this
 
 			double scoreOf(ushort x)
 			{
 				double score = 0;
-				score += HistoryHeuristic[x].Length;
+				score += CaptureValueMVV(x);
+				score += CaptureValueLVA(x);
+				score += CastleValue(x);
+				score += KillerHeuristic(x);
 				return score;
 			}
+
+			bool IsCapture(ushort move)
+			{
+				byte to = MoveToIndex(move);
+				byte toB = CurrentPosition[to >> 1];
+				return IsFieldEmpty(toB, (to & 1) == 1);
+			}
+
+			byte KillerHeuristic(ushort move)
+			{
+				if (!IsKiller(move, ref CurrentPosition, positionKey)) return 0;
+				return PriorityPoints_KillerHeuristic;
+			}
+
+			double CaptureValueMVV(ushort move)
+			{
+				byte to = MoveToIndex(move);
+				byte toB = CurrentPosition[to >> 1];
+				return PriorityPoints_CaptureMVV * PriorityPoints_MaterialValue[(to & 1) == 1 ? toB & 0x07 : (toB >> 4) & 0x07];
+			}
+
+			double CaptureValueLVA(ushort move)
+			{
+				byte from = MoveFromIndex(move);
+				byte fromB = CurrentPosition[from >> 1];
+				return PriorityPoints_CaptureLVA * PriorityPoints_MaterialValue[(from & 1) == 1 ? fromB & 0x07 : (fromB >> 4) & 0x07];
+			}
+
+			byte CastleValue(ushort move)
+			{
+				byte from = MoveFromIndex(move);
+				byte fromB = CurrentPosition[from >> 1];
+				if (((from & 1) == 1 ? fromB & 0x07 : (fromB >> 4) & 0x07) != 0x06) return 0;
+				// We can assert that move != 0
+				if ((from & 0xFD) != (MoveToIndex(move) & 0xFD)) return 0;
+				return PriorityPoints_Castle;
+			}
 		}
+
+		#endregion
 
 		string CC_GetScore(double score)
 		{
@@ -1446,9 +1091,49 @@ namespace ChessV1.Stormcloud
 		ushort CC_Failsoft_BestMove = 0;
 		bool IsOGTurnColorWhite = true;
 		int CC_ForcedMate;
+		bool CC_IsCheck;
+		bool CC_IsMate;
 		int CC_FinalDepth;
 
 		// Todo re-do threefold repetition
+
+		/** Benchmark - Iterative Deepening V1
+			Starting Iterative Deepening...
+			Benchmark. Depth: 1. Starting...
+			Benchmark. Depth: 1. Time: 0,0329117s. Calls: 20. Score: +1,3055136. BestMove: bxc5
+			Benchmark. Depth: 2. Starting...
+			Benchmark. Depth: 2. Time: 0,0398921s. Calls: 182. Score: +4,9751136. BestMove: bxc5
+			Benchmark. Depth: 3. Starting...
+			Benchmark. Depth: 3. Time: 0,1007327s. Calls: 684. Score: +4,916424. BestMove: bxc5
+			Benchmark. Depth: 4. Starting...
+			Benchmark. Depth: 4. Time: 2,1312983s. Calls: 8402. Score: +5,5249776. BestMove: bxc5
+			Benchmark. Depth: 5. Starting...
+			Benchmark. Depth: 5. Time: 7,7762306s. Calls: 45237. Score: +4,3973616. BestMove: bxc5
+			Benchmark. Depth: 6. Starting...
+			Benchmark. Depth: 6. Time: 92,173292s. Calls: 465153. Score: +5,7550176. BestMove: bxc5
+			Benchmark. Depth: 7. Starting...
+			Benchmark. Depth: 7. Time: 471,867396s. Calls: 2511674. Score: +4,7148816. BestMove: bxc5
+			Benchmark. Depth: 8. Starting...
+			Das Programm "[39996] ChessV1.exe" wurde mit Code 4294967295 (0xffffffff) beendet.
+
+		 */
+
+		double CC_FailsoftAlphaBetaIterativeDeepening(byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int TargetDepth, int DepthIncrease = 1)
+		{
+			int depth = DepthIncrease;
+			double score = 0;
+			while (depth <= TargetDepth)
+			{
+				//System.Diagnostics.Debug.WriteLine($"Benchmark. Depth: {depth}. Starting...");
+				//DateTime now = DateTime.Now;
+				score = CC_FailsoftAlphaBeta(position, isTurnColorWhite, castleOptions, posKey, depth);
+				//System.Diagnostics.Debug.WriteLine($"Benchmark. Depth: {depth}. Time: {(DateTime.Now - now).TotalSeconds}s. Calls: {calls}. Score: {CC_GetScore(score)}. BestMove: {MoveToStringPro1(position, CC_Failsoft_BestMove)}");
+				//calls = 0;
+				depth += DepthIncrease;
+			}
+			KillerHeuristic.Clear();
+			return score;
+		}
 
 		/// <summary>
 		/// + is Advantage for current player, - is advandage for opposing player
@@ -1462,13 +1147,18 @@ namespace ChessV1.Stormcloud
 		double CC_FailsoftAlphaBeta(byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depth)
 			=> CC_FailsoftAlphaBeta(NegativeKingCaptureEvalValue-1, PositiveKingCaptureEvalValue+1, position, isTurnColorWhite, castleOptions, posKey, depth, new ushort[12] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, null, false, true);
 
+		long calls = 0;
+
 		double CC_FailsoftAlphaBeta(double alpha, double beta, byte[] position, bool isTurnColorWhite, byte castleOptions, string posKey, int depthleft, ushort[] moveHistory, List<ushort> AllLegalMoves = null, bool isInCheck = false, bool isRoot = false)
 		{
+			calls++;
 			if (isRoot)
 			{
 				CC_ForcedMate = 0;
 				IsOGTurnColorWhite = isTurnColorWhite;
 				CC_FinalDepth = depthleft;
+				CC_IsCheck = false;
+				CC_IsMate = false;
 			}
 			double bestscore = NegativeKingCaptureEvalValue + CC_FinalDepth;	// This might still be glitchy, on insufficient moves it just caused an immediate return.
 			if (depthleft == 0) return CC_FailsoftQuiesce(alpha, beta, position, isTurnColorWhite, castleOptions, posKey, true);
@@ -1477,6 +1167,8 @@ namespace ChessV1.Stormcloud
 			{
 				AllLegalMoves = GetAllLegalMoves(position, isTurnColorWhite);
 				isInCheck = CutLegalMoves_IsInCheck(position, isTurnColorWhite, castleOptions, ref AllLegalMoves, posKey);
+				if (isRoot) CC_IsCheck = isInCheck;
+				OrderMoves(ref AllLegalMoves, position, posKey);
 			}
 
 			if (AllLegalMoves.Count == 0)
@@ -1486,6 +1178,7 @@ namespace ChessV1.Stormcloud
 					// Checkmate.
 					setForcedMate();
 					if (IsOGTurnColorWhite == isTurnColorWhite && isRoot) CC_Failsoft_BestMove = 0;
+					if (isRoot) CC_IsMate = true;
 					return ReturnMateWithForcedBalance();
 				}
 				return 0.0;	// Stalemate
@@ -1504,8 +1197,6 @@ namespace ChessV1.Stormcloud
 				//if (IsOGTurnColorWhite == isTurnColorWhite) return PositiveKingCaptureEvalValue - CC_FinalDepth + depthleft /* see explanation for CC_ForcedMate2 */;    // Stalemate
 				//return NegativeKingCaptureEvalValue + CC_FinalDepth - depthleft;    // Stalemate
 			}
-
-			if (isRoot) System.Diagnostics.Debug.WriteLine($"Starting Root Search; Moves: {AllLegalMoves.Count}");
 
 			foreach (var move in AllLegalMoves)
 			{
@@ -1527,8 +1218,9 @@ namespace ChessV1.Stormcloud
 				
 				// Cut Legal Moves and Check for mate
 				isInCheck = CutLegalMoves_IsInCheck(result.Item1, !isTurnColorWhite, result.Item3, ref followUpMoves, result.Item2);
+				OrderMoves(ref followUpMoves, result.Item1, result.Item2);
 
-				if(followUpMoves.Count == 0)
+				if (followUpMoves.Count == 0)
 				{
 					if (isInCheck) { return KingCaptured(); } 
 					return 0.0;
@@ -1580,6 +1272,8 @@ namespace ChessV1.Stormcloud
 						CC_Failsoft_BestMove = move;
 					}
 					if (!double.IsInfinity(score) && score < PositiveKingCaptureEvalValue && score > NegativeKingCaptureEvalValue) CC_ForcedMate = -1;  // Remove forced mate
+					// Beta Cutoff. This is a killer.
+					AddKiller(move, ref position, posKey);
 					return score;
 				}
 				if (score > bestscore)
@@ -1618,7 +1312,10 @@ namespace ChessV1.Stormcloud
 			List<ushort> AllCaptures = GetAllLegalMovesCapturesOnly(position, isTurnColorWhite, captureChainFields);
 			// Filter Captures
 			CutLegalMoves_IsInCheck(position, isTurnColorWhite, castleOptions, ref AllCaptures, posKey);
-			double stand_pat = AdvancedPositionEvaluation(position, isTurnColorWhite, 0xFF /* Todo */, AllCaptures).Item1;
+			// Order Moves
+			OrderMoves(ref AllCaptures, position, posKey);
+			
+			double stand_pat = AdvancedPositionEvaluation(position, isTurnColorWhite, castleOptions, AllCaptures, null).Item1;
 			if (stand_pat >= beta) return stand_pat;
 			if (alpha < stand_pat) alpha = stand_pat;
 
@@ -2815,7 +2512,7 @@ namespace ChessV1.Stormcloud
 		static bool IsBlackPieceSecondHalf(byte piece) => (piece & 0x08) == 0x08;	// Aint to such thing as an empty black field
 		static bool IsFieldEmpty(byte piece, bool isSecondHalf) => isSecondHalf ? IsFieldEmptySecondHalf(piece) : IsFieldEmptyFirstHalf(piece);
 		static bool IsFieldEmptyFirstHalf(byte piece) => (piece & 0xF0) == 0 || (piece & 0x70) == 0x70;	// En Passant is Passable
-		static bool IsFieldEmptySecondHalf(byte piece) => (piece & 0x0F) == 0 || (piece & 0x07) == 0x07;    // En Passant is Passable;
+		static bool IsFieldEmptySecondHalf(byte piece) => (piece & 0x0F) == 0 || (piece & 0x07) == 0x07;    // En Passant is Passable
 		static bool IsFieldEmptyNoEnPassant(byte piece, bool isSecondHalf) => isSecondHalf ? IsFieldEmptySecondHalfNoEnPassant(piece) : IsFieldEmptyFirstHalfNoEnPassant(piece);
 		static bool IsFieldEmptyFirstHalfNoEnPassant(byte piece) => (piece & 0xF0) == 0;
 		static bool IsFieldEmptySecondHalfNoEnPassant(byte piece) => (piece & 0x0F) == 0;
@@ -3354,8 +3051,11 @@ namespace ChessV1.Stormcloud
 			return $"{nameFrom} on {fromFile}{fromRank} {(nameTo == "Empty" ? "to" : "takes")} {(nameTo != "Empty" ? $"{nameTo} on " : "")}{toFile}{toRank}";
 		}
 
-		public static string MoveToStringPro1(byte[] position, ushort value)
+		public string MoveToStringPro1(byte[] position) => MoveToStringPro1(position, CC_Failsoft_BestMove, CC_IsCheck, CC_IsMate);
+		public string MoveToStringPro1(byte[] position, ushort value) => MoveToStringPro1(position, value, CC_IsCheck, CC_IsMate);
+		public static string MoveToStringPro1(byte[] position, ushort value, bool isCheck = false, bool isMate = false)
 		{
+			string status = isMate ? "#" : isCheck ? "+" : "";
 			byte from = MoveFromIndex(value);
 			byte to = MoveToIndex(value);
 			//System.Diagnostics.Debug.WriteLine($"Debug: from: {Convert.ToString(from, 2)} | to {Convert.ToString(to, 2)} | ushort: {Convert.ToString(value, 2)} | 0x{value.ToString("X2")}");
@@ -3371,7 +3071,7 @@ namespace ChessV1.Stormcloud
 			if ((value & PieceMask) != 0) promotion = "=" + PieceNamePro((byte)(value & 0x0007));
 			string fromFile2 = /*fromRank == toRank ||*/ nameFrom == "" && nameTo != "-" /*pawn*/ ? "" + fromFile : ""; // This aint right
 			string fromRank2 = fromFile == toFile ? "" + fromRank : ""; // This aint right
-			return $"{nameFrom}{fromFile2}{/*fromRank2*/ ""}{(nameTo != "-" ? "x" : "")}{toFile}{toRank}{promotion}";
+			return $"{nameFrom}{fromFile2}{/*fromRank2*/ ""}{(nameTo != "-" ? "x" : "")}{toFile}{toRank}{promotion}{status}";
 		}
 
 		private static string PieceName(byte piece)
@@ -3405,4 +3105,634 @@ namespace ChessV1.Stormcloud
 		#endregion
 
 	}
+
+	partial class Stormcloud3   // Testing and Debugging
+	{
+
+		#region Debug_DeleteMe_Unsafe
+
+		public static Stormcloud3 search;
+
+		public Stormcloud3()
+		{
+			search = this;
+			/*
+			byte[] position = {
+				0xCA, 0xBD, 0xEB, 0xAC,
+				0x99, 0x99, 0x99, 0x99,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x11, 0x11, 0x11, 0x11,
+				0x42, 0x35, 0x63, 0x24
+			};
+			//*/
+			/*
+			byte[] position = {
+				0xC0, 0xB0, 0xEB, 0xAC,
+				0x90, 0x09, 0x99, 0x99,
+				0x00, 0xA0, 0x00, 0x00,
+				0x50, 0x00, 0x00, 0x00,
+				0x09, 0x00, 0x00, 0x00,
+				0x00, 0x10, 0x10, 0x00,
+				0x11, 0x01, 0x01, 0x11,
+				0x42, 0x30, 0x63, 0x24
+			};
+			//*/
+
+			// Generated Testposition (by me on the board, whites queen is hanging, blacks queen too but protected and only attacked by queen)
+			//byte[] position = new byte[] { 0xC0, 0x00, 0xE0, 0x0C, 0x99, 0x90, 0x09, 0x99, 0x00, 0xAB, 0xBA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xD1, 0x91, 0x00, 0x00, 0x25, 0x30, 0x10, 0x11, 0x00, 0x00, 0x01, 0x40, 0x00, 0x60, 0x24, };
+
+			// Scholar's mate execution Qxe8# is the best move
+			//byte[] position = new byte[] { 0xCA, 0xBD, 0xEB, 0xAC, 0x99, 0x99, 0x00, 0x90, 0x00, 0x00, 0x09, 0x09, 0x00, 0x00, 0x90, 0x05, 0x00, 0x30, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x01, 0x11, 0x42, 0x30, 0x60, 0x24 };
+
+			//byte[] position = //{ 0x00, 0xBD, 0xE0, 0x0C, 0x00, 0x99, 0x09, 0x99, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4B, 0x00, 0x10, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x60, 0x01, 0x11, 0x0C, 0xA5, 0x03, 0x24 };
+			//{ 0x00, 0xBD, 0xE0, 0x0C, 0x00, 0x99, 0x09, 0x99, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4B, 0x00, 0x10, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x06, 0x01, 0x11, 0x0C, 0xA5, 0x03, 0x24 };
+
+
+			//{ 0x00, 0xBE, 0x0B, 0xAC, 0xC9, 0x99, 0x09, 0x99, 0x90, 0xA0, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x0D, 0x11, 0x00, 0x10, 0x10, 0x03, 0x11, 0x00, 0x01, 0x42, 0x05, 0x63, 0x24 };
+			//new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
+
+			/*
+			 * Depth: 8 | Time: 55,7723242s | Score: -2 | Move: Queen on d3 takes Queen on c4   ||   d3 -> c4   ||   Queen on d3 takes Queen on c4
+			 * Stockfish: -4.3 | Best Move: Qxc4 => Same move
+			 */
+
+
+			byte castle = 0xFF;
+			//* M2 (depth4) position
+			byte[] position = {
+				0x00, 0x04, 0x00, 0x00,
+				0xEC, 0x90, 0x29, 0x99,
+				0x90, 0x00, 0x00, 0x00,
+				0x10, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x01, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0xC0, 0x00, 0x11,
+				0x00, 0x00, 0x00, 0x60,
+			};
+			castle = 0x00;
+			//*/
+
+			/** Matrix Weight testing
+			double[,] Position_Material_Matrix_None =
+			{
+				{  -5, -3, -4, -9, -5, -4, -3, -5  },
+				{  -1, -1, -1, -1, -1, -1, -1, -1  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  1, 1, 1, 1, 1, 1, 1, 1  },
+				{  5, 3, 4, 9, 5, 4, 3, 5  }
+			};
+
+			double[,] Position_Material_Matrix_E4 =
+			{
+				{  -5, -3, -4, -9, -5, -4, -3, -5  },
+				{  -1, -1, -1, -1, -1, -1, -1, -1  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 1, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  1, 1, 1, 1, 0, 1, 1, 1  },
+				{  5, 3, 4, 9, 5, 4, 3, 5  }
+			};
+			double[,] Position_Material_Matrix_E4E5 =
+			{
+				{  -5, -3, -4, -9, -5, -4, -3, -5  },
+				{  -1, -1, -1, 0, -1, -1, -1, -1  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, -1, 0, 0, 0  },
+				{  0, 0, 0, 0, 1, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  1, 1, 1, 1, 0, 1, 1, 1  },
+				{  5, 3, 4, 9, 5, 4, 3, 5  }
+			};
+			double[,] Position_Material_Matrix_E3 =
+			{
+				{  -5, -3, -4, -9, -5, -4, -3, -5  },
+				{  -1, -1, -1, -1, -1, -1, -1, -1  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 1, 0, 0, 0  },
+				{  1, 1, 1, 1, 0, 1, 1, 1  },
+				{  5, 3, 4, 9, 5, 4, 3, 5  }
+			};
+			double[,] Position_Material_Matrix_G4 =
+			{
+				{  -5, -3, -4, -9, -5, -4, -3, -5  },
+				{  -1, -1, -1, -1, -1, -1, -1, -1  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  0, 0, 0, 0, 0, 0, 1, 0  },
+				{  0, 0, 0, 0, 0, 0, 0, 0  },
+				{  1, 1, 1, 1, 1, 1, 0, 1  },
+				{  5, 3, 4, 9, 5, 4, 3, 5  }
+			};
+
+			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication --: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_None, Matrix_FieldWeights))}");
+			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication E4: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_E4, Matrix_FieldWeights))}");
+			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication E4E5: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_E4E5, Matrix_FieldWeights))}");
+			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication E3: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_E3, Matrix_FieldWeights))}");
+			System.Diagnostics.Debug.WriteLine($"Matrix Multiplication G4: {Matrix.Sum(Matrix.Multiply(Position_Material_Matrix_G4, Matrix_FieldWeights))}");
+
+			//*/
+
+			double Test_Eval = PositionEvaluation(position, EvaluationResultWhiteTurn).Score;
+			var moves = GetAllLegalMoves(position, false);
+			string key = GeneratePositionKey(position, castle); // Castle
+
+
+			int i = 0;
+			System.Diagnostics.Debug.WriteLine($"Legal Moves >> {moves.Count}");
+			foreach (var move in moves)
+			{
+				string movStr = MoveToStringPro1(position, move, CC_IsCheck, CC_IsMate);
+				System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {movStr}");
+			}
+
+			System.Diagnostics.Debug.WriteLine("D >> Test Eval mat: " + Test_Eval + " | Moves: " + moves.Count + " InCheck: " + CutLegalMoves_IsInCheck(position, false, 0x0F, ref moves, key));
+			double topScore = -1;
+			List<string> bestmoves = new List<string>();
+
+			System.Diagnostics.Debug.WriteLine($"Revised Legal Moves >> {moves.Count}");
+			i = 0;
+			foreach (var move in moves)
+			{
+				string movStr = MoveToStringPro1(position, move, CC_IsCheck, CC_IsMate);
+				/*
+				var result = ResultingPosition(position, move, 0xFF, key);
+				StringBuilder sb = new StringBuilder();
+				foreach (byte b in result.Item1)
+				{
+					sb.Append("0x" + b.ToString("X2") + ", ");
+				}
+				double score = AdvancedPositionEvaluation(result.Item1, true, result.Item3, null, result.Item2).Item1;
+				if (score == topScore) bestmoves.Add(movStr);
+				else if (score > topScore)
+				{
+					bestmoves.Clear();
+					topScore = score;
+					bestmoves.Add(movStr);
+				}
+				*/
+				System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {movStr}");//  |  Position Score: {score} >>		{sb}");
+			}
+			System.Diagnostics.Debug.WriteLine($"----------------------------------------------------------");
+			i = 0;
+			System.Diagnostics.Debug.WriteLine($"Total Best Moves >> {bestmoves.Count}");
+			foreach (var move in bestmoves)
+			{
+				System.Diagnostics.Debug.WriteLine($"Best Move {++i} >> {move}");
+			}
+
+			System.Diagnostics.Debug.WriteLine($"----------------------------------------------------------");
+			System.Diagnostics.Debug.WriteLine($"----------------------------------------------------------");
+			System.Diagnostics.Debug.WriteLine($"----------------------------------------------------------");
+
+			//Debug_StartEvaluationTestSingleThread(position, true);
+		}
+
+		public Stormcloud3(bool ignored)
+		{
+			//*
+			byte[] //position = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
+			position = new byte[] {
+				0xCA, 0xBD, 0xEB, 0xAC,
+				0x90, 0x09, 0x99, 0x99,
+				0x00, 0x00, 0x00, 0x00,
+				0x09, 0x90, 0x00, 0x00,
+				0x01, 0x00, 0x00, 0x00,
+				0x30, 0x00, 0x00, 0x00,
+				0x10, 0x11, 0x11, 0x11,
+				0x42, 0x05, 0x63, 0x24
+			};
+			//*/
+
+			byte castle = 0xFF;
+			string posKey = GeneratePositionKey(position, castle);
+
+			System.Diagnostics.Debug.WriteLine("Starting Iterative Deepening...");
+			CC_FailsoftAlphaBetaIterativeDeepening(position, true, castle, posKey, 20);
+
+
+			/* M2 (depth4) position
+			byte[] position = {
+				0x00, 0x04, 0x00, 0x00,
+				0xEC, 0x90, 0x29, 0x99,
+				0x90, 0x00, 0x00, 0x00,
+				0x10, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x01, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0xC0, 0x00, 0x11,
+				0x00, 0x00, 0x00, 0x60,
+			};
+			//*/
+			/* 1 move further | Mirrored for black : M2
+			byte[] position = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0x01,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0x00, 0xCA, 0x06,
+			};
+			//*/
+			/* 1 move further | Mirrored for black : M2 | Entire Move Sequence till capture is possible
+			byte[] position = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0x01,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0x00, 0xCA, 0x06,
+			};
+			/*
+			// Rc1, since thats what it wants
+			byte[] positionB = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0x01,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0xC0, 0x0A, 0x06,
+			};
+			// Rc1, c4, since thats what it wants
+			byte[] positionC = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x90,
+				0x00, 0x90, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0x01,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0xC0, 0x0A, 0x06,
+			};
+			//*/
+			/* Ng3+
+			byte[] position2 = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0xA1,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0x00, 0xC0, 0x06,
+			};
+			// Kh2
+			byte[] position3 = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0xA1,
+				0x11, 0x10, 0x01, 0x46,
+				0x00, 0x00, 0xC0, 0x00,
+			};
+			// Kg1, since thats apparently another legal move
+			byte[] position7 = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0xA1,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0x00, 0xC0, 0x60,
+			};
+			// Rh1#
+			byte[] position4 = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0xA1,
+				0x11, 0x10, 0x01, 0x46,
+				0x00, 0x00, 0x00, 0x0C,
+			};
+			// Kxh1 (beyond mate)
+			byte[] position5 = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0xA1,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0x00, 0x00, 0x06,
+			};
+			// Nxh1 (beyond mate)
+			byte[] position6 = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0x01,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0x00, 0x00, 0x0A,
+			};
+			byte[][] positions = { position2 /*position, position2, /*, position2, position3, position4, position5, position6, positionB, positionC, position7* / };
+			//*/
+			/* Both kings are backranked by rooks and only blocked by a pawn
+			byte[] position = {
+				0xE0, 0xA4, 0x00, 0x00,
+				0x99, 0x90, 0x09, 0x99,
+				0x90, 0x00, 0x00, 0x00,
+				0x10, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x01, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x11, 0x11,
+				0xC0, 0x02, 0x00, 0x06,
+			};
+			//*/
+
+			//byte[] position = { 0x00, 0x00, 0x0E, 0x0C, 0x09, 0x09, 0x00, 0x09, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x90, 0x19, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x00, 0x0D, 0x06, 0x00, 0x00, 0x00, 0x00, 0x04 };
+
+			/* Debug Testing M2 for Black
+
+			bool IsWhitesTurn = true;   // False but is negated at start of loop
+			int _posI = 1;
+			foreach (byte[] pos in positions)
+			{
+				//IsWhitesTurn = !IsWhitesTurn;
+				var moves = GetAllLegalMoves(pos, IsWhitesTurn);
+				string key = GeneratePositionKey(pos, 0x00);
+				int i = 0;
+				System.Diagnostics.Debug.WriteLine($"Position: {_posI}  |  Legal Moves: {moves.Count}  |  TurnColor: {(IsWhitesTurn ? "White" : "Black")}");
+				foreach (var move2 in moves)
+				{
+					if (move2 == 0x2005 || true)
+					{
+						System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToStringPro1(pos, move2)}  |  {MoveToStringCas(pos, move2)}");
+					}
+				}
+
+				bool inCheck = CutLegalMoves_IsInCheck(pos, IsWhitesTurn, 0x00, ref moves, key);
+				System.Diagnostics.Debug.WriteLine($"Position: {_posI}  |  Cut Legal Moves: {moves.Count}");
+				i = 0;
+				foreach (var move2 in moves)
+				{
+					if (move2 == 0x2005 || true)
+					{
+						System.Diagnostics.Debug.WriteLine($"Cut Legal Move {++i} >> {MoveToStringPro1(pos, move2)}  |  {MoveToStringCas(pos, move2)}");
+					}
+				}
+
+				int depth = 4;
+				var score = CC_FailsoftAlphaBeta(pos, IsWhitesTurn, 0x00, key, depth);
+				System.Diagnostics.Debug.WriteLine($"Score: {CC_GetScore(score)}  |  BestMove {MoveToStringPro1(pos, CC_Failsoft_BestMove)}  |  {MoveToStringCas(pos, CC_Failsoft_BestMove)}  |  Checked: {inCheck}");
+				System.Diagnostics.Debug.WriteLine($"");
+				System.Diagnostics.Debug.WriteLine($"------------------------------------------------------------------------------------------------------------------------");
+				System.Diagnostics.Debug.WriteLine($"");
+				_posI++;
+			}
+
+			//*/
+
+			/*
+			bool IsWhitesTurn = false;
+			var moves = GetAllLegalMoves(position, IsWhitesTurn);
+
+			int i = 0;
+			foreach (var move2 in moves)
+			{
+				if (move2 == 0x2005 || true)
+				{
+					System.Diagnostics.Debug.WriteLine($"Legal Move {++i} >> {MoveToStringPro1(position, move2)} | Binary: {Convert.ToString(move2, 2)}");
+					System.Diagnostics.Debug.WriteLine($"Resulting Key: {i} >> {ResultingPosition(position, move2, 0x00, null).Item2}");
+				}
+			}
+
+			//*/
+
+			/*
+			byte[] position = new byte[] {
+				0xCA, 0xBD, 0xEB, 0xAC,
+				0x90, 0x99, 0x99, 0x99,
+				0x00, 0x00, 0x00, 0x00,
+				0x09, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x10, 0x11, 0x11, 0x11,
+				0x42, 0x35, 0x63, 0x24
+			};
+			string key = GeneratePositionKey(position);
+			ushort m = 0xEA80;
+			string move = MoveToStringPro1(position, m);
+
+			var result = ResultingPosition(position, m, 0xFF, key);
+
+			System.Diagnostics.Debug.WriteLine($"Previous Key: {key} | Move: {move} | newKey: {result.Item2}");
+			//*/
+
+			/*
+			for (int depth = 2; depth <= 6; depth++)
+			{
+				var score = CC_FailsoftAlphaBeta(position, IsWhitesTurn, 0x00, GeneratePositionKey(position, 0xFF), depth);
+				string move = MoveToStringPro1(position, CC_Failsoft_BestMove);
+
+				System.Diagnostics.Debug.WriteLine($"Depth: {depth}  |  BestMove: {move}  |  {MoveToStringCas(position, CC_Failsoft_BestMove)}  |  Score: {CC_GetScore(score)}");
+				//break;
+			}
+			//*/
+		}
+
+		public Stormcloud3(int GameDepth)   // 2nd constructor
+		{
+			// Play autonomous game
+			//*
+			byte[] position = {
+				0xCA, 0xBD, 0xEB, 0xAC,
+				0x99, 0x99, 0x99, 0x99,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x11, 0x11, 0x11, 0x11,
+				0x42, 0x35, 0x63, 0x24
+			};
+			//*/
+			/* M2 (depth4) position
+			byte[] position = {
+				0x00, 0x04, 0x00, 0x00,
+				0xEC, 0x90, 0x29, 0x99,
+				0x90, 0x00, 0x00, 0x00,
+				0x10, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x01, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0xC0, 0x00, 0x11,
+				0x00, 0x00, 0x00, 0x60,
+			};
+			//*/
+			/* 1 move further
+			byte[] position = {
+				0xE0, 0x24, 0x00, 0x00,
+				0x0C, 0x90, 0x09, 0x99,
+				0x90, 0x00, 0x00, 0x00,
+				0x10, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x01, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0xC0, 0x00, 0x11,
+				0x00, 0x00, 0x00, 0x60,
+			};
+			//*/
+			//*/
+			/* 1 move further | Mirrored for black : M2
+			byte[] position = {
+				0xE0, 0x00, 0x00, 0x00,
+				0x99, 0x00, 0x04, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x90, 0x00, 0x90,
+				0x00, 0x00, 0x00, 0x09,
+				0x00, 0x00, 0x00, 0x01,
+				0x11, 0x10, 0x01, 0x40,
+				0x00, 0x00, 0xCA, 0x06,
+			};
+			//*/
+			/* Remove the Knight and Rc1 -> Instant Capture of Black and White King possible
+			byte[] position = {
+				0xE0, 0x04, 0x00, 0x00,
+				0x0C, 0x90, 0x09, 0x99,
+				0x90, 0x00, 0x00, 0x00,
+				0x10, 0x00, 0x00, 0x00,
+				0x01, 0x00, 0x01, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x11,
+				0x00, 0xC0, 0x00, 0x60,
+			};
+			//*/
+
+			// Direct Mate: Black captures White King: +60384
+			// Direct Mate: White captures Black King: +3072
+
+			//byte[] position = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x90, 0x00, 0x00, 0x00, 0xE9, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x60, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x0C };
+
+			bool TurnColorWhite = true;
+			byte castle = 0xFF;
+			string key = GeneratePositionKey(position, castle);
+
+			string move = null;
+			List<string> moves = new List<string>();
+
+			System.Diagnostics.Debug.WriteLine("Starting Game (" + DateTime.Now + ")...");
+			while (true)
+			{
+				//var score = CC_FailsoftAlphaBeta(position, TurnColorWhite, castle, key, GameDepth);
+				var score = CC_FailsoftAlphaBetaIterativeDeepening(position, TurnColorWhite, castle, key, GameDepth);
+				byte toIndex = MoveToIndex(CC_Failsoft_BestMove);
+				byte toByte = position[toIndex >> 1];
+				string moveString = MoveToStringPro1(position, CC_Failsoft_BestMove, CC_IsCheck, CC_IsMate);
+
+				System.Diagnostics.Debug.WriteLine($"Depth: {GameDepth} | Score: {CC_GetScore(score)} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(position, CC_Failsoft_BestMove)}");
+
+				var result = ResultingPosition(position, CC_Failsoft_BestMove, castle, key);
+				position = result.Item1;
+				key = result.Item2;
+				castle = result.Item3;
+
+				if (TurnColorWhite)
+				{
+					move = moveString;
+				}
+				else
+				{
+					moves.Add($"{move} {moveString}");
+					System.Diagnostics.Debug.WriteLine($"{moves.Count}. {move} {moveString} | Key: {key}");
+					if (moves.Count > 6)
+					{
+						if (moves[moves.Count - 6] == moves[moves.Count - 4] && moves[moves.Count - 4] == moves[moves.Count - 2] &&
+							moves[moves.Count - 5] == moves[moves.Count - 3] && moves[moves.Count - 3] == move)    // move = Count - 1
+						{
+							System.Diagnostics.Debug.WriteLine("Draw by repetition.");
+							break;
+						}
+					}
+				}
+
+				TurnColorWhite = !TurnColorWhite;
+
+				if ((toByte & 0x07) == 0x06 || (toByte & 0x70) == 0x60)
+				{
+					string KingColor = "-";
+
+					if ((toIndex & 1) == 1)
+					{
+						// 2nd half
+						if ((toByte & 0x0F) == 0x0E) KingColor = "Black";
+						else if ((toByte & 0x0F) == 0x06) KingColor = "White";
+					}
+					else
+					{
+						// 2nd half
+						if ((toByte & 0xF0) == 0xE0) KingColor = "Black";
+						else if ((toByte & 0xF0) == 0x60) KingColor = "White";
+					}
+
+					if (KingColor != "-")
+					{
+						System.Diagnostics.Debug.WriteLine($"Win: The {KingColor} King has been captured.");
+						break;
+					}
+				}
+				if (!EnoughCheckmatingMaterial(position))
+				{
+					System.Diagnostics.Debug.WriteLine("Draw by Insufficient Checkmating Material.");
+					break;
+				}
+			}
+			System.Diagnostics.Debug.WriteLine("The Game:");
+			for (int i = 0; i < moves.Count; i++)
+			{
+				System.Diagnostics.Debug.WriteLine($"{i + 1}. {moves[i]}");
+			}
+		}
+
+		void OldSearch_StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn)
+		{
+			OldSearch_SearchNode startNode = new OldSearch_SearchNode(startPosition, new OldSearch_PositionData());
+			OldSearch_SearchNodes.Enqueue(startNode);
+			OldSearch_ProcessNextNode(true);
+			OldSearch_StartProcessingNodesSingleThread();
+			//StartProcessingMultiThread();
+		}
+
+		public int[] Debug_StartEvaluationTestSingleThread(byte[] startPosition, bool isWhitesTurn, int Final_Depth = 8)
+		{
+			IsRootTurnColorWhite = isWhitesTurn;
+			string posKey = GeneratePositionKey(startPosition, 0xFF);
+			DateTime start;
+			System.Diagnostics.Debug.WriteLine("Starting Stormcloud Calc...");
+			int Debug_Depth = 2;
+			while (Debug_Depth <= Final_Depth)
+			{
+				start = DateTime.Now;
+				double score = CC_FailsoftAlphaBeta(startPosition, isWhitesTurn, 0x00, posKey, Debug_Depth);
+				string moveString = MoveToStringPro1(startPosition, CC_Failsoft_BestMove, CC_IsCheck, CC_IsMate);
+				Form1.bestMove = moveString;
+				Form1.bestMoveScore = score;
+				Form1.bestMoveDepth = Debug_Depth;
+				System.Diagnostics.Debug.WriteLine($"Depth: {Debug_Depth} | Time: {(DateTime.Now - start).TotalSeconds}s | Score: {CC_GetScore(score)} | Move: {moveString}   ||   {MoveToString1(CC_Failsoft_BestMove)}   ||   {MoveToStringCas(startPosition, CC_Failsoft_BestMove)}");
+				Debug_Depth++;
+			}
+			return new int[] { MoveFromIndex(CC_Failsoft_BestMove), MoveToIndex(CC_Failsoft_BestMove) };
+		}
+
+		#endregion
+
+		// Attacked Field by me: + value of attacker, by opponent: - value of attacker. King Safety relies on a positive attack value of surrounding fields
+	}
+
 }

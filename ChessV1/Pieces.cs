@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Drawing;
 
-namespace ChessV1
+namespace ChessUI
 {
 	internal abstract class Pieces
 	{

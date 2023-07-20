@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ChessV1.Properties
+namespace ChessUI.Properties
 {
 
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ChessV1
+namespace ChessUI
 {
 	internal static class Program
 	{
@@ -18,7 +18,7 @@ namespace ChessV1
 			Application.SetCompatibleTextRenderingDefault(false);
 			//new Stormcloud.Stormcloud3();
 			//new Stormcloud.Stormcloud3(false);
-			new Stormcloud.Stormcloud3(5);
+			new Stormcloud.Stormcloud3(4);
 			//Application.Run(new Form1());
 		}
 	}

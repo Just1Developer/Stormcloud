@@ -1,4 +1,4 @@
-﻿namespace ChessV1
+﻿namespace ChessUI
 {
 	partial class Form1
 	{

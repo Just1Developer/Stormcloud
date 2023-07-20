@@ -82,6 +82,7 @@
     <Compile Include="Chessboard2.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="OpeningBook.cs" />
     <Compile Include="Stormcloud3.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>

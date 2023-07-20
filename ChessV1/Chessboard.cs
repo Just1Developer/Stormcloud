@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Net;
 
-namespace ChessV1
+namespace ChessUI
 {
 	internal class Chessboard : Panel, IChessboard
 	{

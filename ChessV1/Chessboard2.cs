@@ -8,7 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ChessV1
+namespace ChessUI
 {
 	internal partial class Chessboard2 : Label, IChessboard
 	{
