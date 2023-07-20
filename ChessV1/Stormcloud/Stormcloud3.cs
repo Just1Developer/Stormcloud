@@ -4,8 +4,9 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ChessUI;
 
-namespace ChessUI.Stormcloud
+namespace Stormcloud
 {
 
 	/**
@@ -27,7 +28,7 @@ namespace ChessUI.Stormcloud
 		12. Bd2 Bxf2+
 		13. Nxf2 Qxd2+
 		14. Nxd2 f5
-		15. Nxe4 Nxe5
+		15. Ndxe4 Nxe5
 		16. Qc3 Nd3+
 		17. Qxd3 c5
 		18. Nd6+ Kd7
