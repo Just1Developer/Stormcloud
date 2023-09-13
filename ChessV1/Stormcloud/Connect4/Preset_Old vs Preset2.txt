@@ -1,0 +1,46 @@
+Engine 1: DefaultPreset_Old
+Engine 2: DefaultPreset2
+
+Result: 0-1
+
+   1. [Yellow] Best Column: 4, Row 1, Eval: +1,26 (1069,5555) | Time: 4,5356963s | Binary Move: 1000-
+   1. [Red] Best Column: 6, Row 1, Eval: +1,94 (1651,444) | Time: 3,2439896s | Binary Move: 10-
+   1. [Yellow] Best Column: 7, Row 1, Eval: +1,25 (1058,9125) | Time: 5,9308622s | Binary Move: 1-
+   1. [Red] Best Column: 1, Row 1, Eval: +1,93 (1639,271) | Time: 8,0086044s | Binary Move: 1000000-
+   1. [Yellow] Best Column: 3, Row 1, Eval: +1,23 (1049,3055) | Time: 7,2899646s | Binary Move: 10000-
+   1. [Red] Best Column: 1, Row 2, Eval: +1,9 (1620,22) | Time: 5,2934798s | Binary Move: 10000000000000-
+   1. [Yellow] Best Column: 2, Row 1, Eval: +1,22 (1039,0845) | Time: 3,3813808s | Binary Move: 100000-
+   1. [Red] Best Column: 5, Row 1, Eval: -1,9 (-1601,37) | Time: 6,3120094s | Binary Move: 100-
+   1. [Yellow] Best Column: 7, Row 2, Eval: +1,2 (1021,2615) | Time: 5,5576598s | Binary Move: 10000000-
+   1. [Red] Best Column: 1, Row 3, Eval: +1,86 (1583,036) | Time: 9,7195988s | Binary Move: 100000000000000000000-
+   1. [Yellow] Best Column: 1, Row 4, Eval: -1,2 (-1007,348) | Time: 2,5970659s | Binary Move: 1000000000000000000000000000-
+   1. [Red] Best Column: 6, Row 2, Eval: +1,82 (1549,207) | Time: 3,6546908s | Binary Move: 100000000-
+   1. [Yellow] Best Column: 4, Row 2, Eval: -1,1 (-961,809999999999) | Time: 4,3864688s | Binary Move: 10000000000-
+   1. [Red] Best Column: 4, Row 3, Eval: -1,8 (-1516,728) | Time: 4,2774126s | Binary Move: 100000000000000000-
+   1. [Yellow] Best Column: 6, Row 3, Eval: -1,1 (-938,168) | Time: 3,7858209s | Binary Move: 1000000000000000-
+   1. [Red] Best Column: 6, Row 4, Eval: +1,74 (1475,29) | Time: 3,0177264s | Binary Move: 10000000000000000000000-
+   1. [Yellow] Best Column: 5, Row 2, Eval: -1,1 (-916,469) | Time: 2,9394662s | Binary Move: 1000000000-
+   1. [Red] Best Column: 3, Row 2, Eval: -1,7 (-1454,913) | Time: 3,0466597s | Binary Move: 100000000000-
+   1. [Yellow] Best Column: 3, Row 3, Eval: -1,1 (-894,61) | Time: 4,6052659s | Binary Move: 1000000000000000000-
+   1. [Red] Best Column: 4, Row 4, Eval: +1,66 (1411,21) | Time: 2,7519249s | Binary Move: 1000000000000000000000000-
+   1. [Yellow] Best Column: 4, Row 5, Eval: +1,06 (897,708) | Time: 2,7952711s | Binary Move: 10000000000000000000000000000000-
+   1. [Red] Best Column: 3, Row 4, Eval: -1,6 (-1387,447) | Time: 2,1461811s | Binary Move: 10000000000000000000000000-
+   1. [Yellow] Best Column: 3, Row 5, Eval: -1 (-857,984) | Time: 2,259056s | Binary Move: 100000000000000000000000000000000-
+   1. [Red] Best Column: 1, Row 5, Eval: +1,57 (1336,042) | Time: 2,2590781s | Binary Move: 10000000000000000000000000000000000-
+   1. [Yellow] Best Column: 2, Row 2, Eval: -1 (-818,8085) | Time: 2,5675192s | Binary Move: 1000000000000-
+   1. [Red] Best Column: 2, Row 3, Eval: +1,5 (1287,769) | Time: 2,0714097s | Binary Move: 10000000000000000000-
+   1. [Yellow] Best Column: 7, Row 3, Eval: -1176,5 (-999985) | Time: 2,0923928s | Binary Move: 100000000000000-
+   1. [Red] Best Column: 7, Row 4, Eval: +1176,45 (999986) | Time: 2,0044487s | Binary Move: 1000000000000000000000-
+   1. [Yellow] Best Column: 3, Row 6, Eval: -1176,5 (-999987) | Time: 2,0059473s | Binary Move: 1000000000000000000000000000000000000000-
+   1. [Red] Best Column: 6, Row 5, Eval: +1176,46 (999988) | Time: 2,0061632s | Binary Move: 100000000000000000000000000000-
+   1. [Yellow] Best Column: 4, Row 6, Eval: -1176,5 (-999989) | Time: 2,0025325s | Binary Move: 100000000000000000000000000000000000000-
+   1. [Red] Best Column: 2, Row 4, Eval: +1176,46 (999990) | Time: 2,0002755s | Binary Move: 100000000000000000000000000-
+   1. [Yellow] Best Column: 2, Row 5, Eval: -1176,5 (-999991) | Time: 2,0009405s | Binary Move: 1000000000000000000000000000000000-
+   1. [Red] Best Column: 7, Row 5, Eval: M7 (999992) | Time: 2,00046s | Binary Move: 10000000000000000000000000000-
+   1. [Yellow] Best Column: 2, Row 6, Eval: -M-6 (-999993) | Time: 2,0005314s | Binary Move: 10000000000000000000000000000000000000000-
+   1. [Red] Best Column: 1, Row 6, Eval: M5 (999994) | Time: 2,0007691s | Binary Move: 100000000000000000000000000000000000000000-
+   1. [Yellow] Best Column: 7, Row 6, Eval: -M-4 (-999995) | Time: 2,0001201s | Binary Move: 100000000000000000000000000000000000-
+   1. [Red] Best Column: 6, Row 6, Eval: M3 (999996) | Time: 2,0009539s | Binary Move: 1000000000000000000000000000000000000-
+   1. [Yellow] Best Column: 5, Row 3, Eval: -M-2 (-999997) | Time: 2,0006108s | Binary Move: 10000000000000000-
+   1. [Red] Best Column: 5, Row 4, Eval: M1 (999998) | Time: 2,0000106s | Binary Move: 100000000000000000000000-
+Das Programm "[2360] ChessV1.exe" wurde mit Code 4294967295 (0xffffffff) beendet.

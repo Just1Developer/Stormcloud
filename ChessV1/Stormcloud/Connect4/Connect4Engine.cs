@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 
 namespace ChessV1.Stormcloud.Connect4
@@ -13,8 +14,9 @@ namespace ChessV1.Stormcloud.Connect4
 		public readonly string EvaluationResult;
 		public readonly long BinaryMove;
 		public readonly double TimeSecs;
+		public readonly int FinalDepth;
 
-		public Move(int Column, int Row, double Eval, string EvaluationResult, long BinaryMove, double TimeSecs)
+		public Move(int Column, int Row, double Eval, string EvaluationResult, long BinaryMove, double TimeSecs, int FinalDepth)
 		{
 			this.Column = Column;
 			this.Row = Row;
@@ -22,17 +24,19 @@ namespace ChessV1.Stormcloud.Connect4
 			this.EvaluationResult = EvaluationResult;
 			this.BinaryMove = BinaryMove;
 			this.TimeSecs = TimeSecs;
+			this.FinalDepth = FinalDepth;
 		}
 	}
 
 	internal class Connect4Engine
 	{
 
+		private const double EVALUATION_DIVIDER = 85;
 		private readonly int BOARD_MAX;
 		private readonly int Rows, Columns;
 		private readonly long MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2;
 
-		public Connect4Engine(int Rows, int Columns, int maxDepth, long MASK_ROW, long MASK_COL, long MASK_DIAG1, long MASK_DIAG2)
+		public Connect4Engine(int Rows, int Columns, int maxDepth, long MASK_ROW, long MASK_COL, long MASK_DIAG1, long MASK_DIAG2, EngineWeightMap WeightMap)
 		{
 			this.Rows = Rows;
 			this.Columns = Columns;
@@ -42,21 +46,33 @@ namespace ChessV1.Stormcloud.Connect4
 			this.MASK_COL = MASK_COL;
 			this.MASK_DIAG1 = MASK_DIAG1;
 			this.MASK_DIAG2 = MASK_DIAG2;
+			this.WeightMap = WeightMap;
 		}
 
-		private string Evaluation
+		private string GetEvaluationString(bool inverseEval)
 		{
-			get
+			if (CC_Eval > WinValue - CC_FinalDepth) return $"M{Math.Abs(WinValue - ((int)CC_Eval - 1))}";
+			if (CC_Eval < LossValue + CC_FinalDepth) return $"-M{Math.Abs(LossValue - ((int)CC_Eval - 1))}";
+			
+			double eval = inverseEval ? -CC_Eval : CC_Eval;
+			eval /= EVALUATION_DIVIDER;	// Preserve 1 Digit
+			
+			if (eval % 1.0 < 0.2 || eval % 1.0 > 0.8)
 			{
-				if (CC_Eval > WinValue - CC_FinalDepth) return $"M{WinValue - CC_Eval}";
-				if (CC_Eval < LossValue + CC_FinalDepth) return $"-M{LossValue - CC_Eval}";
-				return CC_Eval <= 0 ? "" + CC_Eval : "+" + CC_Eval;
+				eval = Math.Round(eval) / 10;	// If its too close to being rounded, only preserve the one
 			}
+			else
+			{
+				// Otherwise, use 2 digits
+				eval *= 10;
+				eval = Math.Round(eval) / 100;
+			}
+			return eval <= 0 ? "" + eval : "+" + eval;
 		}
 
 		public bool IsInUse;	// Perhaps add multithreading
 
-		public Move BestMove(long myBoard, long opponentBoard, int maxDepth = -1, int maxMS = -1)
+		public Move BestMove(long myBoard, long opponentBoard, bool inverseEval = false, int maxDepth = -1, int maxMS = -1)
 		{
 			if(IsInUse)
 			{
@@ -71,7 +87,7 @@ namespace ChessV1.Stormcloud.Connect4
 			CC_Failsoft_BestMove = 0L;
 			do
 			{
-				CC_FailsoftAlphaBeta(myBoard, opponentBoard, CC_FinalDepth);
+				CC_Eval = CC_FailsoftAlphaBeta(myBoard, opponentBoard, CC_FinalDepth);
 				CC_FinalDepth++; // Repeat until time is reached
 			} while ((DateTime.Now - before).TotalMilliseconds < maxMS);	// run once is maxMS == -1, so no time limit
 
@@ -90,7 +106,7 @@ namespace ChessV1.Stormcloud.Connect4
 				row = i / Columns + 1;
 			}
 
-			return new Move(col, row, CC_Eval, Evaluation, CC_Failsoft_BestMove, (DateTime.Now - before).TotalSeconds);
+			return new Move(col, row, CC_Eval, GetEvaluationString(inverseEval), CC_Failsoft_BestMove, (DateTime.Now - before).TotalSeconds, CC_FinalDepth);
 		}
 
 		// Stormcloud 3 AlphaBeta Algorithm but lighter
@@ -111,22 +127,13 @@ namespace ChessV1.Stormcloud.Connect4
 				calls = 0;
 				CC_Eval = CC_FailsoftAlphaBeta(myBoard, opponentBoard, depth);
 				DateTime after = DateTime.Now;
-				Console.WriteLine($"[{after}] Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {Evaluation}) | Time: {(after-before).TotalSeconds}s");
-				System.Diagnostics.Debug.WriteLine($"[{after}] Calls: {calls} | Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {Evaluation}) | Time: {(after-before).TotalSeconds}s");
+				Console.WriteLine($"[{after}] Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {GetEvaluationString(false)}) | Time: {(after-before).TotalSeconds}s");
+				System.Diagnostics.Debug.WriteLine($"[{after}] Calls: {calls} | Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {GetEvaluationString(false)}) | Time: {(after-before).TotalSeconds}s");
 			}
 		}
 
 		// I'm pretty sure there are fairly good weights
-		private const double WEIGHT_SCORE_OWN = 1.2;                    // yes: 1.2
-		private const double WEIGHT_SCORE_OPPONENT = 1.03;              // yes: 1.03
-		private const double WEIGHT_HAMMINGDISTANCE_OWN = 0.9;          // yes: 0.9
-		private const double WEIGHT_HAMMINGDISTANCE_OPPONENT = 1.35;	// yes: 1.05
-
-		private const double WEIGHT_WALL_DISTANCE = 0.32;
-		private const double WEIGHT_NEIGHBORS = 0.67;	// Overall neighbor weight
-		private const double WEIGHT_NEIGHBOR_FREE = 1.0;	// Available
-		private const double WEIGHT_NEIGHBOR_OWNED = 1.1;	// Owned by me
-		private const double WEIGHT_NEIGHBOR_TAKEN = -0.9;	// Taken by opponent
+		private EngineWeightMap WeightMap;
 
 		private double Evaluate(long myBoard, long opponentBoard)
 		{
@@ -162,18 +169,18 @@ namespace ChessV1.Stormcloud.Connect4
 				ApplyMask(boardstate, opponentBoardCurrent, MASK_DIAG2, Columns - 3, Rows - 3, weight, ref score);
 			}
 
-			ApplyMasks(myBoard, opponentBoard, WEIGHT_HAMMINGDISTANCE_OWN, ref myScore);
-			ApplyMasks(opponentBoard, myBoard, WEIGHT_HAMMINGDISTANCE_OPPONENT, ref opponentScore);
+			ApplyMasks(myBoard, opponentBoard, WeightMap.WEIGHT_HAMMINGDISTANCE_OWN, ref myScore);
+			ApplyMasks(opponentBoard, myBoard, WeightMap.WEIGHT_HAMMINGDISTANCE_OPPONENT, ref opponentScore);
 
 			double finalScore = 0;
-			finalScore += myScore * WEIGHT_SCORE_OWN;
-			finalScore += opponentScore * WEIGHT_SCORE_OPPONENT;
+			finalScore += myScore * WeightMap.WEIGHT_SCORE_OWN;
+			finalScore += opponentScore * WeightMap.WEIGHT_SCORE_OPPONENT;
 
 			for (var reverseIndex = 0; reverseIndex <= BOARD_MAX; reverseIndex++)
 			{
 				if (((myBoard >> reverseIndex) & 1) == 0) continue;	// Not my field
-				finalScore += Score_WallDistance(reverseIndex, WEIGHT_WALL_DISTANCE);
-				finalScore += WEIGHT_NEIGHBORS * Score_Neighbors(reverseIndex, myBoard, opponentBoard, WEIGHT_NEIGHBOR_FREE, WEIGHT_NEIGHBOR_OWNED, WEIGHT_NEIGHBOR_TAKEN);
+				finalScore += Score_WallDistance(reverseIndex, WeightMap.WEIGHT_WALL_DISTANCE);
+				finalScore += WeightMap.WEIGHT_NEIGHBORS * Score_Neighbors(reverseIndex, myBoard, opponentBoard, WeightMap.WEIGHT_NEIGHBOR_FREE, WeightMap.WEIGHT_NEIGHBOR_OWNED, WeightMap.WEIGHT_NEIGHBOR_TAKEN);
 			}
 
 			return finalScore;

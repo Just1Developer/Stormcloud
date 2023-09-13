@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace ChessV1.Stormcloud.Connect4
@@ -17,7 +20,7 @@ namespace ChessV1.Stormcloud.Connect4
 
 		private long WinnerMatrix;
 
-		private Connect4Engine Engine;
+		private Connect4Engine Engine1, Engine2;
 		private const int ENGINE_DEPTH = 8;// apparently some maxDepth is actually needed -1; "Strong" would be 10-11, fast is 7 (no)
 
 		private readonly int BoardWidth, BoardHeight;
@@ -27,13 +30,21 @@ namespace ChessV1.Stormcloud.Connect4
 			get => (long) (BoardstateRed | BoardstateYellow);
 		}
 
+		private Label Evaluation;
+		private string Shown_Eval
+		{
+			set => Evaluation.Text = $"Evaluation: {value}";
+		}
+
 		public readonly int Rows, Columns, BOARD_MAX;
 
 		public Connect4UI(int Rows, int Columns)
 		{
 			InitializeComponent();
+			CheckForIllegalCrossThreadCalls = false;
 			DoubleBuffered = true;
 			SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+			this.BackColor = Color.DarkGray;
 			this.FormBorderStyle = FormBorderStyle.FixedSingle;
 			this.MouseUp += (s, e) => ClickMouse(e.Location);
 			this.AllowTransparency = true;
@@ -52,8 +63,19 @@ namespace ChessV1.Stormcloud.Connect4
 			this.Size = new System.Drawing.Size(2 * padding + BoardWidth + 5 * CircleSize, 2 * padding + BoardHeight);
 
 			SetMasks();
-			Engine = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2);
+			Engine1 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.DefaultPreset2);
+			Engine2 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.DefaultPreset2);
 
+			/* Preset Combat Points: Complete Table in excel file
+			 *	Red\/  | Yellow	->	|	DefaultPreset_Old	|	DefaultPreset1	 |	 DefaultPreset2
+			 *  DefaultPreset_Old	|		1 - 0			|		1 - 0		 |		0 - 1
+			 *  DefaultPreset1		|	  1/2 - 1/2			|		1 - 0		 |	  1/2 - 1/2
+			 *  DefaultPreset2		|		0 - 1			|		1 - 0		 |	  1/2 - 1/2
+			 *						|						|					 |
+			//*/
+
+			// Add Top 3 Moves and a margin, so when moves 1&2 are very close in eval, add randomness, perhaps
+			// Top 3 Moves is an array or similar in the Root AlphaBeta, in all other recursive calls the array is null
 
 			l_message = new Label()
 			{
@@ -109,6 +131,17 @@ namespace ChessV1.Stormcloud.Connect4
 			cb.Checked = playComputer;
 			Controls.Add(cb);
 
+			Evaluation = new Label()
+			{
+				Location = new Point(padding + BoardWidth + 2 * Spacing,
+					padding + 3 * Spacing),
+				Text = "Evaluation: -",
+				AutoSize = true,
+				FlatStyle = FlatStyle.Flat,
+				Font = new Font(FontFamily.GenericSansSerif, 15f)
+			};
+			this.Controls.Add(Evaluation);
+
 			this.Load += (s, e) =>
 			{
 				if (playComputer && computerStarts)
@@ -128,6 +161,7 @@ namespace ChessV1.Stormcloud.Connect4
 			l_message.Visible = false;
 			computerSolo = false;
 			WinnerMatrix = 0L;
+			Shown_Eval = "-";
 			move = 1;
 			foreach (Control c in Controls) { if (c.GetType().IsSubclassOf(typeof(ButtonBase))) c.Enabled = true; }
 			Refresh();
@@ -135,6 +169,7 @@ namespace ChessV1.Stormcloud.Connect4
 
 		private void ClickMouse(Point Location)
 		{
+			if (moveInProgress) return;
 			if (computerSolo) return;
 			if (playComputer)
 			{
@@ -160,8 +195,6 @@ namespace ChessV1.Stormcloud.Connect4
 			if (x < 0) return;
 			if (x % pair > CircleSize) return;	// On the divider part
 			int col = Columns - 1 - x / pair;
-
-			Console.WriteLine($"Clicked on col {col}");
 
 			// Check what row has the slot there, so start from the bottom and check where the first is
 			// Delta is always the amount of columns
@@ -209,15 +242,32 @@ namespace ChessV1.Stormcloud.Connect4
 
 		void PlayNextMoveComputer()
 		{
-			if(Engine.IsInUse)
+			if(moveInProgress) return;
+			long myBoard, opponentBoard;
+			Connect4Engine Engine;
+			if (_Turn == Turn.Yellow)
+			{
+				Engine = Engine1;
+				myBoard = BoardstateYellow;
+				opponentBoard = BoardstateRed;
+			}
+			else
+			{
+				Engine = Engine2;
+				myBoard = BoardstateRed;
+				opponentBoard = BoardstateYellow;
+			}
+
+			if (Engine.IsInUse)
 			{
 				Console.Error.WriteLine("Error: Engine Object is in use right now, please wait until calculations are complete or create another instance.");
 				return;
 			}
-			Move bestMove = _Turn == Turn.Yellow ? Engine.BestMove(BoardstateYellow, BoardstateRed, maxMS: maxMSEngine)
-				: Engine.BestMove(BoardstateRed, BoardstateYellow, maxMS: maxMSEngine);
+
+			Move bestMove = Engine.BestMove(myBoard, opponentBoard, _Turn == Turn.Red, maxMS: maxMSEngine);
 			
-			Console.WriteLine($"   {move}. [{_Turn}] Best Column: {bestMove.Column}, Row {bestMove.Row}, Eval: {bestMove.EvaluationResult} ({bestMove.Eval}) | Time: {bestMove.TimeSecs}s | Binary Move: {Convert.ToString(bestMove.BinaryMove, 2)}-");
+			Console.WriteLine($"   {move++}. [{_Turn}] Best Column: {bestMove.Column}, Row {bestMove.Row}, Eval: {bestMove.EvaluationResult} ({bestMove.Eval}) | Time: {bestMove.TimeSecs}s | Binary Move: {Convert.ToString(bestMove.BinaryMove, 2)}-");
+			Shown_Eval = bestMove.EvaluationResult;
 			play(bestMove.BinaryMove);
 		}
 
@@ -226,6 +276,7 @@ namespace ChessV1.Stormcloud.Connect4
 		void play(int reverseIndex) => play(1L << reverseIndex);
 		void play(long ORmove)
 		{
+			if (moveInProgress) return;
 			if (_Turn == Turn.Yellow)
 			{
 				BoardstateYellow |= ORmove;
@@ -236,6 +287,43 @@ namespace ChessV1.Stormcloud.Connect4
 				BoardstateRed |= ORmove;
 				_Turn = Turn.Yellow;
 			}
+
+			// If nothing has changed, no need to re-run it
+			if(ORmove == 0) return;
+
+			new Thread(() => {
+				// Move animation
+				yLevelDrawn = -yDeltaDrawn;
+				yLevelTarget = -1;
+				for (int row = 0; row < Rows; row++)
+				{
+					// get row reversed index and caculate height
+					int rowmask = (1 << Columns) - 1;
+					// Check if move is NOT in row: Columns = RowWidth
+					
+					if (((ORmove >> (row * Columns)) & rowmask) == 0) continue;
+					// Found the row of the move, but reversed (0 = bottom row)
+					int newRow = Rows - 1 - row;
+					yLevelTarget = padding + (1 + newRow) * Spacing + newRow * CircleSize;
+					int col;
+					for (col = 0; col < Columns; col++)
+					{
+						if (((ORmove >> (row * Columns + col)) & 1) == 0) continue;
+						CurrentMoveFieldDrawn = BOARD_MAX - (row * Columns + col);
+					}
+				}
+
+				moveInProgress = true;
+				while (yLevelDrawn < yLevelTarget)
+				{
+					Refresh();
+				}
+				CurrentMoveFieldDrawn = -1;
+				yLevelTarget = -1;
+				Refresh();
+
+				moveInProgress = false;
+			}).Start();
 
 			int result = PlayerWon();
 			switch (result)
@@ -261,6 +349,12 @@ namespace ChessV1.Stormcloud.Connect4
 		const int Spacing = 40;
 		const int padding = 60;
 
+		private bool moveInProgress;
+		private int CurrentMoveFieldDrawn = -1, yLevelDrawn, yLevelTarget;
+		private const int yDeltaDrawn = 15;
+
+		private readonly Brush HoleColor = Brushes.Wheat;
+
 		protected override void OnPaint(PaintEventArgs e)
 		{
 			Graphics g = e.Graphics;
@@ -272,7 +366,7 @@ namespace ChessV1.Stormcloud.Connect4
 				int i = BOARD_MAX - (row * Columns + col); // (reverse for backwards shift)
 				if (((BoardstateYellow >> i) & 1) == 1) return Brushes.Yellow;
 				if (((BoardstateRed >> i) & 1) == 1) return Brushes.Red;
-				if (col == HighlightedCol) return Brushes.Wheat;
+				if (col == HighlightedCol) return HoleColor;
 				return Brushes.Beige;
 			}
 
@@ -281,7 +375,15 @@ namespace ChessV1.Stormcloud.Connect4
 			{
 				for (int col = 0; col < Columns; col++)
 				{
-					g.FillEllipse(ColorOf(row, col), padding + (1+col) * Spacing + col * CircleSize, padding + (1 + row) * Spacing + row * CircleSize, CircleSize, CircleSize);
+					//if(row * Columns + col == CurrentMoveFieldDrawn) g.FillEllipse(Brushes.Crimson, padding + (1 + col) * Spacing + col * CircleSize, padding + (1 + row) * Spacing + row * CircleSize, CircleSize, CircleSize);
+					if (moveInProgress && row * Columns + col == CurrentMoveFieldDrawn)
+					{
+						// Draw Background, too
+						g.FillEllipse(HoleColor, padding + (1 + col) * Spacing + col * CircleSize, padding + (1 + row) * Spacing + row * CircleSize, CircleSize, CircleSize);
+						// Draw the falling tile
+						g.FillEllipse(ColorOf(row, col), padding + (1 + col) * Spacing + col * CircleSize, yLevelDrawn += Math.Min(yDeltaDrawn, yLevelTarget - yLevelDrawn), CircleSize, CircleSize);
+					}
+					else g.FillEllipse(ColorOf(row, col), padding + (1+col) * Spacing + col * CircleSize, padding + (1 + row) * Spacing + row * CircleSize, CircleSize, CircleSize);
 					int i = BOARD_MAX - (row * Columns + col);
 					if(((WinnerMatrix >> i) & 1) == 1) g.DrawEllipse(new Pen(Brushes.Coral, 10f), padding + (1 + col) * Spacing + col * CircleSize, padding + (1 + row) * Spacing + row * CircleSize, CircleSize, CircleSize);
 				}

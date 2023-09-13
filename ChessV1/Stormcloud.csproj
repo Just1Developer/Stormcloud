@@ -102,6 +102,7 @@
     <Compile Include="Stormcloud\Connect4\Connect4UI.Designer.cs">
       <DependentUpon>Connect4UI.cs</DependentUpon>
     </Compile>
+    <Compile Include="Stormcloud\Connect4\EngineWeightMap.cs" />
     <Compile Include="Stormcloud\TicTacToe\TicTacToeEngine.cs" />
     <Compile Include="Stormcloud\TicTacToe\TicTacToeUI.cs">
       <SubType>Form</SubType>
