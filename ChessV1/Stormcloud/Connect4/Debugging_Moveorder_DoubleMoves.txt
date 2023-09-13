@@ -1,0 +1,1905 @@
+
+Yellow:
+...
+0000100
+0011000
+0111000
+0011000
+
+Red:
+0001000
+0010100
+0100100
+1100100
+
+Both:
+0000100001100001110000011000
+0001000001010001001001100100
+000110000X11000X111001111100
+		 X	   X			<- Problem
+
+Move History:
+
+1. [Yellow] Best Column: 4, Row 1, Eval: 0 (0) | Time: 0,7455925s | Binary Move: 1000
+1. >> New states | move: 1000, BoardstateYellow: 1000, BoardstateRed: 0
+2. [Red] Best Column: 5, Row 1, Eval: 0 (0) | Time: 0,7203984s | Binary Move: 100
+2. >> New states | move: 100, BoardstateYellow: 1000, BoardstateRed: 100
+3. [Yellow] Best Column: 4, Row 2, Eval: 0 (0) | Time: 1,1454352s | Binary Move: 10000000000
+3. >> New states | move: 10000000000, BoardstateYellow: 10000001000, BoardstateRed: 100
+4. [Red] Best Column: 5, Row 2, Eval: 0 (0) | Time: 2,5419116s | Binary Move: 1000000000
+4. >> New states | move: 1000000000, BoardstateYellow: 10000001000, BoardstateRed: 1000000100
+5. [Yellow] Best Column: 4, Row 3, Eval: 0 (0) | Time: 2,2155357s | Binary Move: 100000000000000000
+5. >> New states | move: 100000000000000000, BoardstateYellow: 100000010000001000, BoardstateRed: 1000000100
+6. [Red] Best Column: 4, Row 5, Eval: 0 (0) | Time: 5,3546019s | Binary Move: 1000000000000000000000000
+6. >> New states | move: 1000000000000000000000000, BoardstateYellow: 100000010000001000, BoardstateRed: 1000000000000001000000100
+7. [Yellow] Best Column: 3, Row 1, Eval: 0 (0) | Time: 0,345493s | Binary Move: 10000
+7. >> New states | move: 10000, BoardstateYellow: 100000010000011000, BoardstateRed: 1000000000000001000000100
+8. [Red] Best Column: 1, Row 2, Eval: 0 (0) | Time: 0,9450492s | Binary Move: 1000000
+8. >> New states | move: 1000000, BoardstateYellow: 100000010000011000, BoardstateRed: 1000000000000001001000100
+9. [Yellow] Best Column: 3, Row 2, Eval: 0 (0) | Time: 0,6136768s | Binary Move: 100000000000
+9. >> New states | move: 100000000000, BoardstateYellow: 100000110000011000, BoardstateRed: 1000000000000001001000100
+10. [Red] Best Column: 5, Row 3, Eval: 0 (0) | Time: 0,8489404s | Binary Move: 10000000000000000
+10. >> New states | move: 10000000000000000, BoardstateYellow: 100000110000011000, BoardstateRed: 1000000010000001001000100
+11. [Yellow] Best Column: 5, Row 4, Eval: 0 (0) | Time: 0,4185908s | Binary Move: 100000000000000000000000
+11. >> New states | move: 100000000000000000000000, BoardstateYellow: 100000100000110000011000, BoardstateRed: 1000 0000100 0000100 1000100
+12. [Red] Best Column: 2, Row 1, Eval: 0 (0) | Time: 0,2158939s | Binary Move: 100000
+12. >> New states | move: 100000, BoardstateYellow: 100000100000110000011000, BoardstateRed: 1000 0000100 0000100 1100100
+13. [Yellow] Best Column: 3, Row 4, Eval: 0 (0) | Time: 0,4022226s | Binary Move: 1000000000000000000
+13. >> New states | move: 1000000000000000000, BoardstateYellow: 100001100000110000011000, BoardstateRed: 1000 0000100 0000100 1100100
+14. [Red] Best Column: 3, Row 4, Eval: 0 (0) | Time: 0,5748855s | Binary Move: 1000000000000000000
+14. >> New states | move: 1000000000000000000, BoardstateYellow: 100001100000110000011000, BoardstateRed: 1000 0010100 0000100 1100100
+15. [Yellow] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,1453799s | Binary Move: 1000000000000
+15. >> New states | move: 1000000000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000 0010100 0000100 1100100
+16. [Red] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,1890874s | Binary Move: 0100000 0000000
+16. >> New states | move: 0100000 0000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000 0010100 0100100 1100100
+
+After Move 11:
+Yellow:
+0000100
+0001000
+0011000
+0011000
+Red:
+0001000
+0000100
+0000100
+1000100
+Both:
+0001100
+0001100
+0011100
+1011100
+
+After Move 12:
+Yellow:
+0000100
+0001000
+0011000
+0011000
+Red:
+0001000
+0000100
+0000100
+1100100
+Both:
+0001100
+0001100
+0011100
+1111100
+
+
+Extended MoveOrder Log:
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 100
+4/7. 1000
+5/7. 10000
+6/7. 100000
+7/7. 1000000
+Movelist post-ordering:
+1/7. 1000
+2/7. 100
+3/7. 10000
+4/7. 10
+5/7. 100000
+6/7. 1
+7/7. 1000000
+1. [Yellow] Best Column: 4, Row 1, Eval: 0 (0) | Time: 0,7572397s | Binary Move: 1000
+1. >> New states | move: 1000, BoardstateYellow: 1000, BoardstateRed: 0
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 100
+4/7. 10000000000
+5/7. 10000
+6/7. 100000
+7/7. 1000000
+Movelist post-ordering:
+1/7. 10
+2/7. 100000
+3/7. 100
+4/7. 10000
+5/7. 1
+6/7. 1000000
+7/7. 10000000000
+2. [Red] Best Column: 5, Row 1, Eval: 0 (0) | Time: 0,679113s | Binary Move: 100
+2. >> New states | move: 100, BoardstateYellow: 1000, BoardstateRed: 100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 1000000000
+4/7. 10000000000
+5/7. 10000
+6/7. 100000
+7/7. 1000000
+Movelist post-ordering:
+1/7. 10000
+2/7. 100000
+3/7. 10
+4/7. 1
+5/7. 1000000
+6/7. 10000000000
+7/7. 1000000000
+3. [Yellow] Best Column: 4, Row 2, Eval: 0 (0) | Time: 1,1864397s | Binary Move: 10000000000
+3. >> New states | move: 10000000000, BoardstateYellow: 10000001000, BoardstateRed: 100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 1000000000
+4/7. 100000000000000000
+5/7. 10000
+6/7. 100000
+7/7. 1000000
+Movelist post-ordering:
+1/7. 10
+2/7. 100000
+3/7. 10000
+4/7. 1000000000
+5/7. 1
+6/7. 1000000
+7/7. 100000000000000000
+4. [Red] Best Column: 5, Row 2, Eval: 0 (0) | Time: 2,5205453s | Binary Move: 1000000000
+4. >> New states | move: 1000000000, BoardstateYellow: 10000001000, BoardstateRed: 1000000100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 10000000000000000
+4/7. 100000000000000000
+5/7. 10000
+6/7. 100000
+7/7. 1000000
+Movelist post-ordering:
+1/7. 10000
+2/7. 100000
+3/7. 10
+4/7. 1
+5/7. 1000000
+6/7. 100000000000000000
+7/7. 10000000000000000
+5. [Yellow] Best Column: 4, Row 3, Eval: 0 (0) | Time: 2,1988021s | Binary Move: 100000000000000000
+5. >> New states | move: 100000000000000000, BoardstateYellow: 100000010000001000, BoardstateRed: 1000000100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 10000000000000000
+4/7. 1000000000000000000000000
+5/7. 10000
+6/7. 100000
+7/7. 1000000
+Movelist post-ordering:
+1/7. 10
+2/7. 100000
+3/7. 10000
+4/7. 1
+5/7. 1000000
+6/7. 10000000000000000
+7/7. 1000000000000000000000000
+6. [Red] Best Column: 4, Row 5, Eval: 0 (0) | Time: 5,4421271s | Binary Move: 1000000000000000000000000
+6. >> New states | move: 1000000000000000000000000, BoardstateYellow: 100000010000001000, BoardstateRed: 1000000000000001000000100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 10000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 10000
+6/7. 100000
+7/7. 1000000
+Movelist post-ordering:
+1/7. 10000
+2/7. 100000
+3/7. 10
+4/7. 1
+5/7. 1000000
+6/7. 10000000000000000
+7/7. 10000000000000000000000000000000
+7. [Yellow] Best Column: 3, Row 1, Eval: 0 (0) | Time: 0,3509865s | Binary Move: 10000
+7. >> New states | move: 10000, BoardstateYellow: 100000010000011000, BoardstateRed: 1000000000000001000000100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 10000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 100000000000
+6/7. 100000
+7/7. 1000000
+Movelist post-ordering:
+1/7. 10
+2/7. 100000
+3/7. 1
+4/7. 1000000
+5/7. 10000000000000000
+6/7. 10000000000000000000000000000000
+7/7. 100000000000
+8. [Red] Best Column: 1, Row 2, Eval: 0 (0) | Time: 1,0393413s | Binary Move: 1000000
+8. >> New states | move: 1000000, BoardstateYellow: 100000010000011000, BoardstateRed: 1000000000000001001000100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 10000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 100000000000
+6/7. 100000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 100000
+2/7. 100000000000
+3/7. 10
+4/7. 1
+5/7. 10000000000000
+6/7. 10000000000000000
+7/7. 10000000000000000000000000000000
+9. [Yellow] Best Column: 3, Row 2, Eval: 0 (0) | Time: 0,6092371s | Binary Move: 100000000000
+9. >> New states | move: 100000000000, BoardstateYellow: 100000110000011000, BoardstateRed: 1000000000000001001000100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 10000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 1000000000000000000
+6/7. 100000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 10
+2/7. 100000
+3/7. 1
+4/7. 10000000000000
+5/7. 10000000000000000
+6/7. 10000000000000000000000000000000
+7/7. 1000000000000000000
+10. [Red] Best Column: 5, Row 3, Eval: 0 (0) | Time: 0,849954s | Binary Move: 10000000000000000
+10. >> New states | move: 10000000000000000, BoardstateYellow: 100000110000011000, BoardstateRed: 1000000010000001001000100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 100000000000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 1000000000000000000
+6/7. 100000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 100000
+2/7. 10
+3/7. 1
+4/7. 1000000000000000000
+5/7. 10000000000000
+6/7. 100000000000000000000000
+7/7. 10000000000000000000000000000000
+11. [Yellow] Best Column: 5, Row 4, Eval: 0 (0) | Time: 0,3972764s | Binary Move: 100000000000000000000000
+11. >> New states | move: 100000000000000000000000, BoardstateYellow: 100000100000110000011000, BoardstateRed: 1000000010000001001000100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 1000000000000000000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 1000000000000000000
+6/7. 100000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 10
+2/7. 100000
+3/7. 1
+4/7. 10000000000000
+5/7. 10000000000000000000000000000000
+6/7. 1000000000000000000000000000000
+7/7. 1000000000000000000
+12. [Red] Best Column: 2, Row 1, Eval: 0 (0) | Time: 0,2170882s | Binary Move: 100000
+12. >> New states | move: 100000, BoardstateYellow: 100000100000110000011000, BoardstateRed: 1000000010000001001100100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 1000000000000000000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 1000000000000000000
+6/7. 1000000000000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 10
+2/7. 1
+3/7. 1000000000000000000
+4/7. 1000000000000
+5/7. 1000000000000000000000000000000
+6/7. 10000000000000
+7/7. 10000000000000000000000000000000
+13. [Yellow] Best Column: 3, Row 4, Eval: 0 (0) | Time: 0,379297s | Binary Move: 1000000000000000000
+13. >> New states | move: 1000000000000000000, BoardstateYellow: 100001100000110000011000, BoardstateRed: 1000000010000001001100100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 1000000000000000000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 10000000000000000000000000
+6/7. 1000000000000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 10
+2/7. 10000000000000
+3/7. 1
+4/7. 1000000000000
+5/7. 10000000000000000000000000000000
+6/7. 10000000000000000000000000
+7/7. 1000000000000000000000000000000
+14. [Red] Best Column: 3, Row 4, Eval: 0 (0) | Time: 0,5864372s | Binary Move: 1000000000000000000
+14. >> New states | move: 1000000000000000000, BoardstateYellow: 100001100000110000011000, BoardstateRed: 1000001010000001001100100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 1000000000000000000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 10000000000000000000000000
+6/7. 1000000000000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 10
+2/7. 1
+3/7. 1000000000000
+4/7. 10000000000000000000000000
+5/7. 1000000000000000000000000000000
+6/7. 10000000000000
+7/7. 10000000000000000000000000000000
+15. [Yellow] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,1410971s | Binary Move: 1000000000000
+15. >> New states | move: 1000000000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000001010000001001100100
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 1000000000000000000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 10000000000000000000000000
+6/7. 10000000000000000000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 10
+2/7. 1
+3/7. 10000000000000
+4/7. 10000000000000000000000000
+5/7. 10000000000000000000
+6/7. 10000000000000000000000000000000
+7/7. 1000000000000000000000000000000
+16. [Red] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,1854651s | Binary Move: 1000000000000
+16. >> New states | move: 1000000000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000001010001001001100100
+
+
+
+Move 12, the one that seems to go wrong, only:
+Movelist pre-ordering:
+1/7. 1
+2/7. 10
+3/7. 1000000000000000000000000000000
+4/7. 10000000000000000000000000000000
+5/7. 1000000000000000000
+6/7. 100000
+7/7. 10000000000000
+Movelist post-ordering:
+1/7. 10
+2/7. 100000
+3/7. 1
+4/7. 10000000000000
+5/7. 10000000000000000000000000000000
+6/7. 1000000000000000000000000000000
+7/7. 1000000000000000000
+12. [Red] Best Column: 2, Row 1, Eval: 0 (0) | Time: 0,2170882s | Binary Move: 100000
+12. >> New states | move: 100000, BoardstateYellow: 100000100000110000011000, BoardstateRed: 1000000010000001001100100
+
+
+Move 15, where the issue is (discrepancy: C2R3 expected, C2R2 applied):
+Movelist pre-ordering:
+1/7. 0000001
+2/7. 0000010
+3/7. 0000100 0000000 0000000 0000000 0000000
+4/7. 0001000 0000000 0000000 0000000 0000000
+5/7. 0010000 0000000 0000000 0000000
+6/7. 0100000 0000000 -> Column 2, Row 2 (listed as Row 3?): Move Ordering is (surprisingly: doesn't modify move value!) NOT the culprit
+7/7. 1000000 0000000
+Movelist post-ordering:
+1/7. 10
+2/7. 1
+3/7. 1000000000000
+4/7. 10000000000000000000000000
+5/7. 1000000000000000000000000000000
+6/7. 10000000000000
+7/7. 10000000000000000000000000000000
+15. [Yellow] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,1410971s | Binary Move: 1000000000000
+15. >> New states | move: 1000000000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000001010000001001100100
+
+
+
+
+
+
+
+
+
+Extended Log: Move Generation:
+
+In Short: What is happening?
+Moves 13&14 and 15&16 play the same moves, first for Yellow, then for Red. Red doesn't update
+the visual board because yellow is checked first, but in reality both colors occupy a space.
+Although this is not deemed possible by game rules, it's still happening.
+> Move 13&14 play the move Column 3 Row 3 (starting from 1). The move in binary is 0010000 0000000 0000000. Search: 1000000000000000000-
+> Move 15&16 play the move Column 2 Row 2 (starting from 1). The move in binary is 0100000 0000000. Search: 1000000000000-
+Of course, after the yellow move is played, the field should count as occupied.
+Below are multiple excepts from the entire log, the top-most are the most relevant based on newest debugging. So, the deeper, the older.
+
+
+On Final Moves:
+Final moves (the ones that were played) always have a - behind them, so to search for move 1000,
+just search for 1000- in the document. No other print contains a - after binary values, so we get
+no other interference there.
+
+
+Order: YellowBoard | RedBoard >> CombinedBoard. In the log the order of Yellow/Red depends on the Turn Color, there it's myBoard | opponentBoard >> combinedBoard
+Boards perceived during first move generation of move 13 [Yellow]:
+i: 0, col: 0 | state: 0000100 0001000 0011000 0011000 | 0001000 0000100 0000100 1100100 >> 0001100 0001100 0011100 1111100
+Move Played:                  0010000 0000000 0000000 [Yellow Board]
+
+Boards perceived during first move generation of move 14 [Red]:
+i: 0, col: 0 | state: 0000100 0011000 0011000 0011000 | 0001000 0000100 0000100 1100100 >> 0001100 0011100 0011100 1111100
+Move Played:                                                    0010000 0000000 0000000 [Red Board]	-> Invalid move, spot is occupied
+
+Boards perceived during first move generation of move 15 [Yellow]:
+i: 0, col: 0 | state: 0000100 0011000 0011000 0011000 | 0001000 0010100 0000100 1100100 >> 0001100 0011100 0011100 1111100
+Move Played:                          0100000 0000000 [Yellow Board]
+
+Boards perceived during first move generation of move 16 [Red]:
+i: 0, col: 0 | state: 0000100 0011000 0111000 0011000 | 0001000 0010100 0000100 1100100 >> 0001100 0011100 0111100 1111100
+Move Played:                                                            0100000 0000000 [Red Board]	-> Invalid move, spot is occupied
+
+
+
+
+
+For Move 14: Engine Algorithm Evaluation: What the move is inside the AlphaBeta move loop
+Evaluating Binary Move: 10
+Evaluating Binary Move: 1000000 0000000
+Evaluating Binary Move: 1
+Evaluating Binary Move: 0100000 0000000
+Evaluating Binary Move: 1000 0000000 0000000 0000000 0000000
+Evaluating Binary Move: 10000 0000000 0000000 0000000 --> Correct Move (in comparison to the played 10000 0000000 0000000
+
+More in detail:
+1. Evaluating Binary Move: 10000 0000000 0000000 0000000 | myBoard: 01000 0000100 0000100 1100100	[Before Making Move]
+2. Evaluating Binary Move: 10000 0000000 0000000 0000000 | myBoard: 11000 0000100 0000100 1100100	[After Making Move]
+3. Evaluating Binary Move: 10000 0000000 0000000 0000000 | myBoard: 01000 0000100 0000100 1100100	[After Un-Making Move]
+XOR works as intended
+
+Evaluating Binary Move: 100 0000000 0000000 0000000 0000000
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Move 15 log: [2nd Column only (col = (7-2)=5)] What we're looking for: 0100000 0000000
+
+Testing the Rows...
+i: 0, col: 5 | state: 0000100 0011000 0011000 0011000 | 0001000 0010100 0000100 1100100 >> 0001100 0011100 0011100 1111100
+ReverseIndex: 5: 11000011100001110011 - True
+i: 1, col: 5 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 12: 1100001110000 - False
+[Final] row: 1, col: 5 | reverse: 12 | binaryMove: 1000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 0100000 0000000 | Col: 5 Row: 1 | ReverseIndex 1100
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000000000000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 10000000000000000000000000
+6/6 >> 1000000000000
+
+[...]
+
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000000000000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 10000000000000000000000000
+6/7 >> 1000000000000
+7/7 >> 10000000000000
+15. [Yellow] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,1699423s | Binary Move: 1000000000000
+15. >> New states | move: 1000000000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000001010000001001100100
+
+Move 15 log: [Complete]
+Testing the Rows...
+i: 0, col: 0 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 0: 1100001110000111001111100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 1: 110000111000011100111110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 2: 11000011100001110011111 - True
+i: 1, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 9: 1100001110000111 - True
+i: 2, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 16: 110000111 - True
+i: 3, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 23: 11 - True
+i: 4, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 30: 0 - False
+[Final] row: 4, col: 2 | reverse: 30 | binaryMove: 1000000000000000000000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 1000000000000000000000000000000 | Col: 2 Row: 4 | ReverseIndex 11110
+1/3 >> 1
+2/3 >> 10
+3/3 >> 1000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 3: 1100001110000111001111 - True
+i: 1, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 10: 110000111000011 - True
+i: 2, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 17: 11000011 - True
+i: 3, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 1000000000000000000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 4: 110000111000011100111 - True
+i: 1, col: 4 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 11: 11000011100001 - True
+i: 2, col: 4 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 18: 1100001 - True
+i: 3, col: 4 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 25: 0 - False
+[Final] row: 3, col: 4 | reverse: 25 | binaryMove: 10000000000000000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10000000000000000000000000 | Col: 4 Row: 3 | ReverseIndex 11001
+1/5 >> 1
+2/5 >> 10
+3/5 >> 1000000000000000000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 10000000000000000000000000
+Testing the Rows...
+i: 0, col: 5 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 5: 11000011100001110011 - True
+i: 1, col: 5 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 12: 1100001110000 - False
+[Final] row: 1, col: 5 | reverse: 12 | binaryMove: 1000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 1000000000000 | Col: 5 Row: 1 | ReverseIndex 1100
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000000000000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 10000000000000000000000000
+6/6 >> 1000000000000
+Testing the Rows...
+i: 0, col: 6 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 6: 1100001110000111001 - True
+i: 1, col: 6 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 13: 110000111000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000000000000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 10000000000000000000000000
+6/7 >> 1000000000000
+7/7 >> 10000000000000
+15. [Yellow] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,1699423s | Binary Move: 1000000000000
+15. >> New states | move: 1000000000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000001010000001001100100
+
+
+
+
+[Complete Log, 1200+ lines]
+Testing the Rows...
+i: 0, col: 0 | state: 0 | 0 >> 0
+ReverseIndex: 0: 0 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 0 | 0 >> 0
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 0 | 0 >> 0
+ReverseIndex: 1: 0 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 0 | 0 >> 0
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 0 | 0 >> 0
+ReverseIndex: 2: 0 - False
+[Final] row: 0, col: 2 | reverse: 2 | binaryMove: 100 | state: 0 | 0 >> 0
+Adding Legal Move 100 | Col: 2 Row: 0 | ReverseIndex 10
+1/3 >> 1
+2/3 >> 10
+3/3 >> 100
+Testing the Rows...
+i: 0, col: 3 | state: 0 | 0 >> 0
+ReverseIndex: 3: 0 - False
+[Final] row: 0, col: 3 | reverse: 3 | binaryMove: 1000 | state: 0 | 0 >> 0
+Adding Legal Move 1000 | Col: 3 Row: 0 | ReverseIndex 11
+1/4 >> 1
+2/4 >> 10
+3/4 >> 100
+4/4 >> 1000
+Testing the Rows...
+i: 0, col: 4 | state: 0 | 0 >> 0
+ReverseIndex: 4: 0 - False
+[Final] row: 0, col: 4 | reverse: 4 | binaryMove: 10000 | state: 0 | 0 >> 0
+Adding Legal Move 10000 | Col: 4 Row: 0 | ReverseIndex 100
+1/5 >> 1
+2/5 >> 10
+3/5 >> 100
+4/5 >> 1000
+5/5 >> 10000
+Testing the Rows...
+i: 0, col: 5 | state: 0 | 0 >> 0
+ReverseIndex: 5: 0 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 0 | 0 >> 0
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 100
+4/6 >> 1000
+5/6 >> 10000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 0 | 0 >> 0
+ReverseIndex: 6: 0 - False
+[Final] row: 0, col: 6 | reverse: 6 | binaryMove: 1000000 | state: 0 | 0 >> 0
+Adding Legal Move 1000000 | Col: 6 Row: 0 | ReverseIndex 110
+1/7 >> 1
+2/7 >> 10
+3/7 >> 100
+4/7 >> 1000
+5/7 >> 10000
+6/7 >> 100000
+7/7 >> 1000000
+1. [Yellow] Best Column: 4, Row 1, Eval: 0 (0) | Time: 0,7949258s | Binary Move: 1000-
+1. >> New states | move: 1000, BoardstateYellow: 1000, BoardstateRed: 0
+Testing the Rows...
+i: 0, col: 0 | state: 0 | 1000 >> 1000
+ReverseIndex: 0: 1000 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 0 | 1000 >> 1000
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 0 | 1000 >> 1000
+ReverseIndex: 1: 100 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 0 | 1000 >> 1000
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 0 | 1000 >> 1000
+ReverseIndex: 2: 10 - False
+[Final] row: 0, col: 2 | reverse: 2 | binaryMove: 100 | state: 0 | 1000 >> 1000
+Adding Legal Move 100 | Col: 2 Row: 0 | ReverseIndex 10
+1/3 >> 1
+2/3 >> 10
+3/3 >> 100
+Testing the Rows...
+i: 0, col: 3 | state: 0 | 1000 >> 1000
+ReverseIndex: 3: 1 - True
+i: 1, col: 3 | state: 0 | 1000 >> 1000
+ReverseIndex: 10: 0 - False
+[Final] row: 1, col: 3 | reverse: 10 | binaryMove: 10000000000 | state: 0 | 1000 >> 1000
+Adding Legal Move 10000000000 | Col: 3 Row: 1 | ReverseIndex 1010
+1/4 >> 1
+2/4 >> 10
+3/4 >> 100
+4/4 >> 10000000000
+Testing the Rows...
+i: 0, col: 4 | state: 0 | 1000 >> 1000
+ReverseIndex: 4: 0 - False
+[Final] row: 0, col: 4 | reverse: 4 | binaryMove: 10000 | state: 0 | 1000 >> 1000
+Adding Legal Move 10000 | Col: 4 Row: 0 | ReverseIndex 100
+1/5 >> 1
+2/5 >> 10
+3/5 >> 100
+4/5 >> 10000000000
+5/5 >> 10000
+Testing the Rows...
+i: 0, col: 5 | state: 0 | 1000 >> 1000
+ReverseIndex: 5: 0 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 0 | 1000 >> 1000
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 100
+4/6 >> 10000000000
+5/6 >> 10000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 0 | 1000 >> 1000
+ReverseIndex: 6: 0 - False
+[Final] row: 0, col: 6 | reverse: 6 | binaryMove: 1000000 | state: 0 | 1000 >> 1000
+Adding Legal Move 1000000 | Col: 6 Row: 0 | ReverseIndex 110
+1/7 >> 1
+2/7 >> 10
+3/7 >> 100
+4/7 >> 10000000000
+5/7 >> 10000
+6/7 >> 100000
+7/7 >> 1000000
+2. [Red] Best Column: 5, Row 1, Eval: 0 (0) | Time: 0,7166496s | Binary Move: 100-
+2. >> New states | move: 100, BoardstateYellow: 1000, BoardstateRed: 100
+Testing the Rows...
+i: 0, col: 0 | state: 1000 | 100 >> 1100
+ReverseIndex: 0: 1100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 1000 | 100 >> 1100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 1000 | 100 >> 1100
+ReverseIndex: 1: 110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 1000 | 100 >> 1100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 1000 | 100 >> 1100
+ReverseIndex: 2: 11 - True
+i: 1, col: 2 | state: 1000 | 100 >> 1100
+ReverseIndex: 9: 0 - False
+[Final] row: 1, col: 2 | reverse: 9 | binaryMove: 1000000000 | state: 1000 | 100 >> 1100
+Adding Legal Move 1000000000 | Col: 2 Row: 1 | ReverseIndex 1001
+1/3 >> 1
+2/3 >> 10
+3/3 >> 1000000000
+Testing the Rows...
+i: 0, col: 3 | state: 1000 | 100 >> 1100
+ReverseIndex: 3: 1 - True
+i: 1, col: 3 | state: 1000 | 100 >> 1100
+ReverseIndex: 10: 0 - False
+[Final] row: 1, col: 3 | reverse: 10 | binaryMove: 10000000000 | state: 1000 | 100 >> 1100
+Adding Legal Move 10000000000 | Col: 3 Row: 1 | ReverseIndex 1010
+1/4 >> 1
+2/4 >> 10
+3/4 >> 1000000000
+4/4 >> 10000000000
+Testing the Rows...
+i: 0, col: 4 | state: 1000 | 100 >> 1100
+ReverseIndex: 4: 0 - False
+[Final] row: 0, col: 4 | reverse: 4 | binaryMove: 10000 | state: 1000 | 100 >> 1100
+Adding Legal Move 10000 | Col: 4 Row: 0 | ReverseIndex 100
+1/5 >> 1
+2/5 >> 10
+3/5 >> 1000000000
+4/5 >> 10000000000
+5/5 >> 10000
+Testing the Rows...
+i: 0, col: 5 | state: 1000 | 100 >> 1100
+ReverseIndex: 5: 0 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 1000 | 100 >> 1100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000
+4/6 >> 10000000000
+5/6 >> 10000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 1000 | 100 >> 1100
+ReverseIndex: 6: 0 - False
+[Final] row: 0, col: 6 | reverse: 6 | binaryMove: 1000000 | state: 1000 | 100 >> 1100
+Adding Legal Move 1000000 | Col: 6 Row: 0 | ReverseIndex 110
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000
+4/7 >> 10000000000
+5/7 >> 10000
+6/7 >> 100000
+7/7 >> 1000000
+3. [Yellow] Best Column: 4, Row 2, Eval: 0 (0) | Time: 1,2345077s | Binary Move: 10000000000-
+3. >> New states | move: 10000000000, BoardstateYellow: 10000001000, BoardstateRed: 100
+Testing the Rows...
+i: 0, col: 0 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 0: 10000001100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 100 | 10000001000 >> 10000001100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 1: 1000000110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 100 | 10000001000 >> 10000001100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 2: 100000011 - True
+i: 1, col: 2 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 9: 10 - False
+[Final] row: 1, col: 2 | reverse: 9 | binaryMove: 1000000000 | state: 100 | 10000001000 >> 10000001100
+Adding Legal Move 1000000000 | Col: 2 Row: 1 | ReverseIndex 1001
+1/3 >> 1
+2/3 >> 10
+3/3 >> 1000000000
+Testing the Rows...
+i: 0, col: 3 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 3: 10000001 - True
+i: 1, col: 3 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 10: 1 - True
+i: 2, col: 3 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 17: 0 - False
+[Final] row: 2, col: 3 | reverse: 17 | binaryMove: 100000000000000000 | state: 100 | 10000001000 >> 10000001100
+Adding Legal Move 100000000000000000 | Col: 3 Row: 2 | ReverseIndex 10001
+1/4 >> 1
+2/4 >> 10
+3/4 >> 1000000000
+4/4 >> 100000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 4: 1000000 - False
+[Final] row: 0, col: 4 | reverse: 4 | binaryMove: 10000 | state: 100 | 10000001000 >> 10000001100
+Adding Legal Move 10000 | Col: 4 Row: 0 | ReverseIndex 100
+1/5 >> 1
+2/5 >> 10
+3/5 >> 1000000000
+4/5 >> 100000000000000000
+5/5 >> 10000
+Testing the Rows...
+i: 0, col: 5 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 5: 100000 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 100 | 10000001000 >> 10000001100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000
+4/6 >> 100000000000000000
+5/6 >> 10000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 100 | 10000001000 >> 10000001100
+ReverseIndex: 6: 10000 - False
+[Final] row: 0, col: 6 | reverse: 6 | binaryMove: 1000000 | state: 100 | 10000001000 >> 10000001100
+Adding Legal Move 1000000 | Col: 6 Row: 0 | ReverseIndex 110
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000
+4/7 >> 100000000000000000
+5/7 >> 10000
+6/7 >> 100000
+7/7 >> 1000000
+4. [Red] Best Column: 5, Row 2, Eval: 0 (0) | Time: 2,66761s | Binary Move: 1000000000-
+4. >> New states | move: 1000000000, BoardstateYellow: 10000001000, BoardstateRed: 1000000100
+Testing the Rows...
+i: 0, col: 0 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 0: 11000001100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 10000001000 | 1000000100 >> 11000001100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 1: 1100000110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 10000001000 | 1000000100 >> 11000001100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 2: 110000011 - True
+i: 1, col: 2 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 9: 11 - True
+i: 2, col: 2 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 16: 0 - False
+[Final] row: 2, col: 2 | reverse: 16 | binaryMove: 10000000000000000 | state: 10000001000 | 1000000100 >> 11000001100
+Adding Legal Move 10000000000000000 | Col: 2 Row: 2 | ReverseIndex 10000
+1/3 >> 1
+2/3 >> 10
+3/3 >> 10000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 3: 11000001 - True
+i: 1, col: 3 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 10: 1 - True
+i: 2, col: 3 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 17: 0 - False
+[Final] row: 2, col: 3 | reverse: 17 | binaryMove: 100000000000000000 | state: 10000001000 | 1000000100 >> 11000001100
+Adding Legal Move 100000000000000000 | Col: 3 Row: 2 | ReverseIndex 10001
+1/4 >> 1
+2/4 >> 10
+3/4 >> 10000000000000000
+4/4 >> 100000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 4: 1100000 - False
+[Final] row: 0, col: 4 | reverse: 4 | binaryMove: 10000 | state: 10000001000 | 1000000100 >> 11000001100
+Adding Legal Move 10000 | Col: 4 Row: 0 | ReverseIndex 100
+1/5 >> 1
+2/5 >> 10
+3/5 >> 10000000000000000
+4/5 >> 100000000000000000
+5/5 >> 10000
+Testing the Rows...
+i: 0, col: 5 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 5: 110000 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 10000001000 | 1000000100 >> 11000001100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 10000000000000000
+4/6 >> 100000000000000000
+5/6 >> 10000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 10000001000 | 1000000100 >> 11000001100
+ReverseIndex: 6: 11000 - False
+[Final] row: 0, col: 6 | reverse: 6 | binaryMove: 1000000 | state: 10000001000 | 1000000100 >> 11000001100
+Adding Legal Move 1000000 | Col: 6 Row: 0 | ReverseIndex 110
+1/7 >> 1
+2/7 >> 10
+3/7 >> 10000000000000000
+4/7 >> 100000000000000000
+5/7 >> 10000
+6/7 >> 100000
+7/7 >> 1000000
+5. [Yellow] Best Column: 4, Row 3, Eval: 0 (0) | Time: 2,2517939s | Binary Move: 100000000000000000-
+5. >> New states | move: 100000000000000000, BoardstateYellow: 100000010000001000, BoardstateRed: 1000000100
+Testing the Rows...
+i: 0, col: 0 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 0: 100000011000001100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 1: 10000001100000110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 2: 1000000110000011 - True
+i: 1, col: 2 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 9: 100000011 - True
+i: 2, col: 2 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 16: 10 - False
+[Final] row: 2, col: 2 | reverse: 16 | binaryMove: 10000000000000000 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+Adding Legal Move 10000000000000000 | Col: 2 Row: 2 | ReverseIndex 10000
+1/3 >> 1
+2/3 >> 10
+3/3 >> 10000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 3: 100000011000001 - True
+i: 1, col: 3 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 10: 10000001 - True
+i: 2, col: 3 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 17: 1 - True
+i: 3, col: 3 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 24: 0 - False
+[Final] row: 3, col: 3 | reverse: 24 | binaryMove: 1000000000000000000000000 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+Adding Legal Move 1000000000000000000000000 | Col: 3 Row: 3 | ReverseIndex 11000
+1/4 >> 1
+2/4 >> 10
+3/4 >> 10000000000000000
+4/4 >> 1000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 4: 10000001100000 - False
+[Final] row: 0, col: 4 | reverse: 4 | binaryMove: 10000 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+Adding Legal Move 10000 | Col: 4 Row: 0 | ReverseIndex 100
+1/5 >> 1
+2/5 >> 10
+3/5 >> 10000000000000000
+4/5 >> 1000000000000000000000000
+5/5 >> 10000
+Testing the Rows...
+i: 0, col: 5 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 5: 1000000110000 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 10000000000000000
+4/6 >> 1000000000000000000000000
+5/6 >> 10000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+ReverseIndex: 6: 100000011000 - False
+[Final] row: 0, col: 6 | reverse: 6 | binaryMove: 1000000 | state: 1000000100 | 100000010000001000 >> 100000011000001100
+Adding Legal Move 1000000 | Col: 6 Row: 0 | ReverseIndex 110
+1/7 >> 1
+2/7 >> 10
+3/7 >> 10000000000000000
+4/7 >> 1000000000000000000000000
+5/7 >> 10000
+6/7 >> 100000
+7/7 >> 1000000
+6. [Red] Best Column: 4, Row 5, Eval: 0 (0) | Time: 5,6384389s | Binary Move: 1000000000000000000000000-
+6. >> New states | move: 1000000000000000000000000, BoardstateYellow: 100000010000001000, BoardstateRed: 1000000000000001000000100
+Testing the Rows...
+i: 0, col: 0 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 0: 1000000100000011000001100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 1: 100000010000001100000110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 2: 10000001000000110000011 - True
+i: 1, col: 2 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 9: 1000000100000011 - True
+i: 2, col: 2 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 16: 100000010 - False
+[Final] row: 2, col: 2 | reverse: 16 | binaryMove: 10000000000000000 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+Adding Legal Move 10000000000000000 | Col: 2 Row: 2 | ReverseIndex 10000
+1/3 >> 1
+2/3 >> 10
+3/3 >> 10000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 3: 1000000100000011000001 - True
+i: 1, col: 3 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 10: 100000010000001 - True
+i: 2, col: 3 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 17: 10000001 - True
+i: 3, col: 3 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 10000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 4: 100000010000001100000 - False
+[Final] row: 0, col: 4 | reverse: 4 | binaryMove: 10000 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+Adding Legal Move 10000 | Col: 4 Row: 0 | ReverseIndex 100
+1/5 >> 1
+2/5 >> 10
+3/5 >> 10000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 10000
+Testing the Rows...
+i: 0, col: 5 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 5: 10000001000000110000 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 10000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 10000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+ReverseIndex: 6: 1000000100000011000 - False
+[Final] row: 0, col: 6 | reverse: 6 | binaryMove: 1000000 | state: 100000010000001000 | 1000000000000001000000100 >> 1000000100000011000001100
+Adding Legal Move 1000000 | Col: 6 Row: 0 | ReverseIndex 110
+1/7 >> 1
+2/7 >> 10
+3/7 >> 10000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 10000
+6/7 >> 100000
+7/7 >> 1000000
+7. [Yellow] Best Column: 3, Row 1, Eval: 0 (0) | Time: 0,3620385s | Binary Move: 10000-
+7. >> New states | move: 10000, BoardstateYellow: 100000010000011000, BoardstateRed: 1000000000000001000000100
+Testing the Rows...
+i: 0, col: 0 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 0: 1000000100000011000011100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 1: 100000010000001100001110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 2: 10000001000000110000111 - True
+i: 1, col: 2 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 9: 1000000100000011 - True
+i: 2, col: 2 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 16: 100000010 - False
+[Final] row: 2, col: 2 | reverse: 16 | binaryMove: 10000000000000000 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+Adding Legal Move 10000000000000000 | Col: 2 Row: 2 | ReverseIndex 10000
+1/3 >> 1
+2/3 >> 10
+3/3 >> 10000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 3: 1000000100000011000011 - True
+i: 1, col: 3 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 10: 100000010000001 - True
+i: 2, col: 3 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 17: 10000001 - True
+i: 3, col: 3 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 10000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 4: 100000010000001100001 - True
+i: 1, col: 4 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 11: 10000001000000 - False
+[Final] row: 1, col: 4 | reverse: 11 | binaryMove: 100000000000 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+Adding Legal Move 100000000000 | Col: 4 Row: 1 | ReverseIndex 1011
+1/5 >> 1
+2/5 >> 10
+3/5 >> 10000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 100000000000
+Testing the Rows...
+i: 0, col: 5 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 5: 10000001000000110000 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 10000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 100000000000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+ReverseIndex: 6: 1000000100000011000 - False
+[Final] row: 0, col: 6 | reverse: 6 | binaryMove: 1000000 | state: 1000000000000001000000100 | 100000010000011000 >> 1000000100000011000011100
+Adding Legal Move 1000000 | Col: 6 Row: 0 | ReverseIndex 110
+1/7 >> 1
+2/7 >> 10
+3/7 >> 10000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 100000000000
+6/7 >> 100000
+7/7 >> 1000000
+8. [Red] Best Column: 1, Row 2, Eval: 0 (0) | Time: 0,9997947s | Binary Move: 1000000-
+8. >> New states | move: 1000000, BoardstateYellow: 100000010000011000, BoardstateRed: 1000000000000001001000100
+Testing the Rows...
+i: 0, col: 0 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 0: 1000000100000011001011100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 1: 100000010000001100101110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 2: 10000001000000110010111 - True
+i: 1, col: 2 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 9: 1000000100000011 - True
+i: 2, col: 2 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 16: 100000010 - False
+[Final] row: 2, col: 2 | reverse: 16 | binaryMove: 10000000000000000 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+Adding Legal Move 10000000000000000 | Col: 2 Row: 2 | ReverseIndex 10000
+1/3 >> 1
+2/3 >> 10
+3/3 >> 10000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 3: 1000000100000011001011 - True
+i: 1, col: 3 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 10: 100000010000001 - True
+i: 2, col: 3 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 17: 10000001 - True
+i: 3, col: 3 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 10000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 4: 100000010000001100101 - True
+i: 1, col: 4 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 11: 10000001000000 - False
+[Final] row: 1, col: 4 | reverse: 11 | binaryMove: 100000000000 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+Adding Legal Move 100000000000 | Col: 4 Row: 1 | ReverseIndex 1011
+1/5 >> 1
+2/5 >> 10
+3/5 >> 10000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 100000000000
+Testing the Rows...
+i: 0, col: 5 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 5: 10000001000000110010 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 10000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 100000000000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 6: 1000000100000011001 - True
+i: 1, col: 6 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+ReverseIndex: 13: 100000010000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 100000010000011000 | 1000000000000001001000100 >> 1000000100000011001011100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 10000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 100000000000
+6/7 >> 100000
+7/7 >> 10000000000000
+9. [Yellow] Best Column: 3, Row 2, Eval: 0 (0) | Time: 0,6149131s | Binary Move: 100000000000-
+9. >> New states | move: 100000000000, BoardstateYellow: 100000110000011000, BoardstateRed: 1000000000000001001000100
+Testing the Rows...
+i: 0, col: 0 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 0: 1000000100000111001011100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 1: 100000010000011100101110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 2: 10000001000001110010111 - True
+i: 1, col: 2 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 9: 1000000100000111 - True
+i: 2, col: 2 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 16: 100000010 - False
+[Final] row: 2, col: 2 | reverse: 16 | binaryMove: 10000000000000000 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+Adding Legal Move 10000000000000000 | Col: 2 Row: 2 | ReverseIndex 10000
+1/3 >> 1
+2/3 >> 10
+3/3 >> 10000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 3: 1000000100000111001011 - True
+i: 1, col: 3 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 10: 100000010000011 - True
+i: 2, col: 3 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 17: 10000001 - True
+i: 3, col: 3 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 10000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 4: 100000010000011100101 - True
+i: 1, col: 4 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 11: 10000001000001 - True
+i: 2, col: 4 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 18: 1000000 - False
+[Final] row: 2, col: 4 | reverse: 18 | binaryMove: 1000000000000000000 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+Adding Legal Move 1000000000000000000 | Col: 4 Row: 2 | ReverseIndex 10010
+1/5 >> 1
+2/5 >> 10
+3/5 >> 10000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 1000000000000000000
+Testing the Rows...
+i: 0, col: 5 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 5: 10000001000001110010 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 10000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 1000000000000000000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 6: 1000000100000111001 - True
+i: 1, col: 6 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+ReverseIndex: 13: 100000010000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 1000000000000001001000100 | 100000110000011000 >> 1000000100000111001011100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 10000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 1000000000000000000
+6/7 >> 100000
+7/7 >> 10000000000000
+10. [Red] Best Column: 5, Row 3, Eval: 0 (0) | Time: 0,8975014s | Binary Move: 10000000000000000-
+10. >> New states | move: 10000000000000000, BoardstateYellow: 100000110000011000, BoardstateRed: 1000000010000001001000100
+Testing the Rows...
+i: 0, col: 0 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 0: 1000000110000111001011100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 1: 100000011000011100101110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 2: 10000001100001110010111 - True
+i: 1, col: 2 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 9: 1000000110000111 - True
+i: 2, col: 2 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 16: 100000011 - True
+i: 3, col: 2 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 23: 10 - False
+[Final] row: 3, col: 2 | reverse: 23 | binaryMove: 100000000000000000000000 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+Adding Legal Move 100000000000000000000000 | Col: 2 Row: 3 | ReverseIndex 10111
+1/3 >> 1
+2/3 >> 10
+3/3 >> 100000000000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 3: 1000000110000111001011 - True
+i: 1, col: 3 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 10: 100000011000011 - True
+i: 2, col: 3 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 17: 10000001 - True
+i: 3, col: 3 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 100000000000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 4: 100000011000011100101 - True
+i: 1, col: 4 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 11: 10000001100001 - True
+i: 2, col: 4 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 18: 1000000 - False
+[Final] row: 2, col: 4 | reverse: 18 | binaryMove: 1000000000000000000 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+Adding Legal Move 1000000000000000000 | Col: 4 Row: 2 | ReverseIndex 10010
+1/5 >> 1
+2/5 >> 10
+3/5 >> 100000000000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 1000000000000000000
+Testing the Rows...
+i: 0, col: 5 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 5: 10000001100001110010 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 100000000000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 1000000000000000000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 6: 1000000110000111001 - True
+i: 1, col: 6 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+ReverseIndex: 13: 100000011000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 100000110000011000 | 1000000010000001001000100 >> 1000000110000111001011100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 100000000000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 1000000000000000000
+6/7 >> 100000
+7/7 >> 10000000000000
+11. [Yellow] Best Column: 5, Row 4, Eval: 0 (0) | Time: 0,4156353s | Binary Move: 100000000000000000000000-
+11. >> New states | move: 100000000000000000000000, BoardstateYellow: 100000100000110000011000, BoardstateRed: 1000000010000001001000100
+Testing the Rows...
+i: 0, col: 0 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 0: 1100000110000111001011100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 1: 110000011000011100101110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 2: 11000001100001110010111 - True
+i: 1, col: 2 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 9: 1100000110000111 - True
+i: 2, col: 2 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 16: 110000011 - True
+i: 3, col: 2 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 23: 11 - True
+i: 4, col: 2 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 30: 0 - False
+[Final] row: 4, col: 2 | reverse: 30 | binaryMove: 1000000000000000000000000000000 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+Adding Legal Move 1000000000000000000000000000000 | Col: 2 Row: 4 | ReverseIndex 11110
+1/3 >> 1
+2/3 >> 10
+3/3 >> 1000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 3: 1100000110000111001011 - True
+i: 1, col: 3 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 10: 110000011000011 - True
+i: 2, col: 3 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 17: 11000001 - True
+i: 3, col: 3 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 1000000000000000000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 4: 110000011000011100101 - True
+i: 1, col: 4 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 11: 11000001100001 - True
+i: 2, col: 4 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 18: 1100000 - False
+[Final] row: 2, col: 4 | reverse: 18 | binaryMove: 1000000000000000000 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+Adding Legal Move 1000000000000000000 | Col: 4 Row: 2 | ReverseIndex 10010
+1/5 >> 1
+2/5 >> 10
+3/5 >> 1000000000000000000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 1000000000000000000
+Testing the Rows...
+i: 0, col: 5 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 5: 11000001100001110010 - False
+[Final] row: 0, col: 5 | reverse: 5 | binaryMove: 100000 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+Adding Legal Move 100000 | Col: 5 Row: 0 | ReverseIndex 101
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000000000000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 1000000000000000000
+6/6 >> 100000
+Testing the Rows...
+i: 0, col: 6 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 6: 1100000110000111001 - True
+i: 1, col: 6 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+ReverseIndex: 13: 110000011000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 1000000010000001001000100 | 100000100000110000011000 >> 1100000110000111001011100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000000000000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 1000000000000000000
+6/7 >> 100000
+7/7 >> 10000000000000
+12. [Red] Best Column: 2, Row 1, Eval: 0 (0) | Time: 0,2248556s | Binary Move: 100000-
+12. >> New states | move: 100000, BoardstateYellow: 100000100000110000011000, BoardstateRed: 1000000010000001001100100
+Testing the Rows...
+i: 0, col: 0 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 0: 1100000110000111001111100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 1: 110000011000011100111110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 2: 11000001100001110011111 - True
+i: 1, col: 2 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 9: 1100000110000111 - True
+i: 2, col: 2 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 16: 110000011 - True
+i: 3, col: 2 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 23: 11 - True
+i: 4, col: 2 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 30: 0 - False
+[Final] row: 4, col: 2 | reverse: 30 | binaryMove: 1000000000000000000000000000000 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+Adding Legal Move 1000000000000000000000000000000 | Col: 2 Row: 4 | ReverseIndex 11110
+1/3 >> 1
+2/3 >> 10
+3/3 >> 1000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 3: 1100000110000111001111 - True
+i: 1, col: 3 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 10: 110000011000011 - True
+i: 2, col: 3 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 17: 11000001 - True
+i: 3, col: 3 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 1000000000000000000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 4: 110000011000011100111 - True
+i: 1, col: 4 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 11: 11000001100001 - True
+i: 2, col: 4 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 18: 1100000 - False
+[Final] row: 2, col: 4 | reverse: 18 | binaryMove: 1000000000000000000 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+Adding Legal Move 1000000000000000000 | Col: 4 Row: 2 | ReverseIndex 10010
+1/5 >> 1
+2/5 >> 10
+3/5 >> 1000000000000000000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 1000000000000000000
+Testing the Rows...
+i: 0, col: 5 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 5: 11000001100001110011 - True
+i: 1, col: 5 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 12: 1100000110000 - False
+[Final] row: 1, col: 5 | reverse: 12 | binaryMove: 1000000000000 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+Adding Legal Move 1000000000000 | Col: 5 Row: 1 | ReverseIndex 1100
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000000000000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 1000000000000000000
+6/6 >> 1000000000000
+Testing the Rows...
+i: 0, col: 6 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 6: 1100000110000111001 - True
+i: 1, col: 6 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+ReverseIndex: 13: 110000011000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 100000100000110000011000 | 1000000010000001001100100 >> 1100000110000111001111100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000000000000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 1000000000000000000
+6/7 >> 1000000000000
+7/7 >> 10000000000000
+13. [Yellow] Best Column: 3, Row 4, Eval: 0 (0) | Time: 0,3928396s | Binary Move: 1000000000000000000-
+13. >> New states | move: 1000000000000000000, BoardstateYellow: 100001100000110000011000, BoardstateRed: 1000000010000001001100100
+--14--
+Testing the Rows...
+i: 0, col: 0 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 0: 1100001110000111001111100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 1: 110000111000011100111110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 2: 11000011100001110011111 - True
+i: 1, col: 2 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 9: 1100001110000111 - True
+i: 2, col: 2 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 16: 110000111 - True
+i: 3, col: 2 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 23: 11 - True
+i: 4, col: 2 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 30: 0 - False
+[Final] row: 4, col: 2 | reverse: 30 | binaryMove: 1000000000000000000000000000000 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+Adding Legal Move 0000100 0000000 0000000 0000000 0000000 | Col: 2 Row: 4 | ReverseIndex 11110
+1/3 >> 1
+2/3 >> 10
+3/3 >> 1000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 3: 1100001110000111001111 - True
+i: 1, col: 3 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 10: 110000111000011 - True
+i: 2, col: 3 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 17: 11000011 - True
+i: 3, col: 3 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 1000000000000000000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 4: 110000111000011100111 - True
+i: 1, col: 4 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 11: 11000011100001 - True
+i: 2, col: 4 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 18: 1100001 - True
+i: 3, col: 4 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 25: 0 - False
+[Final] row: 3, col: 4 | reverse: 25 | binaryMove: 10000000000000000000000000 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+Adding Legal Move 0010000 0000000 0000000 0000000 | Col: 4 Row: 3 | ReverseIndex 11001
+1/5 >> 1
+2/5 >> 10
+3/5 >> 1000000000000000000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 10000000000000000000000000
+Testing the Rows...
+i: 0, col: 5 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 5: 11000011100001110011 - True
+i: 1, col: 5 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 12: 1100001110000 - False
+[Final] row: 1, col: 5 | reverse: 12 | binaryMove: 1000000000000 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+Adding Legal Move 1000000000000 | Col: 5 Row: 1 | ReverseIndex 1100
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000000000000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 10000000000000000000000000
+6/6 >> 1000000000000
+Testing the Rows...
+i: 0, col: 6 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 6: 1100001110000111001 - True
+i: 1, col: 6 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+ReverseIndex: 13: 110000111000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 1000000010000001001100100 | 100001100000110000011000 >> 1100001110000111001111100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000000000000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 0010000 0000000 0000000 0000000	->  ??? Where does the other move come from?
+6/7 >> 0100000 0000000
+7/7 >> 1000000 0000000
+14. [Red] Best Column: 3, Row 4, Eval: 0 (0) | Time: 0,5910316s | Binary Move: 1000000000000000000-   0010000 0000000 0000000 (invalid)
+14. >> New states | move: 1000000000000000000, BoardstateYellow: 100001100000110000011000, BoardstateRed: 1000001010000001001100100
+Testing the Rows...
+i: 0, col: 0 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 0: 1100001110000111001111100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 1: 110000111000011100111110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 2: 11000011100001110011111 - True
+i: 1, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 9: 1100001110000111 - True
+i: 2, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 16: 110000111 - True
+i: 3, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 23: 11 - True
+i: 4, col: 2 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 30: 0 - False
+[Final] row: 4, col: 2 | reverse: 30 | binaryMove: 1000000000000000000000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 1000000000000000000000000000000 | Col: 2 Row: 4 | ReverseIndex 11110
+1/3 >> 1
+2/3 >> 10
+3/3 >> 1000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 3: 1100001110000111001111 - True
+i: 1, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 10: 110000111000011 - True
+i: 2, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 17: 11000011 - True
+i: 3, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 1000000000000000000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 4: 110000111000011100111 - True
+i: 1, col: 4 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 11: 11000011100001 - True
+i: 2, col: 4 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 18: 1100001 - True
+i: 3, col: 4 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 25: 0 - False
+[Final] row: 3, col: 4 | reverse: 25 | binaryMove: 10000000000000000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10000000000000000000000000 | Col: 4 Row: 3 | ReverseIndex 11001
+1/5 >> 1
+2/5 >> 10
+3/5 >> 1000000000000000000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 10000000000000000000000000
+Testing the Rows...
+i: 0, col: 5 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 5: 11000011100001110011 - True
+i: 1, col: 5 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 12: 1100001110000 - False
+[Final] row: 1, col: 5 | reverse: 12 | binaryMove: 1000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 1000000000000 | Col: 5 Row: 1 | ReverseIndex 1100
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000000000000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 10000000000000000000000000
+6/6 >> 1000000000000
+Testing the Rows...
+i: 0, col: 6 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 6: 1100001110000111001 - True
+i: 1, col: 6 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+ReverseIndex: 13: 110000111000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 100001100000110000011000 | 1000001010000001001100100 >> 1100001110000111001111100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000000000000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 10000000000000000000000000
+6/7 >> 1000000000000
+7/7 >> 10000000000000
+15. [Yellow] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,1418229s | Binary Move: 1000000000000-
+15. >> New states | move: 1000000000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000001010000001001100100
+Testing the Rows...
+i: 0, col: 0 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 0: 1100001110001111001111100 - False
+[Final] row: 0, col: 0 | reverse: 0 | binaryMove: 1 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+Adding Legal Move 1 | Col: 0 Row: 0 | ReverseIndex 0
+1/1 >> 1
+Testing the Rows...
+i: 0, col: 1 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 1: 110000111000111100111110 - False
+[Final] row: 0, col: 1 | reverse: 1 | binaryMove: 10 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+Adding Legal Move 10 | Col: 1 Row: 0 | ReverseIndex 1
+1/2 >> 1
+2/2 >> 10
+Testing the Rows...
+i: 0, col: 2 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 2: 11000011100011110011111 - True
+i: 1, col: 2 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 9: 1100001110001111 - True
+i: 2, col: 2 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 16: 110000111 - True
+i: 3, col: 2 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 23: 11 - True
+i: 4, col: 2 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 30: 0 - False
+[Final] row: 4, col: 2 | reverse: 30 | binaryMove: 1000000000000000000000000000000 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+Adding Legal Move 1000000000000000000000000000000 | Col: 2 Row: 4 | ReverseIndex 11110
+1/3 >> 1
+2/3 >> 10
+3/3 >> 1000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 3 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 3: 1100001110001111001111 - True
+i: 1, col: 3 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 10: 110000111000111 - True
+i: 2, col: 3 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 17: 11000011 - True
+i: 3, col: 3 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 24: 1 - True
+i: 4, col: 3 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 31: 0 - False
+[Final] row: 4, col: 3 | reverse: 31 | binaryMove: 10000000000000000000000000000000 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+Adding Legal Move 10000000000000000000000000000000 | Col: 3 Row: 4 | ReverseIndex 11111
+1/4 >> 1
+2/4 >> 10
+3/4 >> 1000000000000000000000000000000
+4/4 >> 10000000000000000000000000000000
+Testing the Rows...
+i: 0, col: 4 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 4: 110000111000111100111 - True
+i: 1, col: 4 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 11: 11000011100011 - True
+i: 2, col: 4 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 18: 1100001 - True
+i: 3, col: 4 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 25: 0 - False
+[Final] row: 3, col: 4 | reverse: 25 | binaryMove: 10000000000000000000000000 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+Adding Legal Move 10000000000000000000000000 | Col: 4 Row: 3 | ReverseIndex 11001
+1/5 >> 1
+2/5 >> 10
+3/5 >> 1000000000000000000000000000000
+4/5 >> 10000000000000000000000000000000
+5/5 >> 10000000000000000000000000
+Testing the Rows...
+i: 0, col: 5 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 5: 11000011100011110011 - True
+i: 1, col: 5 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 12: 1100001110001 - True
+i: 2, col: 5 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 19: 110000 - False
+[Final] row: 2, col: 5 | reverse: 19 | binaryMove: 10000000000000000000 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+Adding Legal Move 10000000000000000000 | Col: 5 Row: 2 | ReverseIndex 10011
+1/6 >> 1
+2/6 >> 10
+3/6 >> 1000000000000000000000000000000
+4/6 >> 10000000000000000000000000000000
+5/6 >> 10000000000000000000000000
+6/6 >> 10000000000000000000
+Testing the Rows...
+i: 0, col: 6 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 6: 1100001110001111001 - True
+i: 1, col: 6 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+ReverseIndex: 13: 110000111000 - False
+[Final] row: 1, col: 6 | reverse: 13 | binaryMove: 10000000000000 | state: 1000001010000001001100100 | 100001100001110000011000 >> 1100001110001111001111100
+Adding Legal Move 10000000000000 | Col: 6 Row: 1 | ReverseIndex 1101
+1/7 >> 1
+2/7 >> 10
+3/7 >> 1000000000000000000000000000000
+4/7 >> 10000000000000000000000000000000
+5/7 >> 10000000000000000000000000
+6/7 >> 10000000000000000000
+7/7 >> 10000000000000
+16. [Red] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,191453s | Binary Move: 1000000000000-
+16. >> New states | move: 1000000000000, BoardstateYellow: 100001100001110000011000, BoardstateRed: 1000001010001001001100100

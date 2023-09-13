@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ChessV1.Stormcloud.TicTacToe;
+using ChessV1.Stormcloud.Connect4;
 
 namespace ChessUI
 {
@@ -18,8 +20,11 @@ namespace ChessUI
 			Application.SetCompatibleTextRenderingDefault(false);
 			//new Stormcloud.Stormcloud3();
 			//new Stormcloud.Stormcloud3(false);
-			new Stormcloud.Stormcloud3(4);
-			//Application.Run(new Form1());
+			//new Stormcloud.Stormcloud3(4);
+
+			//For Chess: Application.Run(new Form1());
+			//Application.Run(new TicTacToeUI());
+			Application.Run(new Connect4UI(6, 7));
 		}
 	}
 }

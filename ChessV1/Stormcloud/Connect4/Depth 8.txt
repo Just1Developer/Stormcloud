@@ -1,0 +1,100 @@
+Depth 8
+
+   1. [Yellow] Best Column: 4, Row 1, Eval: 0 (0) | Time: 0,3098959s | Binary Move: 1000-
+   1. >> New states | move: 1000, BoardstateYellow: 1000, BoardstateRed: 0
+   2. [Red] Best Column: 5, Row 1, Eval: 0 (0) | Time: 0,2915411s | Binary Move: 100-
+   2. >> New states | move: 100, BoardstateYellow: 1000, BoardstateRed: 100
+   3. [Yellow] Best Column: 6, Row 1, Eval: 0 (0) | Time: 0,6994478s | Binary Move: 10-
+   3. >> New states | move: 10, BoardstateYellow: 1010, BoardstateRed: 100
+   4. [Red] Best Column: 5, Row 2, Eval: 0 (0) | Time: 0,7762783s | Binary Move: 1000000000-
+   4. >> New states | move: 1000000000, BoardstateYellow: 1010, BoardstateRed: 1000000100
+   5. [Yellow] Best Column: 4, Row 2, Eval: 0 (0) | Time: 1,5840655s | Binary Move: 10000000000-
+   5. >> New states | move: 10000000000, BoardstateYellow: 10000001010, BoardstateRed: 1000000100
+   6. [Red] Best Column: 3, Row 1, Eval: 0 (0) | Time: 1,9159281s | Binary Move: 10000-
+   6. >> New states | move: 10000, BoardstateYellow: 10000001010, BoardstateRed: 1000010100
+   7. [Yellow] Best Column: 6, Row 2, Eval: 0 (0) | Time: 1,6575529s | Binary Move: 100000000-
+   7. >> New states | move: 100000000, BoardstateYellow: 10100001010, BoardstateRed: 1000010100
+   8. [Red] Best Column: 3, Row 2, Eval: 0 (0) | Time: 1,7914939s | Binary Move: 100000000000-
+   8. >> New states | move: 100000000000, BoardstateYellow: 10100001010, BoardstateRed: 101000010100
+   9. [Yellow] Best Column: 6, Row 3, Eval: 0 (0) | Time: 1,9092337s | Binary Move: 1000000000000000-
+   9. >> New states | move: 1000000000000000, BoardstateYellow: 1000010100001010, BoardstateRed: 101000010100
+   10. [Red] Best Column: 6, Row 4, Eval: 0 (0) | Time: 1,9114444s | Binary Move: 10000000000000000000000-
+   10. >> New states | move: 10000000000000000000000, BoardstateYellow: 1000010100001010, BoardstateRed: 10000000000101000010100
+   11. [Yellow] Best Column: 4, Row 3, Eval: 0 (0) | Time: 1,3714969s | Binary Move: 100000000000000000-
+   11. >> New states | move: 100000000000000000, BoardstateYellow: 101000010100001010, BoardstateRed: 10000000000101000010100
+   12. [Red] Best Column: 4, Row 4, Eval: 0 (0) | Time: 1,3787551s | Binary Move: 1000000000000000000000000-
+   12. >> New states | move: 1000000000000000000000000, BoardstateYellow: 101000010100001010, BoardstateRed: 1010000000000101000010100
+   13. [Yellow] Best Column: 1, Row 1, Eval: 0 (0) | Time: 0,8038989s | Binary Move: 1000000-
+   13. >> New states | move: 1000000, BoardstateYellow: 101000010101001010, BoardstateRed: 1010000000000101000010100
+   14. [Red] Best Column: 5, Row 3, Eval: 0 (0) | Time: 0,5381615s | Binary Move: 10000000000000000-
+   14. >> New states | move: 10000000000000000, BoardstateYellow: 101000010101001010, BoardstateRed: 1010000010000101000010100
+   15. [Yellow] Best Column: 5, Row 4, Eval: 0 (0) | Time: 0,4098507s | Binary Move: 100000000000000000000000-
+   15. >> New states | move: 100000000000000000000000, BoardstateYellow: 100000101000010101001010, BoardstateRed: 1010000010000101000010100
+   16. [Red] Best Column: 3, Row 3, Eval: 0 (0) | Time: 0,5041839s | Binary Move: 1000000000000000000-
+   16. >> New states | move: 1000000000000000000, BoardstateYellow: 100000101000010101001010, BoardstateRed: 1010001010000101000010100
+   17. [Yellow] Best Column: 3, Row 4, Eval: 0 (0) | Time: 0,509292s | Binary Move: 10000000000000000000000000-
+   17. >> New states | move: 10000000000000000000000000, BoardstateYellow: 10100000101000010101001010, BoardstateRed: 1010001010000101000010100
+   18. [Red] Best Column: 5, Row 5, Eval: 0 (0) | Time: 0,3820036s | Binary Move: 1000000000000000000000000000000-
+   18. >> New states | move: 1000000000000000000000000000000, BoardstateYellow: 10100000101000010101001010, BoardstateRed: 1000001010001010000101000010100
+   19. [Yellow] Best Column: 7, Row 1, Eval: 0 (0) | Time: 0,129468s | Binary Move: 1-
+   19. >> New states | move: 1, BoardstateYellow: 10100000101000010101001011, BoardstateRed: 1000001010001010000101000010100
+   20. [Red] Best Column: 4, Row 5, Eval: 0 (0) | Time: 0,3440037s | Binary Move: 10000000000000000000000000000000-
+   20. >> New states | move: 10000000000000000000000000000000, BoardstateYellow: 10100000101000010101001011, BoardstateRed: 11000001010001010000101000010100
+   21. [Yellow] Best Column: 3, Row 5, Eval: 0 (0) | Time: 0,1731208s | Binary Move: 100000000000000000000000000000000-
+   21. >> New states | move: 100000000000000000000000000000000, BoardstateYellow: 100000010100000101000010101001011, BoardstateRed: 11000001010001010000101000010100
+   22. [Red] Best Column: 2, Row 1, Eval: 0 (0) | Time: 0,1482559s | Binary Move: 100000-
+   22. >> New states | move: 100000, BoardstateYellow: 100000010100000101000010101001011, BoardstateRed: 11000001010001010000101000110100
+   23. [Yellow] Best Column: 2, Row 2, Eval: 0 (0) | Time: 0,1122949s | Binary Move: 1000000000000-
+   23. >> New states | move: 1000000000000, BoardstateYellow: 100000010100000101001010101001011, BoardstateRed: 11000001010001010000101000110100
+   24. [Red] Best Column: 1, Row 2, Eval: 0 (0) | Time: 0,2972967s | Binary Move: 10000000000000-
+   24. >> New states | move: 10000000000000, BoardstateYellow: 100000010100000101001010101001011, BoardstateRed: 11000001010001010010101000110100
+   25. [Yellow] Best Column: 2, Row 3, Eval: 0 (0) | Time: 0,2913731s | Binary Move: 10000000000000000000-
+   25. >> New states | move: 10000000000000000000, BoardstateYellow: 100000010100010101001010101001011, BoardstateRed: 11000001010001010010101000110100
+   26. [Red] Best Column: 1, Row 3, Eval: 0 (0) | Time: 0,1373371s | Binary Move: 100000000000000000000-
+   26. >> New states | move: 100000000000000000000, BoardstateYellow: 100000010100010101001010101001011, BoardstateRed: 11000001010101010010101000110100
+   27. [Yellow] Best Column: 2, Row 4, Eval: 0 (0) | Time: 0,0800947s | Binary Move: 100000000000000000000000000-
+   27. >> New states | move: 100000000000000000000000000, BoardstateYellow: 100000110100010101001010101001011, BoardstateRed: 11000001010101010010101000110100
+   28. [Red] Best Column: 2, Row 5, Eval: 0 (0) | Time: 0,0369433s | Binary Move: 1000000000000000000000000000000000-
+   28. >> New states | move: 1000000000000000000000000000000000, BoardstateYellow: 100000110100010101001010101001011, BoardstateRed: 1011000001010101010010101000110100
+   29. [Yellow] Best Column: 1, Row 4, Eval: 0 (0) | Time: 0,1031594s | Binary Move: 1000000000000000000000000000-
+   29. >> New states | move: 1000000000000000000000000000, BoardstateYellow: 100001110100010101001010101001011, BoardstateRed: 1011000001010101010010101000110100
+   30. [Red] Best Column: 4, Row 6, Eval: 0 (0) | Time: 0,0522301s | Binary Move: 100000000000000000000000000000000000000-
+   30. >> New states | move: 100000000000000000000000000000000000000, BoardstateYellow: 100001110100010101001010101001011, BoardstateRed: 100001011000001010101010010101000110100
+ok 31. [Yellow] Best Column: 5, Row 6, Eval: 0 (0) | Time: 0,0143418s | Binary Move: 100 0000000 0000000 0000000 0000000 0000000-
+ok 31. >> New states | move: 10000000000000000000000000000000000000, BoardstateYellow: 10000100001110100010101001010101001011, BoardstateRed: 100001011000001010101010010101000110100
+   32. [Red] Best Column: 1, Row 5, Eval: 0 (0) | Time: 0,0049875s | Binary Move: 10000000000000000000000000000000000-
+   32. >> New states | move: 10000000000000000000000000000000000, BoardstateYellow: 10000100001110100010101001010101001011, BoardstateRed: 100011011000001010101010010101000110100
+ok 33. [Yellow] Best Column: 1, Row 6, Eval: 0 (0) | Time: 0,0019975s | Binary Move: 100000000000000000000000000000000000000000-
+ok 33. >> New states | move: 100000000000000000000000000000000000000000, BoardstateYellow: 100010000100001110100010101001010101001011, BoardstateRed: 100011011000001010101010010101000110100
+   34. [Red] Best Column: 7, Row 2, Eval: 0 (0) | Time: 0,0009978s | Binary Move: 10000000-
+   34. >> New states | move: 10000000, BoardstateYellow: 100010000100001110100010101001010101001011, BoardstateRed: 100011011000001010101010010101010110100
+?? 35. [Yellow] Best Column: -1, Row -1, Eval: 0 (0) | Time: 0s | Binary Move: 0-
+?? 35. >> New states | move: 0, BoardstateYellow: 100010000100001110100010101001010101001011, BoardstateRed: 100011011000001010101010010101010110100
+   36. [Red] Best Column: 7, Row 3, Eval: 0 (0) | Time: 0s | Binary Move: 100000000000000-
+   36. >> New states | move: 100000000000000, BoardstateYellow: 100010000100001110100010101001010101001011, BoardstateRed: 100011011000001010101010110101010110100
+
+Red wins: 2 Yellows are skipped at the end. 30 moves are normal. Then, in 1 frame, 3 red and 2* yellow are added. White on top of a red
+So 35. is the problem
+
+Move 35:
+Movelist post-ordering:
+1/4.       1 0000000 0000000
+2/4.      10 0000000 0000000 0000000 0000000
+3/4. 0100000 0000000 0000000 0000000 0000000 0000000
+4/4.   10000 0000000 0000000 0000000 0000000 0000000
+Colums: 2, 3, 6, 7
+
+Calculating move 35... | Moves: 4
+Score: -999999 | move: 100000000000000	-> Best Move
+Score: -1000005 | move: 100000000000000000000000000000
+Score: -1000005 | move: 10000000000000000000000000000000000000000
+Score: -1000005 | move: 1000000000000000000000000000000000000000
+Calculating move 35... | moves: 4 | bestscore: -999999 | bestMove: 0
+
+
+1010100
+1000010
+100101#
+00001#0
+0010#01
+011#001

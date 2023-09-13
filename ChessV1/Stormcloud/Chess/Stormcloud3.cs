@@ -47,7 +47,7 @@ namespace Stormcloud
 	 * Game (Notations):
 		1. e3 Nf6				Book		|		 Book
 		2. Qe2 d5				Inaccuracy	|		 Good
-		3. Qb5+ c6				Inaccuracy	|	Excellent		
+		3. Qb5+ c6				Inaccuracy	|	Excellent
 		4. Qc5 e5				Inaccuracy	|		 Best
 		5. Qc3 d4				Best		|		 Good
 		6. exd4 Qd5				Good		|	  Mistake
