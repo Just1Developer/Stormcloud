@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Drawing;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -63,8 +61,8 @@ namespace ChessV1.Stormcloud.Connect4
 			this.Size = new System.Drawing.Size(2 * padding + BoardWidth + 5 * CircleSize, 2 * padding + BoardHeight);
 
 			SetMasks();
-			Engine1 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.DefaultPreset2);
-			Engine2 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.DefaultPreset2);
+			Engine1 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.HighestEloEngineBoard);
+			Engine2 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.HighestEloEngineBoard);
 
 			/* Preset Combat Points: Complete Table in excel file
 			 *	Red\/  | Yellow	->	|	DefaultPreset_Old	|	DefaultPreset1	 |	 DefaultPreset2

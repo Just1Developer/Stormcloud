@@ -19,6 +19,11 @@ namespace ChessV1.Stormcloud.Connect4
 		public double WEIGHT_NEIGHBOR_OWNED;   // Owned by me
 		public double WEIGHT_NEIGHBOR_TAKEN;  // Taken by opponent
 
+		public static EngineWeightMap HighestEloEngineBoard
+		{
+			get => DefaultPreset1;	// Might change here based on more Weightmaps, but this always returns the best known engine map.
+		}
+
 		public static EngineWeightMap DefaultPreset1 = new EngineWeightMap()
 		{
 			WEIGHT_SCORE_OWN = 1.2,                    // yes: 1.2
