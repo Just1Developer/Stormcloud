@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ChessV1.Stormcloud.Connect4
@@ -20,6 +21,16 @@ namespace ChessV1.Stormcloud.Connect4
 
 		private Connect4Engine Engine1, Engine2;
 		private const int ENGINE_DEPTH = 8;// apparently some maxDepth is actually needed -1; "Strong" would be 10-11, fast is 7 (no)
+
+		/// <summary>
+		/// If the time for the move calculated is less than that, it will start a new calculation at higher depth. <br/>
+		/// Careful, as once the new calc starts, it cannot be stopped, which means...
+		/// </summary>
+		private const int MaxMSEngine = 2000;
+		// perhaps add a deadline into the engine (alphabeta method) and it just refuses method calls and immediately returns upon call and score setting inside the loop (skips bestmove)
+		// For this we would need a temp bestmove and a sign if it was cancelled, though.
+		// Using Top 3 moves we can also escape the deadline beforehand if it 'finished' calculating or the best move is the only non-mate move.
+		//   -> Essentially: If the second best move is Forced Mate or there is only 1 move left, it makes no sense to calculate further. Thus, escape the timer before the deadline is up.
 
 		private readonly int BoardWidth, BoardHeight;
 
@@ -232,13 +243,7 @@ namespace ChessV1.Stormcloud.Connect4
 			HighlightedCol = x / pair;
 		}
 
-		// If the time for the move calculated is less than that, it will start a new calculation at higher depth.
-		// Careful, as once the new calc starts, it cannot be stopped, which means...
-		private const int maxMSEngine = 2000;
-		// perhaps add a deadline into the engine and it just refuses method calls and immediately returns upon call and score setting inside the loop (skips bestmove)
-		// For this we would need a temp bestmove and a sign if it was cancelled, though.
-
-		void PlayNextMoveComputer()
+		async Task PlayNextMoveComputer()
 		{
 			if(moveInProgress) return;
 			long myBoard, opponentBoard;
@@ -262,7 +267,14 @@ namespace ChessV1.Stormcloud.Connect4
 				return;
 			}
 
-			Move bestMove = Engine.BestMove(myBoard, opponentBoard, _Turn == Turn.Red, maxMS: maxMSEngine);
+			Move bestMove = new Move();
+			await Task.Run(() =>
+			{
+				moveInProgress = true;
+				bestMove = Engine.BestMove(myBoard, opponentBoard, _Turn == Turn.Red, maxMS: MaxMSEngine);
+				moveInProgress = false;
+			});
+			if (bestMove.BinaryMove == 0L) return;
 			
 			Console.WriteLine($"   {move++}. [{_Turn}] Best Column: {bestMove.Column}, Row {bestMove.Row}, Eval: {bestMove.EvaluationResult} ({bestMove.Eval}) | Time: {bestMove.TimeSecs}s | Binary Move: {Convert.ToString(bestMove.BinaryMove, 2)}-");
 			Shown_Eval = bestMove.EvaluationResult;
@@ -272,7 +284,7 @@ namespace ChessV1.Stormcloud.Connect4
 		public static int move = 1;
 
 		void play(int reverseIndex) => play(1L << reverseIndex);
-		void play(long ORmove)
+		async Task play(long ORmove)
 		{
 			if (moveInProgress) return;
 			if (_Turn == Turn.Yellow)
@@ -289,7 +301,8 @@ namespace ChessV1.Stormcloud.Connect4
 			// If nothing has changed, no need to re-run it
 			if(ORmove == 0) return;
 
-			new Thread(() => {
+			await Task.Run(() =>
+			{
 				// Move animation
 				yLevelDrawn = -yDeltaDrawn;
 				yLevelTarget = -1;
@@ -298,7 +311,7 @@ namespace ChessV1.Stormcloud.Connect4
 					// get row reversed index and caculate height
 					int rowmask = (1 << Columns) - 1;
 					// Check if move is NOT in row: Columns = RowWidth
-					
+
 					if (((ORmove >> (row * Columns)) & rowmask) == 0) continue;
 					// Found the row of the move, but reversed (0 = bottom row)
 					int newRow = Rows - 1 - row;
@@ -316,12 +329,13 @@ namespace ChessV1.Stormcloud.Connect4
 				{
 					Refresh();
 				}
+
 				CurrentMoveFieldDrawn = -1;
 				yLevelTarget = -1;
 				Refresh();
 
 				moveInProgress = false;
-			}).Start();
+			});
 
 			int result = PlayerWon();
 			switch (result)
