@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Forms;
 
 namespace ChessV1.Stormcloud.Connect4
 {
@@ -38,7 +37,7 @@ namespace ChessV1.Stormcloud.Connect4
 			this.Rows = Rows;
 			this.Columns = Columns;
 			this.BOARD_MAX = Rows * Columns - 1;
-			this.CC_FinalDepth = maxDepth; //(maxDepth & 1) == 1 ? maxDepth + 1 : maxDepth;
+			this.CC_FinalDepth = maxDepth;
 			this.MASK_ROW = MASK_ROW;
 			this.MASK_COL = MASK_COL;
 			this.MASK_DIAG1 = MASK_DIAG1;
@@ -55,7 +54,7 @@ namespace ChessV1.Stormcloud.Connect4
 			}
 		}
 
-		public bool IsInUse = false;	// Add multithreading
+		public bool IsInUse;	// Perhaps add multithreading
 
 		public Move BestMove(long myBoard, long opponentBoard, int maxDepth = -1, int maxMS = -1)
 		{
@@ -67,10 +66,9 @@ namespace ChessV1.Stormcloud.Connect4
 			DateTime before = DateTime.Now;
 			int oldDepth = CC_FinalDepth;
 			IsInUse = true;
-			if(maxDepth >= 2) CC_FinalDepth = maxDepth; //(maxDepth & 1) == 1 ? maxDepth + 1 : maxDepth;
+			if(maxDepth >= 2) CC_FinalDepth = maxDepth;
 			CC_Eval = 0;
 			CC_Failsoft_BestMove = 0L;
-			//CC_IterativeDeepening(myBoard, opponentBoard);
 			do
 			{
 				CC_FailsoftAlphaBeta(myBoard, opponentBoard, CC_FinalDepth);
@@ -117,19 +115,8 @@ namespace ChessV1.Stormcloud.Connect4
 				System.Diagnostics.Debug.WriteLine($"[{after}] Calls: {calls} | Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {Evaluation}) | Time: {(after-before).TotalSeconds}s");
 			}
 		}
-		/*
-		private const double WEIGHT_SCORE_OWN = 1.1;
-		private const double WEIGHT_SCORE_OPPONENT = 1.03;
-		private const double WEIGHT_HAMMINGDISTANCE_OWN = 0.9;
-		private const double WEIGHT_HAMMINGDISTANCE_OPPONENT = 0.75;
 
-		private const double WEIGHT_WALL_DISTANCE = 0.15;
-		private const double WEIGHT_NEIGHBORS = 0.67;	// Overall neighbor weight
-		private const double WEIGHT_NEIGHBOR_FREE = 1.0;	// Available
-		private const double WEIGHT_NEIGHBOR_OWNED = 1.1;	// Owned by me
-		private const double WEIGHT_NEIGHBOR_TAKEN = -0.9;  // Taken by opponent
-															//*/
-		//* I'm pretty sure there are fairly good weights
+		// I'm pretty sure there are fairly good weights
 		private const double WEIGHT_SCORE_OWN = 1.2;                    // yes: 1.2
 		private const double WEIGHT_SCORE_OPPONENT = 1.03;              // yes: 1.03
 		private const double WEIGHT_HAMMINGDISTANCE_OWN = 0.9;          // yes: 0.9
@@ -140,7 +127,7 @@ namespace ChessV1.Stormcloud.Connect4
 		private const double WEIGHT_NEIGHBOR_FREE = 1.0;	// Available
 		private const double WEIGHT_NEIGHBOR_OWNED = 1.1;	// Owned by me
 		private const double WEIGHT_NEIGHBOR_TAKEN = -0.9;	// Taken by opponent
-		//*/
+
 		private double Evaluate(long myBoard, long opponentBoard)
 		{
 			double myScore = 0, opponentScore = 0;
@@ -310,37 +297,14 @@ namespace ChessV1.Stormcloud.Connect4
 		{
 			calls++;
 			if (depthLeft < 0) return Evaluate(myBoard, opponentBoard);
-			double bestscore = double.NegativeInfinity;    // This might still be glitchy, on insufficient moves it just caused an immediate return.
+			double bestscore = double.NegativeInfinity;
 
 			if (AllLegalMoves == null)
 			{
 				AllLegalMoves = LegalMoves(myBoard, opponentBoard);
 			}
 
-			/*
-			if (isRoot)
-			{
-				Console.WriteLine("Movelist pre-ordering:");
-				for (int i = 0; i < AllLegalMoves.Count; i++)
-				{
-					Console.WriteLine($"{i + 1}/{AllLegalMoves.Count}. {Convert.ToString(AllLegalMoves[i], 2)}");
-				}
-			}*/
 			AllLegalMoves = OrderMoves(AllLegalMoves, myBoard, opponentBoard);
-			//*
-			if (isRoot && Connect4UI.move == 35)
-			{
-				Console.WriteLine("Movelist post-ordering:");
-				for (int i = 0; i < AllLegalMoves.Count; i++)
-				{
-					Console.WriteLine($"{i + 1}/{AllLegalMoves.Count}. {Convert.ToString(AllLegalMoves[i], 2)}");
-				}
-			}//*/
-
-			if (Connect4UI.move == 35 && isRoot)
-			{
-				Console.WriteLine($"Calculating move 35... | Moves: {AllLegalMoves.Count}");
-			}
 
 			var result = PlayerWon(myBoard, opponentBoard);
 			if (result == 1) return WinValue - CC_FinalDepth + depthLeft;	// Win, Quicker is better
@@ -349,20 +313,17 @@ namespace ChessV1.Stormcloud.Connect4
 
 			if (AllLegalMoves.Count == 0) return 0; // Draw by no moves, do NOT evaluate. No moves = All tiles have been filled. This is a draw.
 
-			//if (isRoot) CC_Failsoft_BestMove = AllLegalMoves[0];
+			// Failsafe. AFAIK not needed but good to have.
+			if (isRoot) CC_Failsoft_BestMove = AllLegalMoves[0];
 
 			foreach (var move in AllLegalMoves)
 			{
-				//if(isRoot) Console.WriteLine($"1. Evaluating Binary Move: {Convert.ToString(move, 2)} | myBoard: {Convert.ToString(myBoard, 2)}");
 				// Do move
 				myBoard ^= move;
-				//if (isRoot) Console.WriteLine($"2. Evaluating Binary Move: {Convert.ToString(move, 2)} | myBoard: {Convert.ToString(myBoard, 2)}");
 				// Evaluate move
 				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, opponentBoard, myBoard, depthLeft-1);
-				if(isRoot && Connect4UI.move == 35) Console.WriteLine($"Score: {score} | move: {Convert.ToString(move, 2)}");
 				// Undo move
 				myBoard ^= move;
-				//if (isRoot) Console.WriteLine($"3. Evaluating Binary Move: {Convert.ToString(move, 2)} | myBoard: {Convert.ToString(myBoard, 2)}");
 
 				if (score >= beta)
 				{
@@ -385,14 +346,6 @@ namespace ChessV1.Stormcloud.Connect4
 					}
 				}
 			}
-
-
-			if (Connect4UI.move == 35 && isRoot)
-			{
-				Console.WriteLine($"Calculating move 35... | moves: {AllLegalMoves.Count} | bestscore: {bestscore} | bestMove: {Convert.ToString(CC_Failsoft_BestMove)}");
-			}
-
-
 			return bestscore;
 		}
 
@@ -410,8 +363,7 @@ namespace ChessV1.Stormcloud.Connect4
 		}
 
 
-		// Bug: Row isn't properly checked for
-		private List<long> LegalMoves(long myBoard, long opponentBoard, bool broadcast = false)
+		private List<long> LegalMoves(long myBoard, long opponentBoard)
 		{
 			// Build a list of available moves
 			List<long> moves = new List<long>();
@@ -421,14 +373,10 @@ namespace ChessV1.Stormcloud.Connect4
 			for (int col = 0; col < Columns; col++)
 			{
 				int row = -1, reverseIndex = -1;
-				//for (int i = Rows - 1; i >= 0; i--)
-				if(broadcast) Console.WriteLine("Testing the Rows...");
 				for (int i = 0; i < Rows; i++)
 				{
 					// Slot
-					reverseIndex = /*BOARD_MAX - */(i * Columns + col);    // Index is where it is, reverse it how much shift I need to bring it to the back
-					if (broadcast) Console.WriteLine($"i: {i}, col: {col} | state: {Convert.ToString(myBoard, 2)} | {Convert.ToString(opponentBoard, 2)} >> {Convert.ToString(state, 2)}");
-					if (broadcast) Console.WriteLine($"ReverseIndex: {reverseIndex}: {Convert.ToString(state >> reverseIndex, 2)} - {((state >> reverseIndex) & 1) == 1}");
+					reverseIndex = i * Columns + col;    // Index is where it is, reverse it how much shift I need to bring it to the back
 					if (((state >> reverseIndex) & 1) == 1) continue;
 					row = i;
 					break;
@@ -437,18 +385,7 @@ namespace ChessV1.Stormcloud.Connect4
 				if (row == -1) continue;
 				// valid row -> valid move -> add it
 				long binaryMove = 1L << reverseIndex;
-				if (broadcast) Console.WriteLine($"[Final] row: {row}, col: {col} | reverse: {reverseIndex} | binaryMove: {Convert.ToString(binaryMove, 2)} | state: {Convert.ToString(myBoard, 2)} | {Convert.ToString(opponentBoard, 2)} >> {Convert.ToString(state, 2)}");
 				moves.Add(binaryMove);
-				
-				//*
-				if (broadcast)
-				{
-					Console.WriteLine($"Adding Legal Move {Convert.ToString(binaryMove, 2)} | Col: {col} Row: {row} | ReverseIndex {Convert.ToString(reverseIndex, 2)}");
-					for (int i = 0; i < moves.Count; i++)
-					{
-						Console.WriteLine($"{(i + 1)}/{moves.Count} >> {Convert.ToString(moves[i], 2)}");
-					}
-				}//*/
 			}
 
 			return moves;

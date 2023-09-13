@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ChessV1.Stormcloud.Connect4
@@ -81,7 +75,7 @@ namespace ChessV1.Stormcloud.Connect4
 				FlatStyle = FlatStyle.Flat,
 				Font = new Font(FontFamily.GenericSansSerif, 15f)
 			};
-			b2.Click += (s, e) => { playNextMoveComputer(false); };
+			b2.Click += (s, e) => { PlayNextMoveComputer(); };
 			Controls.Add(b2);
 
 			Button b = new Button()
@@ -92,7 +86,7 @@ namespace ChessV1.Stormcloud.Connect4
 				FlatStyle = FlatStyle.Flat,
 				Font = new Font(FontFamily.GenericSansSerif, 15f)
 			};
-			b.Click += (s, e) => { computerSolo = true; foreach (Control c in Controls) { if (c.GetType().IsSubclassOf(typeof(ButtonBase))) c.Enabled = false; } playNextMoveComputer(); };
+			b.Click += (s, e) => { computerSolo = true; foreach (Control c in Controls) { if (c.GetType().IsSubclassOf(typeof(ButtonBase))) c.Enabled = false; } PlayNextMoveComputer(); };
 			Controls.Add(b);
 
 			CheckBox cb = new CheckBox()
@@ -110,7 +104,7 @@ namespace ChessV1.Stormcloud.Connect4
 				if (!playComputer) return;
 				if (_Turn == Turn.Yellow) computerStarts = true;
 				else computerStarts = false;
-				playNextMoveComputer();
+				PlayNextMoveComputer();
 			};
 			cb.Checked = playComputer;
 			Controls.Add(cb);
@@ -120,7 +114,7 @@ namespace ChessV1.Stormcloud.Connect4
 				if (playComputer && computerStarts)
 				{
 					System.Threading.Thread.Sleep(1000);
-					playNextMoveComputer();
+					PlayNextMoveComputer();
 				}
 			};
 		}
@@ -174,11 +168,10 @@ namespace ChessV1.Stormcloud.Connect4
 
 			int row = -1, reverseIndex = -1;
 			long s = Boardstate;
-			//for (int i = Rows-1; i >= 0; i--)
 			for (int i = 0; i < Rows; i++)
 			{
 				// Slot
-				reverseIndex = /*BOARD_MAX - */(i * Columns + col);    // Index is where it is, reverse it how much shift I need to bring it to the back
+				reverseIndex = i * Columns + col;    // Index is where it is, reverse it how much shift I need to bring it to the back
 				if (((s >> reverseIndex) & 1) == 1) continue;
 				row = i;
 				break;
@@ -214,14 +207,13 @@ namespace ChessV1.Stormcloud.Connect4
 		// perhaps add a deadline into the engine and it just refuses method calls and immediately returns upon call and score setting inside the loop (skips bestmove)
 		// For this we would need a temp bestmove and a sign if it was cancelled, though.
 
-		void playNextMoveComputer(bool delay = true)
+		void PlayNextMoveComputer()
 		{
 			if(Engine.IsInUse)
 			{
 				Console.Error.WriteLine("Error: Engine Object is in use right now, please wait until calculations are complete or create another instance.");
 				return;
 			}
-			//if (delay) System.Threading.Thread.Sleep((int) (new Random().NextDouble() * 300 + 650));
 			Move bestMove = _Turn == Turn.Yellow ? Engine.BestMove(BoardstateYellow, BoardstateRed, maxMS: maxMSEngine)
 				: Engine.BestMove(BoardstateRed, BoardstateYellow, maxMS: maxMSEngine);
 			
@@ -234,7 +226,6 @@ namespace ChessV1.Stormcloud.Connect4
 		void play(int reverseIndex) => play(1L << reverseIndex);
 		void play(long ORmove)
 		{
-			//Console.WriteLine($"Play method called with ORmove {Convert.ToString(ORmove, 2)}");
 			if (_Turn == Turn.Yellow)
 			{
 				BoardstateYellow |= ORmove;
@@ -245,8 +236,6 @@ namespace ChessV1.Stormcloud.Connect4
 				BoardstateRed |= ORmove;
 				_Turn = Turn.Yellow;
 			}
-
-			Console.WriteLine($"   {move++}. >> New states | move: {Convert.ToString(ORmove, 2)}, BoardstateYellow: {Convert.ToString(BoardstateYellow, 2)}, BoardstateRed: {Convert.ToString(BoardstateRed, 2)}");
 
 			int result = PlayerWon();
 			switch (result)
@@ -260,10 +249,10 @@ namespace ChessV1.Stormcloud.Connect4
 			Refresh();
 			if (result >= 0) return;
 
-			if (computerSolo) playNextMoveComputer();
+			if (computerSolo) PlayNextMoveComputer();
 			else if (playComputer)
 				if(_Turn == Turn.Yellow && computerStarts || _Turn == Turn.Red && !computerStarts)
-					playNextMoveComputer();
+					PlayNextMoveComputer();
 		}
 
 		#region Render UI
@@ -305,28 +294,12 @@ namespace ChessV1.Stormcloud.Connect4
 
 		#region Sophisticated Win Detection
 
-		int PlayerWon()
-		{
-			/*
-			long myBoard, opponentBoard;
-			if(_Turn == Turn.Yellow)
-			{
-				myBoard = BoardstateYellow;
-				opponentBoard = BoardstateRed;
-			}
-			else
-			{
-				myBoard = BoardstateRed;
-				opponentBoard = BoardstateYellow;
-			}//*/
-
-			return Connect4Engine.PlayerWon2(BoardstateYellow, BoardstateRed, Rows, Columns, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, ref WinnerMatrix);
-		}
+		int PlayerWon() => Connect4Engine.PlayerWon2(BoardstateYellow, BoardstateRed, Rows, Columns, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, ref WinnerMatrix);
 
 		private const short MASK_ROW = 0x000F; // 1111 | just shift around as needed
-		private static long MASK_COL = 0x0038; // 000111000 | 0 0011 1000
-		private static long MASK_DIAG1 = 0x01C0; // 111000000 | 1 1100 0000			Maximum is 10 which means
-		private static long MASK_DIAG2 = 0x0124; // 100100100 | 1 0010 0100
+		private static long MASK_COL;
+		private static long MASK_DIAG1;
+		private static long MASK_DIAG2;
 
 		// Masks need to be set because anything transcending own rows need to know how wide a row is
 		void SetMasks()
@@ -357,53 +330,3 @@ namespace ChessV1.Stormcloud.Connect4
 		}
 	}
 }
-
-
-
-
-/* This was developed in this class, but to have only 1 method in case something breaks it was moved to the Engine class when development of the engine started
-
-/// <summary>
-/// Values: <br/>
-/// -1: Game is still going <br/>
-/// 0: Draw <br/>
-/// 1: Player 1 won <br/>
-/// 2: Player 2 won <br/>
-/// </summary>
-/// <returns></returns>
-int PlayerWon()
-{
-	// Mask Width is 4, number of transitions: columns - 4, number of runs: columns - 4 + 1 for run before first transition
-	bool applyMask(long position, long maskTemplate, int horizontalRuns, int verticalRuns)
-	{
-		// horizontalRuns:	Columns -4 mask width +1 for initial run
-		// verticalRuns:	usually 4-1, but now we need the height of the mask, which may be different.
-		for(int i = 0; i < verticalRuns; i++)
-		{
-			long mask = maskTemplate << (i * Columns);	// Shift by 1 row, so 1 rowwidth, so amount of columns
-			for (int i2 = 0; i2 < horizontalRuns; i2++)
-			{
-				if ((position & mask) == mask) return true;
-				mask <<= 1;
-			}
-		}
-		return false;
-	}
-
-	bool applyMasks(long boardstate)
-	{
-		if (applyMask(boardstate, MASK_ROW, Columns - 3, Rows)) return true;
-		if (applyMask(boardstate, MASK_COL, Columns, Rows - 3)) return true;
-		if (applyMask(boardstate, MASK_DIAG1, Columns - 3, Rows - 3)) return true;
-		if (applyMask(boardstate, MASK_DIAG2, Columns - 3, Rows - 3)) return true;
-		return false;
-	}
-
-	if (applyMasks(BoardstateYellow)) return 1;
-	if (applyMasks(BoardstateRed)) return 2;
-
-	// Check if board is full
-	if ((Boardstate & long.MaxValue) == long.MaxValue) return 0;	// No more moves
-	return -1;
-}
-*/
