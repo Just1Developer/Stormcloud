@@ -21,12 +21,13 @@ namespace ChessV1.Stormcloud.Connect4
 
 		private Connect4Engine Engine1, Engine2;
 		private const int ENGINE_DEPTH = 8;// apparently some maxDepth is actually needed -1; "Strong" would be 10-11, fast is 7 (no)
+		// Engine Depth 8 -> 6, 6 is "extra" depth, gave extra 1000ms to time so 6 doesn't cause a time loss (6 is <.5s), but stuff where everything else is M1 or similar should get dismissed quicker now using the extra run on depth 6
 
 		/// <summary>
 		/// If the time for the move calculated is less than that, it will start a new calculation at higher depth. <br/>
 		/// Careful, as once the new calc starts, it cannot be stopped, which means...
 		/// </summary>
-		private const int MaxMSEngine = 2000;
+		private const int MaxMSEngine = 0;//3000;
 		// perhaps add a deadline into the engine (alphabeta method) and it just refuses method calls and immediately returns upon call and score setting inside the loop (skips bestmove)
 		// For this we would need a temp bestmove and a sign if it was cancelled, though.
 		// Using Top 3 moves we can also escape the deadline beforehand if it 'finished' calculating or the best move is the only non-mate move.
@@ -36,7 +37,7 @@ namespace ChessV1.Stormcloud.Connect4
 
 		private long Boardstate
 		{
-			get => (long) (BoardstateRed | BoardstateYellow);
+			get => (BoardstateRed | BoardstateYellow);
 		}
 
 		private Label Evaluation;
@@ -73,7 +74,7 @@ namespace ChessV1.Stormcloud.Connect4
 
 			SetMasks();
 			Engine1 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.HighestEloEngineBoard);
-			Engine2 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.HighestEloEngineBoard);
+			Engine2 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.DefaultPreset1);
 
 			/* Preset Combat Points: Complete Table in excel file
 			 *	Red\/  | Yellow	->	|	DefaultPreset_Old	|	DefaultPreset1	 |	 DefaultPreset2
@@ -117,7 +118,15 @@ namespace ChessV1.Stormcloud.Connect4
 				FlatStyle = FlatStyle.Flat,
 				Font = new Font(FontFamily.GenericSansSerif, 15f)
 			};
-			b.Click += (s, e) => { computerSolo = true; foreach (Control c in Controls) { if (c.GetType().IsSubclassOf(typeof(ButtonBase))) c.Enabled = false; } PlayNextMoveComputer(); };
+			b.Click += (s, e) =>
+			{
+				computerSolo = true;
+				foreach (Control c in Controls)
+				{
+					if (c.GetType().IsSubclassOf(typeof(ButtonBase))) c.Enabled = false;
+				}
+				PlayNextMoveComputer();
+			};
 			Controls.Add(b);
 
 			CheckBox cb = new CheckBox()
@@ -140,10 +149,30 @@ namespace ChessV1.Stormcloud.Connect4
 			cb.Checked = playComputer;
 			Controls.Add(cb);
 
+			/*
+			Button buttonUnittest = new Button()
+			{
+				Bounds = new Rectangle(padding + BoardWidth + 2 * Spacing,
+					b.Location.Y + b.Height + Spacing, 120, 80),
+				Text = "[WIP] Unittest",
+				FlatStyle = FlatStyle.Flat,
+				Font = new Font(FontFamily.GenericSansSerif, 15f)
+			};
+			buttonUnittest.Click += (s, e) =>
+			{
+				foreach (Control c in Controls)
+				{
+					if (c.GetType().IsSubclassOf(typeof(ButtonBase))) c.Enabled = false;
+				}
+				TestUnitTest();
+			};
+			Controls.Add(buttonUnittest);
+			//*/
+
 			Evaluation = new Label()
 			{
 				Location = new Point(padding + BoardWidth + 2 * Spacing,
-					padding + 3 * Spacing),
+					padding + 2 * Spacing),
 				Text = "Evaluation: -",
 				AutoSize = true,
 				FlatStyle = FlatStyle.Flat,
@@ -151,14 +180,16 @@ namespace ChessV1.Stormcloud.Connect4
 			};
 			this.Controls.Add(Evaluation);
 
-			this.Load += (s, e) =>
+
+
+			if (playComputer && computerStarts)
 			{
-				if (playComputer && computerStarts)
+				this.Load += (s, e) =>
 				{
 					System.Threading.Thread.Sleep(1000);
 					PlayNextMoveComputer();
-				}
-			};
+				};
+			}
 		}
 
 		void restart()
@@ -430,12 +461,72 @@ namespace ChessV1.Stormcloud.Connect4
 			cols += 2;
 			// Now to +1, since Columns is +1, we can just use that instead
 			MASK_DIAG2 = (((((1 << cols) | 1) << cols) | 1) << cols) | 1;
-
-
-			MASKS = new[] { MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2 };
 		}
 
-		private long[] MASKS;
+		#endregion
+
+		#region Testing the Unittest
+
+		void TestUnitTest()
+		{
+			int result = PlayMatch(EngineWeightMap.DefaultPresetBalanced, EngineWeightMap.DefaultPresetBalanced);
+			switch (result)
+			{
+				case -1: return;
+				case 0: MessageBox.Show("Draw!"); break;
+				case 1: MessageBox.Show("Player 1 wins!"); break;
+				case 2: MessageBox.Show("Player 2 wins!"); break;
+			}
+			foreach (Control c in Controls) { if (c.GetType().IsSubclassOf(typeof(ButtonBase))) c.Enabled = true; }
+		}
+
+		private int EngineDepth = 8;
+
+		internal int PlayMatch(EngineWeightMap YellowMap, EngineWeightMap RedMap)
+		{
+			Connect4Engine EngineYellow = new Connect4Engine(Rows, Columns, EngineDepth, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, YellowMap);
+			Connect4Engine EngineRed = new Connect4Engine(Rows, Columns, EngineDepth, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, RedMap);
+			bool IsYellow = true;
+			int currentWinResult;
+			do
+			{
+				int isMate;
+				if (IsYellow) isMate = PlayMoveComputerNonRecursive(ref BoardstateYellow, ref BoardstateRed, ref EngineYellow, true);   // probably dont need ref for the engine
+				else isMate = PlayMoveComputerNonRecursive(ref BoardstateRed, ref BoardstateYellow, ref EngineRed, false);
+				IsYellow = !IsYellow;
+
+				// Resign if Mx where x <= EngineDepth-2
+				if (isMate != 0)
+				{
+					// Resignation, set win result
+					currentWinResult = isMate;
+					break;
+				}
+
+				currentWinResult = PlayerWon();
+				Refresh();
+			} while (currentWinResult == -1);
+
+			Refresh();
+			return currentWinResult;
+		}
+
+		int PlayMoveComputerNonRecursive(ref long myBoard, ref long opponentBoard, ref Connect4Engine Engine, bool IsYellow)
+		{
+			Move bestMove = Engine.BestMove(myBoard, opponentBoard);
+			
+			// New line for UI:
+			Shown_Eval = bestMove.EvaluationResult;
+
+			myBoard ^= bestMove.BinaryMove;
+			bool mate = Math.Abs(bestMove.Eval) >= Connect4Engine.WinValue - 2;   // 2 = Mate-Visibility-Threshold
+			int result;
+			if (IsYellow) result = mate ? bestMove.Eval < 0 ? 2 : 1 : 0;    // This needs to display in absolute who won
+			else result = mate ? bestMove.Eval < 0 ? 1 : 2 : 0;
+			return result;
+			// Return values: 0=Game ongoing, 1 = I will win, 2 = Opponent will win
+		}
+
 		#endregion
 
 		enum Turn

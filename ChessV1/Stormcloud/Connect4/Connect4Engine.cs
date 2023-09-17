@@ -30,14 +30,17 @@ namespace ChessV1.Stormcloud.Connect4
 
 	internal class Connect4Engine
 	{
+		public bool Silenced = false;
 
+		private static byte Evaluation_MThreshold = 100;	// This close to the absolute M0 value to be displayed as Mx
 		private const double EVALUATION_DIVIDER = 85;
 		private readonly int BOARD_MAX;
 		private readonly int Rows, Columns;
 		private readonly long MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2;
-
-		public Connect4Engine(int Rows, int Columns, int maxDepth, long MASK_ROW, long MASK_COL, long MASK_DIAG1, long MASK_DIAG2, EngineWeightMap WeightMap)
+		
+		public Connect4Engine(int Rows, int Columns, int maxDepth, long MASK_ROW, long MASK_COL, long MASK_DIAG1, long MASK_DIAG2, EngineWeightMap WeightMap = null, bool Silenced = false)
 		{
+			this.Silenced = Silenced;
 			this.Rows = Rows;
 			this.Columns = Columns;
 			this.BOARD_MAX = Rows * Columns - 1;
@@ -46,13 +49,14 @@ namespace ChessV1.Stormcloud.Connect4
 			this.MASK_COL = MASK_COL;
 			this.MASK_DIAG1 = MASK_DIAG1;
 			this.MASK_DIAG2 = MASK_DIAG2;
-			this.WeightMap = WeightMap;
+			this.WeightMap = WeightMap ?? EngineWeightMap.HighestEloEngineBoard;
 		}
+
 
 		private string GetEvaluationString(bool inverseEval)
 		{
-			if (CC_Eval > WinValue - CC_FinalDepth) return $"M{Math.Abs(WinValue - ((int)CC_Eval - 1))}";
-			if (CC_Eval < LossValue + CC_FinalDepth) return $"-M{Math.Abs(LossValue - ((int)CC_Eval - 1))}";
+			if (CC_Eval > WinValue - Evaluation_MThreshold) return $"M{Math.Abs(WinValue - ((int)CC_Eval + 1))}";
+			if (CC_Eval < LossValue + Evaluation_MThreshold) return $"-M{Math.Abs(LossValue - ((int)CC_Eval - 1))}";
 			
 			double eval = inverseEval ? -CC_Eval : CC_Eval;
 			eval /= EVALUATION_DIVIDER;	// Preserve 1 Digit
@@ -70,13 +74,36 @@ namespace ChessV1.Stormcloud.Connect4
 			return eval <= 0 ? "" + eval : "+" + eval;
 		}
 
-		public bool IsInUse;	// Perhaps add multithreading
+		private string GetEvaluationStringAny(double CC_Eval, bool inverseEval)
+		{
+			if (CC_Eval > WinValue - Evaluation_MThreshold) return $"M{Math.Abs(WinValue - ((int)CC_Eval + 1))}";
+			if (CC_Eval < LossValue + Evaluation_MThreshold) return $"-M{Math.Abs(LossValue - ((int)CC_Eval - 1))}";
 
+			double eval = inverseEval ? -CC_Eval : CC_Eval;
+			eval /= EVALUATION_DIVIDER; // Preserve 1 Digit
+
+			if (eval % 1.0 < 0.2 || eval % 1.0 > 0.8)
+			{
+				eval = Math.Round(eval) / 10;   // If its too close to being rounded, only preserve the one
+			}
+			else
+			{
+				// Otherwise, use 2 digits
+				eval *= 10;
+				eval = Math.Round(eval) / 100;
+			}
+			return eval <= 0 ? "" + eval : "+" + eval;
+		}
+
+		public bool IsInUse;    // Perhaps add multithreading
+
+		Dictionary<long, double> ScoreMap;
 		public Move BestMove(long myBoard, long opponentBoard, bool inverseEval = false, int maxDepth = -1, int maxMS = -1)
 		{
 			if(IsInUse)
 			{
 				Console.Error.WriteLine("Engine Object is in use right now, please wait until calculations are complete or create another instance.");
+				throw new Exception();
 				return new Move();
 			}
 			DateTime before = DateTime.Now;
@@ -85,12 +112,29 @@ namespace ChessV1.Stormcloud.Connect4
 			if(maxDepth >= 2) CC_FinalDepth = maxDepth;
 			CC_Eval = 0;
 			CC_Failsoft_BestMove = 0L;
+			ScoreMap = new Dictionary<long, double>();
 			do
 			{
+				// Or 3000ms + Depth 6 start
+				ScoreMap.Clear();
 				CC_Eval = CC_FailsoftAlphaBeta(myBoard, opponentBoard, CC_FinalDepth);
-				CC_FinalDepth++; // Repeat until time is reached
-			} while ((DateTime.Now - before).TotalMilliseconds < maxMS);	// run once is maxMS == -1, so no time limit
+				CC_FinalDepth += 2; // Repeat until time is reached
 
+				if (ScoreMap.Count <= 1) break;
+				if (Math.Abs(ScoreMap.OrderByDescending(x => x.Value).Select(x => x.Value).ToList()[1]) >=
+				    WinValue - Evaluation_MThreshold)
+					break;  // If the second highest score is checkmate, the top score is either mate or not, but further looking doesn't make sense since we've seen all important there is to see now
+
+			} while ((DateTime.Now - before).TotalMilliseconds < maxMS);    // run once is maxMS == -1, so no time limit
+			//Console.WriteLine("-->>==...");
+			int computedDepth = CC_FinalDepth - 2;
+
+			if(!Silenced) Console.WriteLine($"Eval: {CC_Eval} >> {GetEvaluationString(false)}  |  Final Depth: {computedDepth}");
+			int i2 = 1;
+			foreach (var move in ScoreMap.OrderByDescending(x => x.Value).Select(x => x.Key))
+			{
+				if (!Silenced) Console.WriteLine($"{i2++}. Move: {Convert.ToString(move, 2)} | Score: {ScoreMap[move]}   (=> {GetEvaluationStringAny(ScoreMap[move], false)})");
+			}
 			// Reset Data
 
 			CC_FinalDepth = oldDepth;
@@ -106,14 +150,14 @@ namespace ChessV1.Stormcloud.Connect4
 				row = i / Columns + 1;
 			}
 
-			return new Move(col, row, CC_Eval, GetEvaluationString(inverseEval), CC_Failsoft_BestMove, (DateTime.Now - before).TotalSeconds, CC_FinalDepth);
+			return new Move(col, row, CC_Eval, GetEvaluationString(inverseEval), CC_Failsoft_BestMove, (DateTime.Now - before).TotalSeconds, computedDepth);
 		}
 
 		// Stormcloud 3 AlphaBeta Algorithm but lighter
 
 		private long CC_Failsoft_BestMove;
-		private const int WinValue = 999999;
-		private const int LossValue = -999999;
+		internal const int WinValue = 999999999;
+		private const int LossValue = -WinValue;		// Jup, those all of a sudden high values are indeed Win/Loss value here, but not marked as Mx
 		private int CC_FinalDepth;
 		private double CC_Eval;
 
@@ -127,13 +171,13 @@ namespace ChessV1.Stormcloud.Connect4
 				calls = 0;
 				CC_Eval = CC_FailsoftAlphaBeta(myBoard, opponentBoard, depth);
 				DateTime after = DateTime.Now;
-				Console.WriteLine($"[{after}] Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {GetEvaluationString(false)}) | Time: {(after-before).TotalSeconds}s");
-				System.Diagnostics.Debug.WriteLine($"[{after}] Calls: {calls} | Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {GetEvaluationString(false)}) | Time: {(after-before).TotalSeconds}s");
+				if (!Silenced) Console.WriteLine($"[{after}] Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {GetEvaluationString(false)}) | Time: {(after-before).TotalSeconds}s");
+				//System.Diagnostics.Debug.WriteLine($"[{after}] Calls: {calls} | Depth: {depth} | BestField: {Convert.ToString(CC_Failsoft_BestMove, 2)} (Eval: {GetEvaluationString(false)}) | Time: {(after-before).TotalSeconds}s");
 			}
 		}
 
 		// I'm pretty sure there are fairly good weights
-		private EngineWeightMap WeightMap;
+		public EngineWeightMap WeightMap;
 
 		private double Evaluate(long myBoard, long opponentBoard)
 		{
@@ -153,9 +197,22 @@ namespace ChessV1.Stormcloud.Connect4
 						long mash = (position & mask);
 						long mashTotal = ((position | opponentBoardCurrent) & mask);
 						int distance = HammingDistance(mash, mask);
+						int distanceOpponent = HammingDistance((opponentBoardCurrent & mask), mask);
 						int distanceTotal = HammingDistance(mashTotal, mask);
-						score += distance * weight;
-						score -= distanceTotal-distance * 2 * weight;
+
+						// HammingDistance 0 is a win, 4 is nothing. This section is broken:
+						if (distance < distanceOpponent)
+						{
+							score -= (distanceOpponent - distance) * weight;
+						}
+						if(distance == 2) score += (distanceTotal - distance) * weight;
+						else if(distance == 1) score += (distanceTotal - distance) * weight * weight;
+
+						//if(distanceOpponent == 2) score -= (distanceTotal - distance) * -WeightMap.WEIGHT_SCORE_OPPONENT;
+						//else if(distanceOpponent == 1) score -= (distanceTotal - distance) * -(WeightMap.WEIGHT_SCORE_OPPONENT * WeightMap.WEIGHT_SCORE_OPPONENT);
+
+						score -= distance / (weight * weight);	// High distance from the perfect mask is bad btw
+						score += distanceTotal - distance * 2 * weight;
 						mask <<= 1;
 					}
 				}
@@ -329,6 +386,7 @@ namespace ChessV1.Stormcloud.Connect4
 				myBoard ^= move;
 				// Evaluate move
 				double score = -CC_FailsoftAlphaBeta(-beta, -alpha, opponentBoard, myBoard, depthLeft-1);
+				if (isRoot) ScoreMap.Add(move, score);
 				// Undo move
 				myBoard ^= move;
 
@@ -353,6 +411,7 @@ namespace ChessV1.Stormcloud.Connect4
 					}
 				}
 			}
+			//if(isRoot) { Console.WriteLine($"Returning score {bestscore}. Dict size: {ScoreMap.Count}"); }
 			return bestscore;
 		}
 

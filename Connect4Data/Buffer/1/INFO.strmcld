@@ -1,0 +1,9 @@
+File info:
+WeightMaps run (total): 4
+Games Played: 16
+Boardsize: 7 x 6
+Engine Depth: 6
+
+Log: 
+This is match 4, it will just return. Match: ID 1 vs 0. Apparently this matchup fucks up the engine somewhere, idk
+Completed Game. | Run: True | Count: 5 | IsEmpty: False | AllowNewGen: True | break: False

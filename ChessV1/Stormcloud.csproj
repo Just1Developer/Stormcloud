@@ -94,7 +94,8 @@
     <Compile Include="Pieces.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Stormcloud\Chess\Stormcloud4.cs" />
+    <Compile Include="Stormcloud\Chess\Stormcloud4\Stormcloud4.cs" />
+    <Compile Include="Stormcloud\Chess\Stormcloud4\MagicNumberFinder.cs" />
     <Compile Include="Stormcloud\Connect4\Connect4Engine.cs" />
     <Compile Include="Stormcloud\Connect4\Connect4UI.cs">
       <SubType>Form</SubType>
@@ -103,6 +104,13 @@
       <DependentUpon>Connect4UI.cs</DependentUpon>
     </Compile>
     <Compile Include="Stormcloud\Connect4\EngineWeightMap.cs" />
+    <Compile Include="Stormcloud\Connect4\Unittest\GenerationController.cs" />
+    <Compile Include="Stormcloud\Connect4\Weightfinder\Particle Swarm Weight Optimization.cs" />
+    <Compile Include="Stormcloud\Connect4\Unittest\UnitMatch.cs" />
+    <Compile Include="Stormcloud\Connect4\Unittest\UnittestComputer Specific.cs" />
+    <Compile Include="Stormcloud\Connect4\Unittest\UnittestComputer.cs" />
+    <Compile Include="Stormcloud\Connect4\Weightfinder\Particle.cs" />
+    <Compile Include="Stormcloud\Connect4\Weightfinder\PhaseConditions.cs" />
     <Compile Include="Stormcloud\TicTacToe\TicTacToeEngine.cs" />
     <Compile Include="Stormcloud\TicTacToe\TicTacToeUI.cs">
       <SubType>Form</SubType>

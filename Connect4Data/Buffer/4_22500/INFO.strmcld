@@ -1,0 +1,10 @@
+File info:
+WeightMaps run (total): 150
+Games Played: 22500
+Maximum Games per Player: 301
+  -> Explanation 150 maps, so each map has 149 opponents. Each opponent 2 times, 1 per color, thus 300 games, and then 1 game against itself.
+Total Time: 06:23:19.8527686
+Boardsize: 7 x 6
+Engine Depth: 6
+Statistics:
+  >> Todo

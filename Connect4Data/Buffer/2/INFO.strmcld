@@ -1,0 +1,9 @@
+File info:
+WeightMaps run (total): 4
+Games Played: 16
+Maximum Games per Player: 9
+  -> Explanation 4 maps, so each map has 3 opponents. Each opponent 2 times, 1 per color, thus 8 games, and then 1 game against itself.
+Boardsize: 7 x 6
+Engine Depth: 6
+Statistics:
+ >> Todo
