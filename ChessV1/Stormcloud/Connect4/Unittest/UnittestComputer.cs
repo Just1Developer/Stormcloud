@@ -87,6 +87,8 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 					FileMaps.AppendLine($"	WEIGHT_SCORE_OPPONENT = {map.Value.WEIGHT_SCORE_OPPONENT.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"	WEIGHT_HAMMINGDISTANCE_OWN = {map.Value.WEIGHT_HAMMINGDISTANCE_OWN.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"	WEIGHT_HAMMINGDISTANCE_OPPONENT = {map.Value.WEIGHT_HAMMINGDISTANCE_OPPONENT.ToString().Replace(",", ".")},");
+					FileMaps.AppendLine($"\n	WEIGHT_FORK_HAMMINGDISTANCE_S = {map.Value.WEIGHT_FORK_HAMMINGDISTANCE_S.ToString().Replace(",", ".")},");
+					FileMaps.AppendLine($"	WEIGHT_FORK_HAMMINGDISTANCE_L = {map.Value.WEIGHT_FORK_HAMMINGDISTANCE_L.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"\n	WEIGHT_WALL_DISTANCE = {map.Value.WEIGHT_WALL_DISTANCE.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"	WEIGHT_NEIGHBORS = {map.Value.WEIGHT_NEIGHBORS.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"	WEIGHT_NEIGHBOR_FREE = {map.Value.WEIGHT_NEIGHBOR_FREE.ToString().Replace(",", ".")},");

@@ -73,7 +73,7 @@ namespace ChessV1.Stormcloud.Connect4
 			this.Size = new System.Drawing.Size(2 * padding + BoardWidth + 5 * CircleSize, 2 * padding + BoardHeight);
 
 			SetMasks();
-			Engine1 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.HighestEloEngineBoard);
+			Engine1 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.DefaultPreset1);
 			Engine2 = new Connect4Engine(Rows, Columns, ENGINE_DEPTH, MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2, EngineWeightMap.DefaultPreset1);
 
 			/* Preset Combat Points: Complete Table in excel file

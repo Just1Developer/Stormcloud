@@ -10,7 +10,7 @@ namespace ChessV1.Stormcloud.Connect4.Weightfinder
 	internal class Particle
 	{
 		public static (double, double)[] SearchSpace = new (double, double)[Dimensions];
-		private const int Dimensions = 9;
+		internal const int Dimensions = 11;
 		private static Random rng = new Random();
 
 		public static double Inertia, CognitiveCoefficient, SocialCoefficient;
@@ -20,15 +20,17 @@ namespace ChessV1.Stormcloud.Connect4.Weightfinder
 		public static void Init()
 		{
 			// Define Searchspace
-			SearchSpace[0] = (0.2, 2.2);          // WEIGHT_SCORE_OWN
-			SearchSpace[1] = (0.2, 2.2);          // WEIGHT_SCORE_OPPONENT
-			SearchSpace[2] = (0.2, 2.2);          // WEIGHT_HAMMINGDISTANCE_OWN
-			SearchSpace[3] = (-1.2, 1.2);          // WEIGHT_HAMMINGDISTANCE_OPPONENT
-			SearchSpace[4] = (-0.1, 1.2);          // WEIGHT_WALL_DISTANCE
-			SearchSpace[5] = (0.5, 2.1);          // WEIGHT_NEIGHBORS
-			SearchSpace[6] = (0.3, 1.7);          // WEIGHT_NEIGHBOR_FREE
-			SearchSpace[7] = (0.8, 2.3);          // WEIGHT_NEIGHBOR_OWNED
-			SearchSpace[8] = (-1.7, 0.3);          // WEIGHT_NEIGHBOR_TAKEN
+			SearchSpace[0] = (-1.2, 2.8);          // WEIGHT_SCORE_OWN
+			SearchSpace[1] = (-1.2, 2.8);          // WEIGHT_SCORE_OPPONENT
+			SearchSpace[2] = (-1.2, 2.8);          // WEIGHT_HAMMINGDISTANCE_OWN
+			SearchSpace[3] = (-2.2, 2.8);          // WEIGHT_HAMMINGDISTANCE_OPPONENT
+			SearchSpace[4] = (-1.2, 2.8);          // WEIGHT_FORK_HAMMINGDISTANCE_S
+			SearchSpace[5] = (-1.2, 2.7);          // WEIGHT_FORK_HAMMINGDISTANCE_L
+			SearchSpace[6] = (-1.8, 3.2);          // WEIGHT_WALL_DISTANCE
+			SearchSpace[7] = (-2.0, 3.1);          // WEIGHT_NEIGHBORS
+			SearchSpace[8] = (-2.3, 3.7);          // WEIGHT_NEIGHBOR_FREE
+			SearchSpace[9] = (-1.9, 3.3);          // WEIGHT_NEIGHBOR_OWNED
+			SearchSpace[10] = (-2.2, 2.3);          // WEIGHT_NEIGHBOR_TAKEN
 		}
 
 		public double[] Position
@@ -42,7 +44,7 @@ namespace ChessV1.Stormcloud.Connect4.Weightfinder
 			BestPosition = new double[Dimensions],
 			Velocity = new double[Dimensions];
 
-		internal double CurrentPositionScore = 0, BestPositionScore = 0;
+		internal double CurrentPositionScore, BestPositionScore;
 
 		public readonly int ID;
 
@@ -60,7 +62,7 @@ namespace ChessV1.Stormcloud.Connect4.Weightfinder
 
 		// There is a problem with continuity here regarding when the current particle is being evaluated
 
-		private void Mutate()
+		internal void Mutate()
 		{
 			double[] VelocityNew = new double[Dimensions];
 			for (int dim = 0; dim < Dimensions; dim++)
@@ -90,7 +92,6 @@ namespace ChessV1.Stormcloud.Connect4.Weightfinder
 				GlobalBestPosition = CurrentPosition;
 				GlobalBestPositionScore = CurrentPositionScore;
 			}
-			Mutate();
 		}
 	}
 }

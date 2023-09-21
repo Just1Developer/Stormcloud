@@ -18,16 +18,16 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 		const int MAX_FOLDERS = 10000;
 
 		// Should be >= 1, divides # of cores by this to determine how many threads are created, minimum (1) creates as many threads as there are Cores.
-		private double TOTAL_CORE_DIVIDER = 1.3;
+		private double TOTAL_CORE_DIVIDER = 1;
 
-		internal string Flush()
+		internal string Flush(string temp = "")
 		{
 			Console.WriteLine("Attempting Data Flush");
 			bool done = false;
 			int max;
 			for (max = 0; max <= MAX_FOLDERS; max++)
 			{
-				if (Directory.Exists(DATA_PATH + "custom_" + max)) continue;
+				if (Directory.Exists(DATA_PATH + "custom_" + max + temp)) continue;
 				done = true;
 				break;
 			}
@@ -38,7 +38,7 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 				return "-";
 			}
 
-			string path = DATA_PATH + "custom_" + max + "/";
+			string path = DATA_PATH + "custom_" + max + temp + "/";
 			Directory.CreateDirectory(path);
 
 			// Now, gather the data and actually write it.
@@ -62,7 +62,6 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 				FileInfo.AppendLine("Statistics:");
 				FileInfo.AppendLine("  >> Todo");
 
-				File.Create(path + "INFO.strmcld").Close();
 				File.WriteAllText(path + "INFO.strmcld", FileInfo.ToString());
 
 				StringBuilder FileMaps = new StringBuilder();
@@ -79,6 +78,8 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 					FileMaps.AppendLine($"	WEIGHT_SCORE_OPPONENT = {map.Value.WEIGHT_SCORE_OPPONENT.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"	WEIGHT_HAMMINGDISTANCE_OWN = {map.Value.WEIGHT_HAMMINGDISTANCE_OWN.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"	WEIGHT_HAMMINGDISTANCE_OPPONENT = {map.Value.WEIGHT_HAMMINGDISTANCE_OPPONENT.ToString().Replace(",", ".")},");
+					FileMaps.AppendLine($"\n	WEIGHT_FORK_HAMMINGDISTANCE_S = {map.Value.WEIGHT_FORK_HAMMINGDISTANCE_S.ToString().Replace(",", ".")},");
+					FileMaps.AppendLine($"	WEIGHT_FORK_HAMMINGDISTANCE_L = {map.Value.WEIGHT_FORK_HAMMINGDISTANCE_L.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"\n	WEIGHT_WALL_DISTANCE = {map.Value.WEIGHT_WALL_DISTANCE.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"	WEIGHT_NEIGHBORS = {map.Value.WEIGHT_NEIGHBORS.ToString().Replace(",", ".")},");
 					FileMaps.AppendLine($"	WEIGHT_NEIGHBOR_FREE = {map.Value.WEIGHT_NEIGHBOR_FREE.ToString().Replace(",", ".")},");
@@ -87,7 +88,6 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 					FileMaps.AppendLine("};");
 				}
 
-				File.Create(path + "WEIGHTMAPS.strmcld").Close();
 				File.WriteAllText(path + "WEIGHTMAPS.strmcld", FileMaps.ToString());
 
 				StringBuilder FileScores = new StringBuilder();
@@ -97,12 +97,12 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 					FileScores.AppendLine($"\nMap {i++} of {amount}");
 					FileScores.AppendLine($" >> Map ID: {mapID}");
 					(double, int) score = Scores[mapID];
-					Stats.TryGetValue(mapID, out (int, int, int) stats);
+					Stats.TryGetValue(mapID, out (int, int, int, int, int, int) stats);
 					FileScores.AppendLine($" >> Score: {score.Item1} / {score.Item2}");
-					FileScores.AppendLine($" >> Wins: {stats.Item1}  |  Draws: {stats.Item2}  |  Losses: {stats.Item3}");
+					FileScores.AppendLine($" >> Wins with Yellow: {stats.Item1}  |  Draws with Yellow: {stats.Item2}  |  Losses with Yellow: {stats.Item3}");
+					FileScores.AppendLine($" >> Wins with Red: {stats.Item4}  |  Draws with Red: {stats.Item5}  |  Losses with Red: {stats.Item6}");
 				}
 
-				//File.Create(path + "WEIGHTMAP_SCORES.strmcld");
 				File.WriteAllText(path + "WEIGHTMAP_SCORES.strmcld", FileScores.ToString());
 
 				Console.WriteLine($"Data flushed to: {path}");
@@ -136,7 +136,7 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 		/// <summary>
 		/// Order: (Wins, Draws, Losses)
 		/// </summary>
-		ConcurrentDictionary<int, (int, int, int)> Stats = new ConcurrentDictionary<int, (int, int, int)> ();
+		ConcurrentDictionary<int, (int, int, int, int, int, int)> Stats = new ConcurrentDictionary<int, (int, int, int, int, int, int)> ();
 
 		public bool AllowGenerateNew { private set; get; }
 		public bool Run { private set; get; }
@@ -230,8 +230,8 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 			Scores.TryGetValue(next.Item2, out (double, int) scoreMap2);
 
 
-			Stats.TryGetValue(next.Item1, out (int, int, int) stats1);	// will be 0,0,0 if does not contain
-			Stats.TryGetValue(next.Item2, out (int, int, int) stats2);
+			Stats.TryGetValue(next.Item1, out (int, int, int, int, int, int) stats1);	// will be 0,0,0 if does not contain
+			Stats.TryGetValue(next.Item2, out (int, int, int, int, int, int) stats2);
 
 			// Both have played 1 game
 			scoreMap1.Item2++;
@@ -244,19 +244,19 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 					scoreMap1.Item1 += 0.5;
 					scoreMap2.Item1 += 0.5;
 					stats1.Item2++;
-					stats2.Item2++;
+					stats2.Item5++;
 					break;
 				case 1:
 					// Yellow Wins
 					scoreMap1.Item1++;
 					stats1.Item1++;
-					stats2.Item3++;
+					stats2.Item6++;
 					break;
 				case 2:
 					// Red wins
 					scoreMap2.Item1++;
 					stats1.Item3++;
-					stats2.Item1++;
+					stats2.Item4++;
 					break;
 			}
 

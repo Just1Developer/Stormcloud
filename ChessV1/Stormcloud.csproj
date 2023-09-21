@@ -105,6 +105,10 @@
     </Compile>
     <Compile Include="Stormcloud\Connect4\EngineWeightMap.cs" />
     <Compile Include="Stormcloud\Connect4\Unittest\GenerationController.cs" />
+    <Compile Include="Stormcloud\Connect4\Weightfinder\JSON Export\ParticleHistoryHolder.cs" />
+    <Compile Include="Stormcloud\Connect4\Weightfinder\JSON Export\ParticleIteration.cs" />
+    <Compile Include="Stormcloud\Connect4\Weightfinder\JSON Export\PSO_Export_Parser.cs" />
+    <Compile Include="Stormcloud\Connect4\Weightfinder\JSON Export\WeightHistoryHolder.cs" />
     <Compile Include="Stormcloud\Connect4\Weightfinder\Particle Swarm Weight Optimization.cs" />
     <Compile Include="Stormcloud\Connect4\Unittest\UnitMatch.cs" />
     <Compile Include="Stormcloud\Connect4\Unittest\UnittestComputer Specific.cs" />

@@ -1,0 +1,12 @@
+File info:
+WeightMaps run (total): 10
+Games Played: 100
+Maximum Games per Player: 19
+  -> Explanation 10 maps, so each map has 9 opponents. Each opponent 2 times, 1 per color, thus 18 games, and then 1 game against itself.
+Start Time: 21.09.2023 01:29:22
+End Time: 21.09.2023 01:30:53
+Total Time: 00:01:30.8553701
+Boardsize: 7 x 6
+Engine Depth: 6
+Statistics:
+  >> Todo

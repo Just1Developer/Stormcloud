@@ -33,7 +33,7 @@ namespace ChessV1.Stormcloud.Connect4
 		public bool Silenced = false;
 
 		private static byte Evaluation_MThreshold = 100;	// This close to the absolute M0 value to be displayed as Mx
-		private const double EVALUATION_DIVIDER = 85;
+		private const double EVALUATION_DIVIDER = 2;	// Actual divider is *10, old eval uses 85 to achieve 850
 		private readonly int BOARD_MAX;
 		private readonly int Rows, Columns;
 		private readonly long MASK_ROW, MASK_COL, MASK_DIAG1, MASK_DIAG2;
@@ -50,6 +50,43 @@ namespace ChessV1.Stormcloud.Connect4
 			this.MASK_DIAG1 = MASK_DIAG1;
 			this.MASK_DIAG2 = MASK_DIAG2;
 			this.WeightMap = WeightMap ?? EngineWeightMap.HighestEloEngineBoard;
+			SetMasks();
+		}
+
+		private long MASK_FORK_ROW_L = 0b10001, MASK_FORK_COL_L, MASK_FORK_DIAG1_L, MASK_FORK_DIAG2_L,
+			MASK_FORK_ROW_S = 0b01110, MASK_FORK_COL_S, MASK_FORK_DIAG1_S, MASK_FORK_DIAG2_S;
+
+		private void SetMasks()
+		{
+			// Set Outer Masks, like 10001
+
+			int cols = Columns; // Leave space for the 1 in the column
+			// Basically: value is 1, shift so much across << that new line, then add 1 again, shift until 4
+			MASK_FORK_COL_L = (1 << (cols * 4)) | 1;
+
+			// Now do the same for +/- 1 each time for the diagnonal
+			cols--; // Shift 1 less for the diagonal going upwards L-R. Only thing is this will need leading 0s, but it's got that. Just don't forget
+			// We skipped 3 0s that are quite essential here (I think), so let's add them to the back
+			MASK_FORK_DIAG1_L = (1 << (cols * 4)) | 1;
+
+			cols += 2;
+			// Now to +1, since Columns is +1, we can just use that instead
+			MASK_FORK_DIAG2_L = (1 << (cols * 4)) | 1;
+
+			// Set Inner Masks, like 01110
+
+			cols = Columns; // Leave space for the 1 in the column
+			// Basically: value is 1, shift so much across << that new line, then add 1 again, shift until 4
+			MASK_FORK_COL_S = ((((1 << cols) | 1) << cols) | 1) << cols;
+
+			// Now do the same for +/- 1 each time for the diagnonal
+			cols--; // Shift 1 less for the diagonal going upwards L-R. Only thing is this will need leading 0s, but it's got that. Just don't forget
+			// We skipped 3 0s that are quite essential here (I think), so let's add them to the back
+			MASK_FORK_DIAG1_S = ((((1 << cols) | 1) << cols) | 1) << cols;
+
+			cols += 2;
+			// Now to +1, since Columns is +1, we can just use that instead
+			MASK_FORK_DIAG2_S = ((((1 << cols) | 1) << cols) | 1) << cols;
 		}
 
 
@@ -243,6 +280,138 @@ namespace ChessV1.Stormcloud.Connect4
 			return finalScore;
 		}
 
+		private bool EVAL_DEBUG_FORKS = true;
+		private bool EVAL_DEBUG_WALLDIST = true;
+		private bool EVAL_DEBUG_NEIGHBORS = true;
+
+		private double AdvancedEvaluation(long myBoard, long opponentBoard)	// Also perhaps evaluate moves that can arise from this position, or how many
+		{
+
+			double myScore = 0, opponentScore = 0;
+			void ApplyMask(long myBoardstate, long opponentBoardCurrent, long maskTemplate, long forkMaskTemplateS, long forkMaskTemplateL, int horizontalRuns, int verticalRuns, double weight, ref double score)
+			{
+				for (int i = 0; i < verticalRuns; i++)
+				{
+					long mask = maskTemplate << (i * Columns);  // Shift by 1 row, so 1 rowwidth, so amount of columns
+					long maskForkS = forkMaskTemplateS << (i * Columns);  // Shift by 1 row, so 1 rowwidth, so amount of columns
+					long maskForkL = forkMaskTemplateL << (i * Columns);  // Shift by 1 row, so 1 rowwidth, so amount of columns
+
+					for (int i2 = 0; i2 < horizontalRuns; i2++)
+					{
+						int distance = HammingDistance(myBoardstate & mask, mask);
+						int distanceTotal = HammingDistance((myBoardstate | opponentBoardCurrent) & mask, mask);
+
+						if (distance != distanceTotal)
+						{
+							// We don't solely occupy the mask, but does the opponent?
+							if (distance == 0)
+							{
+								// Only let it count if we don't have a point here.
+								// If we do, it's shared and neither can complete it. So, no points.
+								// Otherwise, its a threat from the mate
+								distance = HammingDistance(opponentBoardCurrent & mask, mask);
+								if (distance <= 2)
+								{
+									int dist = 3 - distance;
+									opponentScore += dist * WeightMap.WEIGHT_HAMMINGDISTANCE_OPPONENT;
+									int MaskWallDistance = Math.Min(i2, horizontalRuns - 1 - i2);
+									opponentScore += dist * MaskWallDistance * WeightMap.WEIGHT_WALL_DISTANCE;
+
+									// Now Check for Potential Forks: How do S and L masks apply?: S >= 2/3 apply, L == 0 apply, otherwise its a fork
+									// Since the mask is 1 larger, if it's the final run don't do anything
+									if (i < verticalRuns - 1 && i < horizontalRuns - 1 && EVAL_DEBUG_FORKS)
+									{
+										int distanceS = HammingDistance(opponentBoardCurrent & maskForkS, maskForkS);
+										if (distanceS <= 1)
+										{
+											opponentScore += (2 - distanceS) * WeightMap.WEIGHT_FORK_HAMMINGDISTANCE_S;
+											// Check long
+											int distanceL = HammingDistance(opponentBoardCurrent & maskForkL, maskForkL);
+											if (distanceL <= 1)
+											{
+												// Higher Hamming distance is better for forks
+												opponentScore += distanceL * WeightMap.WEIGHT_FORK_HAMMINGDISTANCE_L;
+											}
+										}
+									}
+								}
+							}
+							// No score for blocked Connect4s
+							mask <<= 1;
+							forkMaskTemplateS <<= 1;
+							forkMaskTemplateL <<= 1;
+							continue;
+						}
+
+						// We are the only ones in the mask, let's see how much we're in it to win it
+						if (distance <= 2)
+						{
+							int dist = 3 - distance;
+							myScore += dist * WeightMap.WEIGHT_HAMMINGDISTANCE_OWN;
+							// Distance to the wall: i2 = 0 and i2 = horizontalRuns-1 => 0
+							// Math.Min (distance left, distance right)
+							int MaskWallDistance = Math.Min(i2, horizontalRuns - 1 - i2);
+							myScore += dist * MaskWallDistance * WeightMap.WEIGHT_WALL_DISTANCE;
+
+							// Now Check for Potential Forks: How do S and L masks apply?: S >= 2/3 apply, L == 0 apply, otherwise its a fork
+							// Since the mask is 1 larger, if it's the final run don't do anything
+							if (i < verticalRuns - 1 && i < horizontalRuns - 1 && EVAL_DEBUG_FORKS)
+							{
+								int distanceS = HammingDistance(myBoardstate & maskForkS, maskForkS);
+								if (distanceS <= 1)
+								{
+									myScore += (2 - distanceS) * WeightMap.WEIGHT_FORK_HAMMINGDISTANCE_S;
+									// Check long
+									int distanceL = HammingDistance(myBoardstate & maskForkL, maskForkL);
+									if (distanceL <= 1)
+									{
+										// Higher Hamming distance is better for forks
+										myScore += distanceL * WeightMap.WEIGHT_FORK_HAMMINGDISTANCE_L;
+									}
+								}
+							}
+						}
+
+						mask <<= 1;
+						forkMaskTemplateS <<= 1;
+						forkMaskTemplateL <<= 1;
+					}
+				}
+			}
+
+			void ApplyMasks(long myBoardstate, long opponentBoardCurrent, double weight, ref double score)
+			{
+				ApplyMask(myBoardstate, opponentBoardCurrent, MASK_ROW, MASK_FORK_ROW_S, MASK_FORK_ROW_L, Columns - 3, Rows, weight, ref score);
+				ApplyMask(myBoardstate, opponentBoardCurrent, MASK_COL, MASK_FORK_COL_S, MASK_FORK_COL_L, Columns, Rows - 3, weight, ref score);
+				ApplyMask(myBoardstate, opponentBoardCurrent, MASK_DIAG1, MASK_FORK_DIAG1_S, MASK_FORK_DIAG1_L, Columns - 3, Rows - 3, weight, ref score);
+				ApplyMask(myBoardstate, opponentBoardCurrent, MASK_DIAG2, MASK_FORK_DIAG2_S, MASK_FORK_DIAG2_L, Columns - 3, Rows - 3, weight, ref score);
+			}
+
+			ApplyMasks(myBoard, opponentBoard, WeightMap.WEIGHT_HAMMINGDISTANCE_OWN, ref myScore);
+			ApplyMasks(opponentBoard, myBoard, WeightMap.WEIGHT_HAMMINGDISTANCE_OPPONENT, ref opponentScore);
+
+			//*
+			for (var reverseIndex = 0; reverseIndex <= BOARD_MAX && EVAL_DEBUG_NEIGHBORS && EVAL_DEBUG_WALLDIST; reverseIndex++)
+			{
+				if (((myBoard >> reverseIndex) & 1) == 0)
+				{
+					if (((opponentBoard >> reverseIndex) & 1) == 0) continue;
+					// Opponent has field
+					if(EVAL_DEBUG_WALLDIST) opponentScore += Score_WallDistance(reverseIndex, WeightMap.WEIGHT_WALL_DISTANCE * WeightMap.WEIGHT_WALL_DISTANCE);
+					if(EVAL_DEBUG_NEIGHBORS) opponentScore += WeightMap.WEIGHT_NEIGHBORS * Score_Neighbors(reverseIndex, opponentBoard, myBoard, WeightMap.WEIGHT_NEIGHBOR_FREE, WeightMap.WEIGHT_NEIGHBOR_OWNED, WeightMap.WEIGHT_NEIGHBOR_TAKEN);
+					continue;
+				}
+				if(EVAL_DEBUG_WALLDIST) myScore += Score_WallDistance(reverseIndex, WeightMap.WEIGHT_WALL_DISTANCE * WeightMap.WEIGHT_WALL_DISTANCE);
+				if(EVAL_DEBUG_NEIGHBORS) myScore += WeightMap.WEIGHT_NEIGHBORS * Score_Neighbors(reverseIndex, myBoard, opponentBoard, WeightMap.WEIGHT_NEIGHBOR_FREE, WeightMap.WEIGHT_NEIGHBOR_OWNED, WeightMap.WEIGHT_NEIGHBOR_TAKEN);
+			}
+			//*/
+
+			// Apply factors and return
+			myScore *= WeightMap.WEIGHT_SCORE_OWN;
+			myScore -= opponentScore * WeightMap.WEIGHT_SCORE_OPPONENT;
+			return myScore;
+		}
+
 		private const double OPTION_DISTANCE_TO_WALL = 0.1; // per fields away from the wall, adjacent fields are 0.1
 		private const double OPTION_NEIGHBOR_IS_OWN = 0.9;
 		private const double OPTION_NEIGHBOR_IS_EMPTY = 0.5;
@@ -360,7 +529,14 @@ namespace ChessV1.Stormcloud.Connect4
 		double CC_FailsoftAlphaBeta(double alpha, double beta, long myBoard, long opponentBoard, int depthLeft, List<long> AllLegalMoves = null, bool isRoot = false)
 		{
 			calls++;
-			if (depthLeft < 0) return Evaluate(myBoard, opponentBoard);
+
+			// First: Check for a win
+			var result = PlayerWon(myBoard, opponentBoard);
+			if (result == 1) return WinValue - CC_FinalDepth + depthLeft;   // Win, Quicker is better
+			if (result == 2) return LossValue + CC_FinalDepth - depthLeft;  // Loss. Adding of FinalDepth is important because then LossValue is the minimum. when bestscore is initialized to LossValue and its forcedMate, this can cause issues with bestMove, as every move would be worse than doing nothing, so move stay 0 (invalid)
+			if (result == 0) return 0;   // Draw
+
+			if (depthLeft < 0) return AdvancedEvaluation(myBoard, opponentBoard);
 			double bestscore = double.NegativeInfinity;
 
 			if (AllLegalMoves == null)
@@ -369,11 +545,6 @@ namespace ChessV1.Stormcloud.Connect4
 			}
 
 			AllLegalMoves = OrderMoves(AllLegalMoves, myBoard, opponentBoard);
-
-			var result = PlayerWon(myBoard, opponentBoard);
-			if (result == 1) return WinValue - CC_FinalDepth + depthLeft;	// Win, Quicker is better
-			if (result == 2) return LossValue + CC_FinalDepth - depthLeft;	// Loss. Adding of FinalDepth is important because then LossValue is the minimum. when bestscore is initialized to LossValue and its forcedMate, this can cause issues with bestMove, as every move would be worse than doing nothing, so move stay 0 (invalid)
-			if (result == 0) return 0;   // Draw
 
 			if (AllLegalMoves.Count == 0) return 0; // Draw by no moves, do NOT evaluate. No moves = All tiles have been filled. This is a draw.
 

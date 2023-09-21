@@ -105,7 +105,7 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 			recursionConsole();
 		}
 
-		public void StartSpecificPreset()
+		public void StartSpecificPreset(int EngineDepth = 6)
 		{
 			ICollection<EngineWeightMap> weightMaps = new HashSet<EngineWeightMap>();
 			weightMaps.Add(new EngineWeightMap()
@@ -116,36 +116,11 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 				WEIGHT_HAMMINGDISTANCE_OWN = 0.9,
 				WEIGHT_HAMMINGDISTANCE_OPPONENT = 1.35,
 
+				WEIGHT_FORK_HAMMINGDISTANCE_S = 1,
+				WEIGHT_FORK_HAMMINGDISTANCE_L = 1,
+
 				WEIGHT_WALL_DISTANCE = 0,
 				WEIGHT_NEIGHBORS = 0,
-				WEIGHT_NEIGHBOR_FREE = 1,
-				WEIGHT_NEIGHBOR_OWNED = 1.1,
-				WEIGHT_NEIGHBOR_TAKEN = -0.9
-			});
-			weightMaps.Add(new EngineWeightMap()
-			{
-				NAME = "MapID-2",
-				WEIGHT_SCORE_OWN = 1.65,
-				WEIGHT_SCORE_OPPONENT = 1.65,
-				WEIGHT_HAMMINGDISTANCE_OWN = 0.9,
-				WEIGHT_HAMMINGDISTANCE_OPPONENT = 1.35,
-
-				WEIGHT_WALL_DISTANCE = 1.65,
-				WEIGHT_NEIGHBORS = 1.65,
-				WEIGHT_NEIGHBOR_FREE = 1,
-				WEIGHT_NEIGHBOR_OWNED = 1.1,
-				WEIGHT_NEIGHBOR_TAKEN = -0.9
-			});
-			weightMaps.Add(new EngineWeightMap()
-			{
-				NAME = "MapID-3",
-				WEIGHT_SCORE_OWN = 3.3,
-				WEIGHT_SCORE_OPPONENT = 3.3,
-				WEIGHT_HAMMINGDISTANCE_OWN = 0.9,
-				WEIGHT_HAMMINGDISTANCE_OPPONENT = 1.35,
-
-				WEIGHT_WALL_DISTANCE = 3.3,
-				WEIGHT_NEIGHBORS = 3.3,
 				WEIGHT_NEIGHBOR_FREE = 1,
 				WEIGHT_NEIGHBOR_OWNED = 1.1,
 				WEIGHT_NEIGHBOR_TAKEN = -0.9
@@ -156,7 +131,10 @@ namespace ChessV1.Stormcloud.Connect4.Unittest
 			weightMaps.Add(EngineWeightMap.DefaultPreset3);
 			weightMaps.Add(EngineWeightMap.DefaultPresetBalanced);
 			weightMaps.Add(EngineWeightMap.ParticleBest_Run1);
-			StartSpecific(weightMaps, Rows: 6, Columns: 7, EngineDepth: 6);
+			weightMaps.Add(EngineWeightMap.Particle_NewEngine_Best_Run3_D2);
+			weightMaps.Add(EngineWeightMap.Particle_NewEngine_Best_Run4_TempIT28_465);
+			weightMaps.Add(EngineWeightMap.Particle_NewEngine_Best_Run4_TempIT34_481);
+			StartSpecific(weightMaps, Rows: 6, Columns: 7, EngineDepth: EngineDepth);
 		}
 	}
 }

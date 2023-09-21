@@ -31,7 +31,24 @@ namespace Stormcloud
 		 * 00000000
 		 */
 
-		private long Boardstate;
+		private ulong BoardstateWhitePawns;
+		private ulong BoardstateWhiteKnights;
+		private ulong BoardstateWhiteBishops;
+		private ulong BoardstateWhiteRooks;
+		private ulong BoardstateWhiteQueens;
+		private ulong BoardstateWhiteKing;
+
+		private ulong BoardstateBlackPawns;
+		private ulong BoardstateBlackKnights;
+		private ulong BoardstateBlackBishops;
+		private ulong BoardstateBlackRooks;
+		private ulong BoardstateBlackQueens;
+		private ulong BoardstateBlackKing;
+
+		private ulong BoardstateEnPassant;
+
+		private ulong BoardstateWhiteAllCastles;
+		private ulong BoardstateBlackAllCastles;
 
 	}
 }
