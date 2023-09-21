@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ChessV1.Stormcloud.TicTacToe;
@@ -17,7 +16,7 @@ namespace ChessUI
 		/// <summary>
 		/// Der Haupteinstiegspunkt für die Anwendung.
 		/// </summary>
-		//[STAThread]
+		[STAThread]
 		static void Main()
 		{
 			Application.EnableVisualStyles();
@@ -42,9 +41,9 @@ namespace ChessUI
 
 			// Export to JSON (happens automatically when a run finishes now):
 			//PSOExportParser.ConvertToJSONSingleFile(11);
-			PSOExportParser.ConvertToJSONSingleFileInvertedOrder(11);
+			//PSOExportParser.ConvertToJSONSingleFileInvertedOrder(11);
 
-			//Application.Run(new Connect4UI(6, 7));
+			Application.Run(new Connect4UI(6, 7));
 		}
 	}
 }

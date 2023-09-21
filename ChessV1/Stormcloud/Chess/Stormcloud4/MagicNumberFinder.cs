@@ -16,6 +16,58 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		private Dictionary<ushort, (byte, byte, byte, byte)> CutoffIndeces =
 			new Dictionary<ushort, (byte, byte, byte, byte)>();
 
+		private static Random random = new Random();
+
+		// Generates a random 64-bit number with a specific number of bits set. By GPT-4.
+		public static ulong GenerateRandomNumber(int bitsSet)
+		{
+			ulong result = 0;
+			HashSet<int> usedBits = new HashSet<int>();
+
+			for (int i = 0; i < bitsSet; ++i)
+			{
+				int bitPos;
+				do
+				{
+					bitPos = random.Next(64);
+				} while (usedBits.Contains(bitPos));
+
+				usedBits.Add(bitPos);
+				result |= (1UL << bitPos);
+			}
+
+			return result;
+		}
+		// Test if the magic number is valid.
+		// This is a simplified version; you'll need to test the magic number
+		// with all blocker configurations and the corresponding attack sets.
+		public static bool TestMagicNumber(ulong magic)
+		{
+			// For each blocker configuration, compute the hash using the magic number.
+			// Check for collisions.
+			// If there are collisions, return false.
+			// Otherwise, return true.
+
+
+
+			// This is a placeholder, fill with the proper logic.
+			return true;
+		}
+
+		static void StartTesting()
+		{
+			while (true)
+			{
+				ulong magicCandidate = GenerateRandomNumber(12);  // for example, 12 bits set.
+				if (TestMagicNumber(magicCandidate))
+				{
+					Console.WriteLine($"Found a valid magic number: {magicCandidate}");
+					break;
+				}
+			}
+		}
+
+
 		#endregion
 
 		ulong RookPossibleMoves(byte rank, byte file, ulong Bitboard = ulong.MaxValue)
