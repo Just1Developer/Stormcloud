@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ChessV1.Stormcloud.Connect4.Weightfinder.PSO_JSON_WRITER;
+using ChessV1.Stormcloud.Connect4.Weightfinder.PSO_TS_WRITER;
 using UnitMatch = ChessV1.Stormcloud.Connect4.Unittest.UnitMatch;
 
 namespace ChessV1.Stormcloud.Connect4.Weightfinder
@@ -371,9 +372,7 @@ namespace ChessV1.Stormcloud.Connect4.Weightfinder
 				    this.PhaseIterations >= PhaseConditions.MAX_ITERATIONS_PHASE3)
 				{
 					Flush();
-					PSOExportParser.ConvertToJSONs(FLUSH_FOLDER);
-					PSOExportParser.ConvertToJSONSingleFile(FLUSH_FOLDER);
-					PSOExportParser.ConvertToJSONSingleFileInvertedOrder(FLUSH_FOLDER);
+					TS_PSOExportParser.ConvertToTSSingleFileInvertedOrder(FLUSH_FOLDER);
 					Console.WriteLine("Exiting...");
 					Environment.Exit(0);
 				}

@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ChessV1.Stormcloud.Chess.Stormcloud4;
 using ChessV1.Stormcloud.TicTacToe;
 using ChessV1.Stormcloud.Connect4;
 using ChessV1.Stormcloud.Connect4.Unittest;
 using ChessV1.Stormcloud.Connect4.Weightfinder;
-using ChessV1.Stormcloud.Connect4.Weightfinder.PSO_JSON_WRITER;
+using ChessV1.Stormcloud.Connect4.Weightfinder.PSO_TS_WRITER;
 
 namespace ChessUI
 {
@@ -39,11 +40,16 @@ namespace ChessUI
 			// Resume previous:
 			//ParticleSwarmOptimization.ResumePSO(11);
 
-			// Export to JSON (happens automatically when a run finishes now):
+			// Export to JSON:
 			//PSOExportParser.ConvertToJSONSingleFile(11);
 			//PSOExportParser.ConvertToJSONSingleFileInvertedOrder(11);
 
-			Application.Run(new Connect4UI(6, 7));
+			// Export to TS (happens automatically when a run finishes now):
+			//PSOExportParser.ConvertToTSSingleFile(11);
+			//TS_PSOExportParser.ConvertToTSSingleFileInvertedOrder(11);
+
+			//Application.Run(new Connect4UI(6, 7));
+			Application.Run(new MagicNumberFinder());
 		}
 	}
 }
