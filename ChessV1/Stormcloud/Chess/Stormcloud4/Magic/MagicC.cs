@@ -13,6 +13,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		// The C code but translated to C#, currently rook only
 
 		// This conforms to how Stormcloud4 is mapping the bits to the squares
+		
+		// Mask for blocker constellations, so without the last rank
 		internal static ulong rmask(int sq)
 		{
 			ulong result = 0UL;

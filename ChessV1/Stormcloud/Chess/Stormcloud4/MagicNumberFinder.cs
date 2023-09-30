@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualBasic.Logging;
 
 namespace ChessV1.Stormcloud.Chess.Stormcloud4
 {
@@ -22,10 +19,170 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 		#region Rook MagicNumberFinder
 
+
+		#region Magic Finder
+
+
+		#region New Magic Finder with sq 0 = h1
+
+		static byte[] RBits = {
+				12, 11, 11, 11, 11, 11, 11, 12,
+				11, 10, 10, 10, 10, 10, 10, 11,
+				11, 10, 10, 10, 10, 10, 10, 11,
+				11, 10, 10, 10, 10, 10, 10, 11,
+				11, 10, 10, 10, 10, 10, 10, 11,
+				11, 10, 10, 10, 10, 10, 10, 11,
+				11, 10, 10, 10, 10, 10, 10, 11,
+				12, 11, 11, 11, 11, 11, 11, 12
+			};
+
+
+		// Test if the magic number is valid.
+		static int TestMagicNumber2(ulong magic, int square, HashSet<ulong> allBlockers)
+		{
+			byte shiftBits = (byte)(64 - RBits[square]);
+			ulong[] used = new ulong[4096];
+			for (int i = 0; i < 4096; i++) used[i] = ulong.MaxValue;
+			int size = 0;
+
+			foreach (ulong blockerPos in allBlockers)
+			{
+				int hash = (int)((blockerPos * magic) >> shiftBits);
+				ulong legalMoves = MagicC.rookAttacks(square, blockerPos);
+
+				if (used[hash] == ulong.MaxValue) { used[hash] = legalMoves; size++; }
+				else if (used[hash] != legalMoves) return -1;
+
+				// Old:
+				//if (!hashs.ContainsKey(hash)) hashs.Add(hash, legalMoves);
+				//else if (hashs[hash] != legalMoves) return -1;
+			}
+			if (size <= 8)
+			{
+				int i, n;
+				Log("--------------");
+				for (i = 0, n = 0; i < 4096; i++)
+				{
+					if (used[i] == ulong.MaxValue) continue;
+					n++;
+					Log($"{n}. used[{i}] == {Convert.ToString((long)used[i], 2)}");
+				}
+			}
+			return size;
+		}
+
+		static int count_1s(ulong number)
+		{
+			int count = 0;
+			for (int i = 0; i < 64; i++) if (((number >> i) & 1) == 1) count++;
+			return count;
+		}
+
+		const int maxSecondsTime = 5;
+
+		static (ulong, int) FindMagicCmethods(int square, int maxSize)
+		{
+			string str_square = String_square(square);
+			int size = int.MaxValue;
+			ulong bestMagic = 0;
+			ulong mask = (RookBBSpecial_GetBitboardFileOnly0to7(square % 8) | RookBBSpecial_GetBitboardRankOnly0to7(square / 8)) & ~(1UL << square);
+			var AllBlockers = GetAllBlockerPositionsFromSquareNew(mask);
+			Log($"Starting, square: {square} | {str_square}, maxSize: {maxSize}, Blockers: {AllBlockers.Count}");
+			Log("mask: " + Convert.ToString((long)mask, 2));
+			Log("square: " + Convert.ToString(1L << square, 2));
+			DateTime start = DateTime.Now;
+			while (size == int.MaxValue && true)
+			{
+				if ((DateTime.Now - start).TotalSeconds > maxSecondsTime)
+				{
+					Log($"[{str_square}] Time limit exceeded ({maxSecondsTime}s)");
+					if (size == int.MaxValue) return (0, 0);
+					break;
+				}
+
+				// generate new magic number candidate
+				ulong magic = (ulong)(random.NextInt64() & random.NextInt64() & random.NextInt64());
+				// Check if there are at least 6 1s in the highest 8 bits
+				if (count_1s((mask * magic) & 0xFF00000000000000) < 6) continue;    // root out unpromising candidates
+
+				int magicSize = TestMagicNumber2(magic, square, AllBlockers);
+				if (magicSize == -1) continue;
+				if (magicSize > maxSize) continue;
+				if (magicSize >= size) continue;
+				bestMagic = magic;
+				size = magicSize;
+				Log($"[{str_square}] Found new magic number: size: {size}, magic: {magic}, binary: {Convert.ToString((long)magic, 2)}");
+			}
+			return (bestMagic, size);
+		}
+
+
+		public static void FindMagicsAllSquares()
+		{
+			ulong[] magics = new ulong[64];
+			int[] sizes = new int[64];
+			for (int i = 0; i < 64; i++)
+			{
+				int maxSize = RBits[i] == 12 ? 4096 : RBits[i] == 11 ? 2048 : 1024;
+				var result = FindMagicCmethods(i, maxSize);
+				ulong magic = result.Item1;
+				magics[i] = magic;
+				sizes[i] = result.Item2;
+				Log($"Square: {i}  |  Size: {result.Item2}  |  Magic Found: {magic}UL  |  0b{Convert.ToString((long)magic, 2)}UL  |  0x{Convert.ToString((long)magic, 16)}UL");
+			}
+
+			Log("internal static readonly ulong[] rook_magics_X = {");
+			for (int i = 0; i < 64; i++)
+			{
+				ulong magic = magics[i];
+				Log($"0x{Convert.ToString((long)magic, 16)}UL,		// size: {sizes[i]}");
+			}
+			Log("};");
+
+			Environment.Exit(0);
+
+		}
+
+		static string String_square(int square) => $"{(char)('h' - (square % 8))}{(char)('8' - (square / 8))}";
+
+		internal static HashSet<ulong> GetAllBlockerPositionsFromSquareNew(ulong blockerMask)
+		{
+			//byte s = (byte) (0b111111 - (rank << 3 + file));	// reverse index, 63 - index, index = rank*8 + file
+			// This has 10-12 active bytes, determined by how much overlap there is.
+			HashSet<ulong> blockerPositions = new HashSet<ulong>();
+
+			int maxCount = count_1s(blockerMask); //CompressBitboard(ulong.MaxValue, blockerMask);
+												  //Log("Mask: " + Convert.ToString((long)blockerMask, 2));
+			for (ushort i = 0; i <= (1 << maxCount); ++i)
+			{
+				ulong blockerPosition = ExpandFromUShort(i, blockerMask);
+				//Log($"blockerPos {i}: " + Convert.ToString((long)blockerPosition, 2));
+				blockerPositions.Add(blockerPosition);
+			}
+			return blockerPositions;
+		}
+
+		#endregion
+
+		// Since we want to calculate the index for the lookup table, the last square of each file/rank is redundant, since we'd include that anyway (squares are calculated as if every square was empty/had an opponent on it.
+		// Thus, we can lower the search space
+		static ulong RookBBSpecial_GetBitboardRankOnly0to7(int rank)
+		{
+			return RookBBSpecial_LastRank << (rank * 8);
+		}
+		static ulong RookBBSpecial_GetBitboardFileOnly0to7(int file)
+		{
+			return RookBBSpecial_LastFile << file;
+		}
+
+		#endregion
+
+
+
 		#region Numberfinder Operation
 
 		// Stores the index that results from the magic number and the Cutoffs in each direction. This Checks for overlay.
-		
+
 		private static Random random = new ();
 
 		// Generates a random 64-bit number with a specific number of bits set. By GPT-4.
@@ -255,7 +412,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 					int bestIndex = -1;
 					for (int i = 0; i < 64; i++)
 					{
-						ulong magic = Magics.rook_magics_1[i];
+						ulong magic = 0;//Magics.rook_magics_1[i];
 						var result = TestMagicNumber(magic, RBits[field], rank, file, allBlockerPositions);
 						if (result == -1) continue;
 						if (result < bestSize || bestSize == -1)

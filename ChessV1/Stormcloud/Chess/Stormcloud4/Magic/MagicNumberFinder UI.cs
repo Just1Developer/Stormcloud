@@ -153,6 +153,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			HighlightBitboard = GetCutoffInDirectionsLegalMovesPos(BlockerBitboard, selectedY, selectedX);
 			int field = selectedY * 8 + selectedX;
 			//HighlightBitboard = MagicC.rmask(field);
+			//HighlightBitboard = MagicC.rookAttacks(field, BlockerBitboard);
 			Refresh();
 
 			//Log($"Clicked {String_file(x)}{String_rank(y)}  |  x: {x}, y: {y}");

@@ -8,7 +8,7 @@
     <RootNamespace>ChessV1</RootNamespace>
     <AssemblyName>ChessV1</AssemblyName>
     <Deterministic>true</Deterministic>
-    <StartupObject>ChessUI.Program</StartupObject>
+    <StartupObject>ChessV1.StormcloudMain</StartupObject>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
