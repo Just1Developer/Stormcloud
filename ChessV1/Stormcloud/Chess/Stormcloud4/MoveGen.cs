@@ -11,10 +11,10 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
         private static readonly ulong[] RookFullBlockerMasks = new ulong[64];
         private static readonly ulong[] BishopFullBlockerMasks = new ulong[64];
 
-        private static readonly ulong[][] RookMoves = new ulong[64][];
-        private static readonly ulong[][] BishopMoves = new ulong[64][];
-        private static readonly ulong[] KingMoves = new ulong[64];
-        private static readonly ulong[] KnightMoves = new ulong[64];
+        internal static readonly ulong[][] RookMoves = new ulong[64][];
+        internal static readonly ulong[][] BishopMoves = new ulong[64][];
+        internal static readonly ulong[] KingMoves = new ulong[64];
+        internal static readonly ulong[] KnightMoves = new ulong[64];
 
         #region Move Gen
 
@@ -78,22 +78,22 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
             return board;
         }
 
-        static ulong RookBlockerBitboard(int square, ulong combinedBitboard)
+        internal static ulong RookBlockerBitboard(int square, ulong combinedBitboard)
         {
 	        return combinedBitboard & RookFullBlockerMasks[square];
         }
 
-        static ulong BishopBlockerBitboard(int square, ulong combinedBitboard)
+        internal static ulong BishopBlockerBitboard(int square, ulong combinedBitboard)
         {
 	        return combinedBitboard & BishopFullBlockerMasks[square];
         }
 
-        static int TranslateRook(int square, ulong BlockerBitboard)
+        internal static int TranslateRook(int square, ulong BlockerBitboard)
         {
             return (int) (BlockerBitboard * RookMagics[square]) >> (64-RBits[square]);
         }
 
-        static int TranslateBishop(int square, ulong BlockerBitboard)
+        internal static int TranslateBishop(int square, ulong BlockerBitboard)
         {
             return (int) (BlockerBitboard * RookMagics[square]) >> (64-RBits[square]);
         }

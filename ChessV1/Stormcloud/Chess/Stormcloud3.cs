@@ -12,6 +12,8 @@ namespace Stormcloud
 	/**
 	 * This Version of Stormcloud is discontinued. Development will continue in Stormcloud 4 using advanced techniques to significantly enhance speed of the Engine.
 	 * This has been a valuable experience to code, and I have no intention of stopping.
+	 *
+	 * Dev note: The reason the engine didn't play that well is because I believe it's using the new Eval and that code is not finished.
 	 * 
 	 * A current top game of Stormcloud 3 is this [Depth: 4 | Time: ~1 hour 10 minutes]:
 	 * Game (No Notations):

@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ChessV1.Stormcloud.Chess.Stormcloud4
 {
@@ -21,7 +17,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 		/*
 		 * Board
-		 * 00000000		Rook a1 mask: 01111111 10000000 1000... => 0x7F80808080808080; I dont know anything
+		 * 00000000		Rook a8 mask: 01111111 10000000 1000... => 0x7F80808080808080; I dont know anything
 		 * 00000000
 		 * 00000000
 		 * 00000000
@@ -31,28 +27,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		 * 00000000
 		 */
 
-		/*
-		private ulong BoardstateWhitePawns;
-		private ulong BoardstateWhiteKnights;
-		private ulong BoardstateWhiteBishops;
-		private ulong BoardstateWhiteRooks;
-		private ulong BoardstateWhiteQueens;
-		private ulong BoardstateWhiteKing;
-
-		private ulong BoardstateBlackPawns;
-		private ulong BoardstateBlackKnights;
-		private ulong BoardstateBlackBishops;
-		private ulong BoardstateBlackRooks;
-		private ulong BoardstateBlackQueens;
-		private ulong BoardstateBlackKing;
-
-		private ulong BoardstateEnPassant;
-
-		private ulong BoardstateWhiteAllCastles;
-		private ulong BoardstateBlackAllCastles;
-		*/
-
-		#region Constants
+		// Constants Class
 
 		private const byte INDEX_PAWN_BITBOARD = 0;
 		private const byte INDEX_KNIGHT_BITBOARD = 1;
@@ -68,8 +43,11 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 		#region Move Data
 
+		// Reminder why movedata none doesn't exist
+		[Obsolete("Please specify piece bitboard index.", true)]	// true causes compiler error
 		private const byte MOVEDATA_NONE = 0;
 
+		/*
 		private const byte MOVEDATA_SHORTCASTLE_WHITE = 1;
 		private const byte MOVEDATA_SHORTCASTLE_BLACK = 2;
 		private const byte MOVEDATA_LONGCASTLE_WHITE = 3;
@@ -82,45 +60,75 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 		private const byte MOVEDATA_PAWN_JUMPSTART_WHITE = 9;	// Add index << 8 or >> 8 to en passant board
 		private const byte MOVEDATA_PAWN_JUMPSTART_BLACK = 10;
+		*/
+
+		// Or: Alternative Move Data (including piece types)
+		// Basically, normal move data packs into 0xxx for xxx = Index of manipulated Bitboard
+		// Additional Data like this may also hold data, but all move data has to have the 8-bit set to 1
+		// The jumpstart data also indicates the pawn bitboard, but gives some *additional info*
+		// Of course, we can just always pack the index like this, but that gives us only 1 bit for information. That is not a problem unless
+		// we might want to pack more than a yes/no into movedata, for example the castle direction. Now, we can pack movedata into bits, but
+		// if the 8-bit is set to 1, we interpret it differently, for example 1001 might be white short castle, and 1100 black long castle.
+		// This way, we can (with a bit of if-else, fair) store more information.
+
+		private const byte MOVEDATA_PAWN_JUMPSTART = 0b1000;
+
+		private const byte MOVEDATA_CASTLE_SHORT = 0b1001;
+		private const byte MOVEDATA_CASTLE_LONG = 0b1010;
+
+		private const byte MOVEDATA_PROMOTION_N = 0b1011;
+		private const byte MOVEDATA_PROMOTION_B = 0b1100;
+		private const byte MOVEDATA_PROMOTION_R = 0b1101;
+		private const byte MOVEDATA_PROMOTION_Q = 0b1110;
+
+		private const byte MOVEDATA_EN_PASSANT_CAPTURE = 0b1111;
 
 		#endregion
 
+		#region Castle Options Square and Data masks
+
+		// Vulnerable Squares for Kingside castleing, includes the King square since cannot castle out of check
+		private const ulong CASTLE_SQUAREMASK_VULNERABLE_WHITE = 0b00111110UL;
+		private const ulong CASTLE_SQUAREMASK_VULNERABLE_BLACK = 0x3E00000000000000UL; // 0b0000 1110 000...
+		private const ulong CASTLE_SQUAREMASK_VULNERABLE_BOTH = 0x3E0000000000003EUL; // 0b0000 1110 000...
+
+		private const ulong CASTLE_SQUAREMASK_VULNERABLE_KINGSIDE_WHITE = 0b00001110UL;
+		private const ulong CASTLE_SQUAREMASK_VULNERABLE_QUEENSIDE_WHITE = 0b00111000UL;
+		private const ulong CASTLE_SQUAREMASK_VULNERABLE_KINGSIDE_BLACK = 0x0E00000000000000UL; // 0b0000 1110 000...
+		private const ulong CASTLE_SQUAREMASK_VULNERABLE_QUEENSIDE_BLACK = 0x3700000000000000UL;    // 0b0011 1000 000...
+
+		// Masks for the King Position later
+		private const ulong CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE = 0b00000010UL;
+		private const ulong CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE = 0b00100000UL;
+		private const ulong CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK = 0x2000000000000000UL;
+		private const ulong CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK = 0x0200000000000000UL;
+
+		// Squares for rook taking
+		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_WHITE = 0;
+		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_WHITE = 7;
+		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_BLACK = 56;
+		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_BLACK = 63;
+
+		private const ulong CASTLE_BITMASK_NOT_CASTLE_KINGSIDE_WHITE = ~CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE;    // 0b0000 0010
+		private const ulong CASTLE_BITMASK_NOT_CASTLE_QUEENSIDE_WHITE = ~CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE;   // 0b0010 0000
+		private const ulong CASTLE_BITMASK_NOT_CASTLE_KINGSIDE_BLACK = ~CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK;	// 0b0011 1000 000...
+		private const ulong CASTLE_BITMASK_NOT_CASTLE_QUEENSIDE_BLACK = ~CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK;	// 0b0000 1110 000...
+
+		private static readonly ulong[] CASTLE_XOR_MASKS_KING = {	// Index = Move Data - 0b1001 since 0b1001 = 0
+			0x000000000000000A,	// White castle Kingside, 0000 1010
+			0x0000000000000028,	// White caslte Queenside, 0010 1000
+			0x0A00000000000000, // Black castle Kingside, 0000 1010
+			0x2800000000000000	// Black castle Queenside, 0010 1000
+		};
+
+		private static readonly ulong[] CASTLE_XOR_MASKS_ROOK = {	// Index = Move Data - 0b1001 since 0b1001 = 0, so Move Data - 9
+			0x0000000000000005,	// White castle Kingside, 0000 0101
+			0x0000000000000090,	// White caslte Queenside, 1001 0000
+			0x0500000000000000, // Black castle Kingside, 0000 0101
+			0x9000000000000000	// Black castle Queenside, 1001 0000
+		};
+
 		#endregion
-
-		internal double Failsoft_AlphaBeta(double alpha, double beta, ulong[] myBitboards, ulong[] opponentBitboards,
-			int depthRemaining, bool isWhite, bool isRoot = false)
-		{
-			if (depthRemaining == 0) return Evaluate(myBitboards, opponentBitboards, isWhite);
-
-			double HighestScore = double.NegativeInfinity;
-
-			// Somehow we need to save from and to, so we need to save
-			Span<ushort> moves = stackalloc ushort[218];	// Does this make sense? This is 218 * 8 bytes + overhead for each node (But when one finishes the memory is released, so there is always just 1 path, meaning at most 218*8*depth, with probably >= 1MB stack size available
-
-			// Fill up moves
-			moves = MoveGen.GenerateAllMoves(myBitboards, opponentBitboards, moves);
-
-			foreach (ushort move in moves)
-			{
-
-			}
-
-			return HighestScore;
-		}
-
-		// Pack and Unpack
-		static ushort Pack(byte FromSquare, int ToSquare, byte data)
-		{
-			return (ushort) ((FromSquare << 12) | (ToSquare << 4) | (data & 0xF));
-		}
-		static ulong Unpack(ushort packedMove)
-		{
-			return (1UL << GetMoveSquareFrom(packedMove)) | (1UL << GetMoveSquareTo(packedMove));
-		}
-
-		static byte GetMoveSquareFrom(ushort move) => (byte) (move >> 12);
-		static byte GetMoveSquareTo(ushort move) => (byte) ((move >> 4) & 0x3F);
-		static byte GetMoveData(ushort move) => (byte)(move & 0xF);
 
 	}
 }

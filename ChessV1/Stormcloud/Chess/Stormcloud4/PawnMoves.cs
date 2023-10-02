@@ -13,8 +13,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
         public static ulong PawnAttacksWhite(ulong pawnBitboard, ulong opponentBitboardComplete)
         {
             ulong moves = 0;
-            moves |= (pawnBitboard << 9) & Bitboard_NotAFile;
-            moves |= (pawnBitboard << 7) & Bitboard_NotHFile;
+            moves |= (pawnBitboard & Bitboard_NotAFile) << 9;
+            moves |= (pawnBitboard & Bitboard_NotHFile) << 7;
             moves &= opponentBitboardComplete;
             return moves;
         }
@@ -38,8 +38,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
         public static ulong PawnAttacksBlack(ulong pawnBitboard, ulong opponentBitboardComplete)
         {
             ulong moves = 0;
-            moves |= (pawnBitboard >> 7) & Bitboard_NotAFile;
-            moves |= (pawnBitboard >> 9) & Bitboard_NotHFile;
+            moves |= (pawnBitboard & Bitboard_NotAFile) >> 7;
+            moves |= (pawnBitboard & Bitboard_NotHFile) >> 9;
             moves &= opponentBitboardComplete;
             return moves;
         }
