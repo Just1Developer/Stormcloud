@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace ChessV1.Stormcloud.Chess.Stormcloud4
 {
-    internal class MoveGen : PawnMoves
+    internal class MoveGen
     {
 
         private static readonly ulong[] RookFullBlockerMasks = new ulong[64];
@@ -545,41 +545,3 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
         };
     }
 }
-
-
-
-/*
- *
- * For printing out in a file:
-			builderHex.AppendLine("\t\tinternal static ulong[][] AllLegalRookMovesHex = {");
-            builderDec.AppendLine("\t\tinternal static ulong[][] AllLegalRookMovesDec = {");
-            for (int square = 0; square < 64; square++)
-            {
-	            builderHex.AppendLine($"\t\t\t// square: {square+1}");
-	            builderDec.AppendLine($"\t\t\t// square: {square+1}");
-	            builderHex.AppendLine($"\t\t\tnew ulong[] {{\t\t");
-	            builderDec.AppendLine($"\t\t\tnew ulong[] {{\t\t");
-                PreGenerateRookMoves(square);
-                builderHex.AppendLine("\t\t\t},");
-                builderDec.AppendLine("\t\t\t},");
-            }
-            builderHex.AppendLine("\t\t};");
-            builderDec.AppendLine("\t\t};");
-
-            Log("namespace ChessV1.Stormcloud.Chess.Stormcloud4\n{\n\tinternal class RookMoves\n\t{");
-            Log(builderHex.ToString());
-            Log(builderDec.ToString());
-            Log("\t}\n}");
-
-
-			Inside the rook move generation after moves[] is generated:
-
-
-                for (int i = 0; i < moves.Length; i++)
-                {
-                    //Log($"\t\t\t\t0x{Convert.ToString((long) moves[i], 16)}UL,");
-                    builderHex.AppendLine($"\t\t\t\t0x{Convert.ToString((long) moves[i], 16)}UL,");
-                    builderDec.AppendLine($"\t\t\t\t{moves[i]}UL,");
-                }
- *
- */

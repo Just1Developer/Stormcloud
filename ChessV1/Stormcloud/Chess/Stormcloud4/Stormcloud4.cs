@@ -47,22 +47,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		[Obsolete("Please specify piece bitboard index.", true)]	// true causes compiler error
 		private const byte MOVEDATA_NONE = 0;
 
-		/*
-		private const byte MOVEDATA_SHORTCASTLE_WHITE = 1;
-		private const byte MOVEDATA_SHORTCASTLE_BLACK = 2;
-		private const byte MOVEDATA_LONGCASTLE_WHITE = 3;
-		private const byte MOVEDATA_LONGCASTLE_BLACK = 4;
-
-		private const byte MOVEDATA_PROMOTION_KNIGHT = 5;
-		private const byte MOVEDATA_PROMOTION_BISHOP = 6;
-		private const byte MOVEDATA_PROMOTION_ROOK = 7;
-		private const byte MOVEDATA_PROMOTION_QUEEN = 8;
-
-		private const byte MOVEDATA_PAWN_JUMPSTART_WHITE = 9;	// Add index << 8 or >> 8 to en passant board
-		private const byte MOVEDATA_PAWN_JUMPSTART_BLACK = 10;
-		*/
-
-		// Or: Alternative Move Data (including piece types)
+		// Move Data (including piece types)
 		// Basically, normal move data packs into 0xxx for xxx = Index of manipulated Bitboard
 		// Additional Data like this may also hold data, but all move data has to have the 8-bit set to 1
 		// The jumpstart data also indicates the pawn bitboard, but gives some *additional info*
@@ -108,11 +93,6 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_WHITE = 7;
 		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_BLACK = 56;
 		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_BLACK = 63;
-
-		private const ulong CASTLE_BITMASK_NOT_CASTLE_KINGSIDE_WHITE = ~CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE;    // 0b0000 0010
-		private const ulong CASTLE_BITMASK_NOT_CASTLE_QUEENSIDE_WHITE = ~CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE;   // 0b0010 0000
-		private const ulong CASTLE_BITMASK_NOT_CASTLE_KINGSIDE_BLACK = ~CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK;	// 0b0011 1000 000...
-		private const ulong CASTLE_BITMASK_NOT_CASTLE_QUEENSIDE_BLACK = ~CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK;	// 0b0000 1110 000...
 
 		private static readonly ulong[] CASTLE_XOR_MASKS_KING = {	// Index = Move Data - 0b1001 since 0b1001 = 0
 			0x000000000000000A,	// White castle Kingside, 0000 1010

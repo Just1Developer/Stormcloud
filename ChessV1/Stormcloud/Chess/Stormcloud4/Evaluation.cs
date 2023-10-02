@@ -17,6 +17,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			return 0;
 		}
 
+		// Todo Use moveGeneration's methods to create the complete attack bitboard of a given bitboard array
+
 		#region Pawn Attacks
 
 		public static ulong PawnAttacksWhiteWest(ulong pawnBitboard, ulong opponentBitboardComplete)

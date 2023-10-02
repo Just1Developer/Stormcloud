@@ -5,7 +5,9 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 {
 	partial class Stormcloud4
 	{
-		private ushort packed_Bestmove = 0;	// 0 means 0 movedata means no move
+		private ushort packed_Bestmove = 0;	// 0 means 0 movedata means no move -> 0 means no move
+
+		// Todo Multithread
 
 		internal unsafe double Failsoft_AlphaBeta(double alpha, double beta, ref ulong[] myBitboards, ref ulong[] opponentBitboards,
 	int depthRemaining, bool isWhite, bool isRoot = false)
@@ -216,7 +218,6 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 			for (; c < totalOperationCount; ++c)
 			{
-				// Todo perhaps updates before
 				opponentBitboards[Operations[c].Item1] ^= Operations[c].Item2;
 			}
 
@@ -250,50 +251,3 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		static bool DataReferencesBitboard(byte data) => (data & 0b1000) == 0;
 	}
 }
-
-
-
-
-
-
-
-
-
-/*
-
-byte affectedOwnBitboardIndex;
-// Consists of XOR Operation as ulong and byte as index of the affected bitboard
-Span<(byte, ulong)> additionalAffectedBitboardsAndOperations = stackalloc (byte, ulong)[2]; // Max affected score
-
-
-if (data == MOVEDATA_CASTLE_SHORT)
-{
-	affectedOwnBitboardIndex = INDEX_KING_BITBOARD;
-	additionalAffectedBitboardsAndOperations[affectedBoardsCount++] = (INDEX_ROOK_BITBOARD,
-		CASTLE_XOR_MASKS_ROOK[isWhite ? 0 : 2]);
-}
-else if (data == MOVEDATA_CASTLE_LONG)
-{
-	affectedOwnBitboardIndex = INDEX_KING_BITBOARD;
-	additionalAffectedBitboardsAndOperations[affectedBoardsCount++] = (INDEX_ROOK_BITBOARD,
-		CASTLE_XOR_MASKS_ROOK[isWhite ? 1 : 3]);
-}
-else if (data == MOVEDATA_EN_PASSANT_CAPTURE)
-{
-	affectedOwnBitboardIndex = INDEX_PAWN_BITBOARD;
-	additionalAffectedBitboardsAndOperations[affectedBoardsCount++] = (INDEX_EN_PASSANT_BITBOARD,
-		myBitboards[INDEX_EN_PASSANT_BITBOARD]);	// XOR with itself to remove/add pawn capturability
-}
-else if (data == MOVEDATA_PAWN_JUMPSTART)
-{
-	affectedOwnBitboardIndex = INDEX_PAWN_BITBOARD;
-	additionalAffectedBitboardsAndOperations[affectedBoardsCount++] = (INDEX_EN_PASSANT_BITBOARD,
-		GetMedianBitboard(moves[i]));	// XOR with itself to remove/add pawn capturability
-}
-else if (data == MOVEDATA_PROMOTION_N)
-{
-	affectedOwnBitboardIndex = INDEX_PAWN_BITBOARD;
-	additionalAffectedBitboardsAndOperations[affectedBoardsCount++] = (INDEX_EN_PASSANT_BITBOARD,
-		GetMedianBitboard(moves[i]));	// XOR with itself to remove/add pawn capturability
-}
-*/
