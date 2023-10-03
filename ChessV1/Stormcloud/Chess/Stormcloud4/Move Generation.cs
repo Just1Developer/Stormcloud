@@ -6,19 +6,23 @@ using System.Threading.Tasks;
 
 namespace ChessV1.Stormcloud.Chess.Stormcloud4
 {
-	// Todo Incorporate Castle and En Passant
+	// No longer To-Do Incorporate Castle and En Passant (both included now I think)
 	partial class Stormcloud4
 	{
 		public static byte GenerateAllMoves(ulong[] myBitboards, ulong[] opponentBitboards, Span<ushort> moves, bool isWhite)
 			=> GenerateAllMoves(myBitboards, opponentBitboards, myBitboards[INDEX_FULL_BITBOARD] | opponentBitboards[INDEX_FULL_BITBOARD], moves, isWhite);
 		public static unsafe byte GenerateAllMoves(ulong[] myBitboards, ulong[] opponentBitboards, ulong CompleteGamestate, Span<ushort> moves, bool isWhite)
 		{
-			ulong myBitboardInverted = ~myBitboards[INDEX_FULL_BITBOARD];
+			ulong allMyPieces = myBitboards[INDEX_FULL_BITBOARD];
+			ulong myBitboardInverted = ~allMyPieces;
 			byte move = 0;
 			// Get all moves in order, order is based on piece amount and how long they probably live:
 			// Pawn, Rook, Bishop, Knight, King, Queen
-			for (byte square = 0; square < 64; square++)
+			while (allMyPieces != 0)
 			{
+				ulong moveBitboard = allMyPieces & (ulong)-(long)allMyPieces;
+				byte square = (byte) System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
+
 				if (((myBitboards[INDEX_PAWN_BITBOARD] >> square) & 1) == 1)
 				{
 					// Perhaps re-do this but since for complete pawn bitboard we have no way of knowing the origin for a given pawn attack,
@@ -60,9 +64,11 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 				if (((myBitboards[INDEX_KING_BITBOARD] >> square) & 1) == 1)
 				{
-					ulong KingMoves = MoveGen.GetKingMoves(square, myBitboardInverted, myBitboards[INDEX_CASTLE_BITBOARD]);
-					MoveGen_PackMovesFromBitboard(KingMoves, moves, square, &move, INDEX_KING_BITBOARD);
+					PackKingMovesAndCastleOptions(myBitboards, opponentBitboards, CompleteGamestate, myBitboardInverted,
+						moves, square, &move, isWhite);
 				}
+
+				allMyPieces ^= moveBitboard;
 			}
 
 			return move;
@@ -72,16 +78,38 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		// We could also calculate pins for pinned pieces, but that is too much computation for here.
 		// But on the other hand, we get attacked squares anyway, and instead of just ruling out castleing, why not rule out kingmoves too.
 		// => Just also NAND it with the King move bitboard
-		static unsafe void CastleOptions(ulong[] myBitboards, ulong[] opponentBitboards, ulong combinedBitboard, bool isWhite)
+		static unsafe void PackKingMovesAndCastleOptions(ulong[] myBitboards, ulong[] opponentBitboards, ulong combinedBitboard, ulong myBitboardInverted, Span<ushort> moves, byte fromSquare, byte* move, bool isWhite)
 		{
 			// Generate All Attacks of Opponent
 			ulong opponentAttacks = GetAllNonPawnAttackBitboard(opponentBitboards, combinedBitboard);
 			if(isWhite) ApplyAllPawnAttackBitboardWhite(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
 			else ApplyAllPawnAttackBitboardBlack(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
 
+			ulong KingMoves = MoveGen.GetKingMoves(fromSquare, myBitboardInverted, myBitboards[INDEX_CASTLE_BITBOARD]);
+			MoveGen_PackMovesFromBitboard(KingMoves & ~opponentAttacks, moves, fromSquare, move, INDEX_KING_BITBOARD);
+
 			// All moves that would be castle castle moves (allowed)
 			// Lets temp them out
 			ulong castleOptions = myBitboards[INDEX_CASTLE_BITBOARD];
+
+			if (isWhite)
+			{
+				ulong shortCastle = CASTLE_SQUAREMASK_VULNERABLE_KINGSIDE_WHITE & castleOptions;
+				if ((shortCastle & opponentAttacks) == 0 && shortCastle != 0)
+					moves[(*move)++] = Pack(fromSquare, CASTLE_TO_SQUARE_KING_INDEX_KINGSIDE_WHITE, MOVEDATA_CASTLE_SHORT);
+				ulong longCastle = CASTLE_SQUAREMASK_VULNERABLE_QUEENSIDE_WHITE & castleOptions;
+				if ((shortCastle & opponentAttacks) == 0 && longCastle != 0)
+					moves[(*move)++] = Pack(fromSquare, CASTLE_TO_SQUARE_KING_INDEX_QUEENSIDE_WHITE, MOVEDATA_CASTLE_LONG);
+			}
+			else
+			{
+				ulong shortCastle = CASTLE_SQUAREMASK_VULNERABLE_KINGSIDE_BLACK & castleOptions;
+				if ((shortCastle & opponentAttacks) == 0 && shortCastle != 0)
+					moves[(*move)++] = Pack(fromSquare, CASTLE_TO_SQUARE_KING_INDEX_KINGSIDE_BLACK, MOVEDATA_CASTLE_SHORT);
+				ulong longCastle = CASTLE_SQUAREMASK_VULNERABLE_QUEENSIDE_BLACK & castleOptions;
+				if ((shortCastle & opponentAttacks) == 0 && longCastle != 0)
+					moves[(*move)++] = Pack(fromSquare, CASTLE_TO_SQUARE_KING_INDEX_QUEENSIDE_BLACK, MOVEDATA_CASTLE_LONG);
+			}
 		}
 
 		static ulong GetAllNonPawnAttackBitboard(ulong[] Bitboards, ulong completeGamestateBlockers)
@@ -181,7 +209,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			*moveBitboard |= (pawnBitboard & Bitboard_NotHFile) >> 9;	// East
 		}
 
-		static unsafe void MoveGen_PackMovesFromBitboard(ulong LegalMoveBitboard, Span<ushort> moves, byte square, byte* move, byte MOVEDATA)
+		static unsafe void MoveGen_PackMovesFromBitboard(ulong LegalMoveBitboard, Span<ushort> moves, byte fromSquare, byte* move, byte MOVEDATA)
 		{
 			// Trust inversion has happened when move generation
 			// From GPT-4:
@@ -190,7 +218,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 				ulong toMove = LegalMoveBitboard & (ulong)-(long)LegalMoveBitboard;
 				int toSquare = System.Numerics.BitOperations.TrailingZeroCount(toMove);
 
-				moves[(*move)++] = Pack(square, toSquare, MOVEDATA);
+				moves[(*move)++] = Pack(fromSquare, toSquare, MOVEDATA);
 
 				LegalMoveBitboard ^= toMove; // Clear the least significant bit set.
 			}

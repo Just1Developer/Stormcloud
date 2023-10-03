@@ -88,11 +88,23 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		private const ulong CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK = 0x2000000000000000UL;
 		private const ulong CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK = 0x0200000000000000UL;
 
+		// Masks for the King Position later
+		private const ulong CASTLE_BITMASK_NOT_CASTLE_KINGSIDE_WHITE = ~CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE;
+		private const ulong CASTLE_BITMASK_NOT_CASTLE_QUEENSIDE_WHITE = ~CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE;
+		private const ulong CASTLE_BITMASK_NOT_CASTLE_KINGSIDE_BLACK = ~CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK;
+		private const ulong CASTLE_BITMASK_NOT_CASTLE_QUEENSIDE_BLACK = ~CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK;
+
 		// Squares for rook taking
 		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_WHITE = 0;
 		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_WHITE = 7;
 		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_BLACK = 56;
 		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_BLACK = 63;
+
+		// Squares for king castle legal move
+		private const byte CASTLE_TO_SQUARE_KING_INDEX_KINGSIDE_WHITE = 1;
+		private const byte CASTLE_TO_SQUARE_KING_INDEX_QUEENSIDE_WHITE = 5;
+		private const byte CASTLE_TO_SQUARE_KING_INDEX_KINGSIDE_BLACK = 57;
+		private const byte CASTLE_TO_SQUARE_KING_INDEX_QUEENSIDE_BLACK = 61;
 
 		private static readonly ulong[] CASTLE_XOR_MASKS_KING = {	// Index = Move Data - 0b1001 since 0b1001 = 0
 			0x000000000000000A,	// White castle Kingside, 0000 1010
@@ -110,5 +122,10 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 		#endregion
 
+		#region Algorithm Constants
+
+		private const int ALGORITHM_CONSTANT_KING_CAPTUREVALUE = 999999999;
+
+		#endregion
 	}
 }
