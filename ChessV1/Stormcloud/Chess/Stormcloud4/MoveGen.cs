@@ -20,7 +20,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
         // Moving Pieces
 
-        public static ulong GetKingMoves(int square, ulong myBitboardInverted, ulong myCastleOptionsBitboard)
+        public static ulong GetKingMoves(int square, ulong myBitboardInverted)
             => KingMoves[square] & myBitboardInverted;
 
         public static ulong GetKnightMoves(int square, ulong myBitboardInverted)
@@ -117,27 +117,26 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
         private static void PreGenerateAllLegalKingMoves()
         {
-            static ulong KingLegalMoves(int square)
-            {
-                ulong moves = 0;
-                //square = 63 - square;	// since layout matters, flip
-                int rank = square / 8, file = square % 8;
-                if (rank > 0)
-                {
-                    moves |= 1UL << (square - 8);
-                    if (file > 0) moves |= 1UL << (square - 9);
-                    if (file < 7) moves |= 1UL << (square - 7);
-                }
-                if (rank < 7)
-                {
-                    moves |= 1UL << (square - 9);
-                    if (file > 0) moves |= 1UL << (square + 7);
-                    if (file < 7) moves |= 1UL << (square + 9);
-                }
-                if (file > 0) moves |= 1UL << (square - 1);
-                if (file < 7) moves |= 1UL << (square + 1);
-                return moves;
-            }
+	        static ulong KingLegalMoves(int square)
+	        {
+		        ulong moves = 0;
+                byte rank = (byte)(square >> 3), file = (byte)(square & 0x7);
+                if (rank != 0)
+		        {
+			        moves |= 1UL << (square - 8);
+			        if (file != 0) moves |= 1UL << (square - 9);
+			        if (file != 7) moves |= 1UL << (square - 7);
+		        }
+		        if (rank != 7)
+		        {
+			        moves |= 1UL << (square + 8);
+			        if (file != 0) moves |= 1UL << (square + 7);
+			        if (file != 7) moves |= 1UL << (square + 9);
+		        }
+		        if (file != 0) moves |= 1UL << (square - 1);
+		        if (file != 7) moves |= 1UL << (square + 1);
+		        return moves;
+	        }
 
             for (int sq = 0; sq < 64; sq++)
                 KingMoves[sq] = KingLegalMoves(sq);
@@ -182,15 +181,16 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
         {
             void PreGenerateRookMoves(byte square)
             {
-                ulong magic = RookMagics[square];
                 ulong[] moves = new ulong[(int)Math.Pow(2, RBits[square])];
-                ulong mask = ((MASK_FILE_BLOCKER << (square & 0b111000)) | (MASK_RANK_BLOCKER << (square & 0b000111))) & ~(1UL << square);
+                // These are both broken, idk why:
+                //ulong mask = ((MASK_FILE_BLOCKER << (square & 0b000111)) | (MASK_RANK_BLOCKER << (square & 0b111000))) & ~(1UL << square);
+                //ulong mask = ((MASK_FILE_BLOCKER << (square & 0x7)) | (MASK_RANK_BLOCKER << (square & 0x38))) & ~(1UL << square);
+                ulong mask = RookMask(square);
                 RookFullBlockerMasks[square] = mask;
                 var allBlockers = GetAllBlockerPositions(mask);
 
                 foreach (var blockerPos in allBlockers)
                 {
-	                //int hash = (int) ((blockerPos * magic) >> (64-RBits[square]));
 	                int hash = TranslateRook(square, blockerPos);
 	                if (hash < 0) System.Diagnostics.Debug.WriteLine($"negative rook hash: {hash}, square: {square}");
 	                moves[hash] = RookAttacks(square, blockerPos);

@@ -162,7 +162,7 @@ namespace ChessUI
 			ResetButton.AutoSize = true;
 			ResetButton.Location = new Point(MyPadding + DisplaySize + 40, 650);
 			ResetButton.Text = "Reset Board";
-			ResetButton.Click += (s, e) => { _Chessboard.Reset(); };
+			ResetButton.Click += (s, e) => { if(_Chessboard != null) _Chessboard.Reset(); else if(SC4UI != null) SC4UI.ResetBoard(); };
 			Controls.Add(ResetButton);
 
 			RefreshSizeButton = new Button();

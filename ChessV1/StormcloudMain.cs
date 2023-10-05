@@ -22,11 +22,11 @@ namespace ChessV1
 			ApplicationConfiguration.Initialize();
 			Application.Run(new Form1());
 
-			/*
+			//*
 			printf("Starting test");
 			Stormcloud4 engine = new Stormcloud4();
 			engine.Test_1(20);
-			*/
+			//*/
 			return 0;
 		}
 

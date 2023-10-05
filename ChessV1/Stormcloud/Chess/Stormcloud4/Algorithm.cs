@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Numerics;
+using System.Threading.Tasks;
 
 namespace ChessV1.Stormcloud.Chess.Stormcloud4
 {
@@ -40,17 +43,77 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 
 
+		internal double Failsoft_AlphaBeta_Multithread(ulong[] myBitboards, ulong[] opponentBitboards, bool isWhite)
+			//=> Failsoft_AlphaBeta(-ALGORITHM_CONSTANT_KING_CAPTUREVALUE - 1, ALGORITHM_CONSTANT_KING_CAPTUREVALUE + 1, ref myBitboards,
+			//	ref opponentBitboards, FinalDepth, isWhite, true);
+		{
+			ConcurrentQueue<ushort> InitialMoves = new ConcurrentQueue<ushort>();
+
+			int ThreadCount = Environment.ProcessorCount;
+			Span<ushort> allCurrentMoves = stackalloc ushort[218];
+			byte moveCount = GenerateAllMoves(myBitboards, opponentBitboards, allCurrentMoves, isWhite);
+			(ushort, int)[] scores = new (ushort, int)[moveCount];
+
+			ConcurrentDictionary<ushort, int> Scores = new ConcurrentDictionary<ushort, int>();
+
+			for (byte i = 0; i < moveCount; ++i)
+			{
+				InitialMoves.Enqueue(allCurrentMoves[i]);
+				scores[i] = (allCurrentMoves[i], 0);
+				Scores.TryAdd(allCurrentMoves[i], 0);
+			}
+
+			// Create a task for each core in the system.
+			Task[] threadPoolTasks = new Task[ThreadCount];
+
+			for (int i = 0; i < ThreadCount; i++)
+			{
+				var task = Task.Run(() => RunEngineTasks());
+				threadPoolTasks[i] = task;
+			}
+
+
+			void RunEngineTasks()
+			{
+
+			}
+
+			// No need for Run = false since the Tasks only end when Run = false
+			Task.WaitAll(threadPoolTasks);
+			Console.WriteLine("All Finished.");
+
+			// Now get the best out of the initial moves
+			return 0;
+		}
+
+
+
 		private ushort packed_Bestmove = 0;	// 0 means 0 movedata means no move -> 0 means no move
+
+		public ushort PackedBestmove
+		{
+			get => packed_Bestmove;
+		}
 
 		// Todo Multithread
 
 		private int FinalDepth = 10;    // Todo
 
+		internal (ushort, double) CalculateBestMove(ulong[] myBitboards, ulong[] opponentBitboards, bool isWhite,
+			int Depth)
+		{
+			FinalDepth = Depth;
+			double score = Failsoft_AlphaBeta(-ALGORITHM_CONSTANT_KING_CAPTUREVALUE - 1, ALGORITHM_CONSTANT_KING_CAPTUREVALUE + 1, ref myBitboards,
+				ref opponentBitboards, FinalDepth, isWhite, true);
+			return (packed_Bestmove, score);
+		}
+
+
 		internal double Failsoft_AlphaBeta(ulong[] myBitboards, ulong[] opponentBitboards, bool isWhite)
 			=> Failsoft_AlphaBeta(-ALGORITHM_CONSTANT_KING_CAPTUREVALUE-1, ALGORITHM_CONSTANT_KING_CAPTUREVALUE+1, ref myBitboards,
 				ref opponentBitboards, FinalDepth, isWhite, true);
 
-		internal unsafe double Failsoft_AlphaBeta(double alpha, double beta, ref ulong[] myBitboards, ref ulong[] opponentBitboards,
+		private unsafe double Failsoft_AlphaBeta(double alpha, double beta, ref ulong[] myBitboards, ref ulong[] opponentBitboards,
 	int depthRemaining, bool isWhite, bool isRoot = false)
 		{
 			if (isRoot)
@@ -245,16 +308,16 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 				else if ((unpacked.Item1 & myBitboards[INDEX_ROOK_BITBOARD]) != 0)
 				{
 					// If could castle that way before, cannot castle anymore now
-					if(unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_WHITE && (CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+					if (fromSquare == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_WHITE && (CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
 						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE);
 
-					else if(unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_WHITE && (CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+					else if (fromSquare == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_WHITE && (CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
 						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE);
 
-					else if (unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_BLACK && (CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+					else if (fromSquare == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_BLACK && (CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
 						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK);
 
-					else if (unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_BLACK && (CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+					else if (fromSquare == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_BLACK && (CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
 						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK);
 				}
 				XORBitboardOperations[(*OperationCount)++] = (data, unpacked_combined);

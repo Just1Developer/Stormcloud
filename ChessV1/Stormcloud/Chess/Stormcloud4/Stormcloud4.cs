@@ -12,11 +12,15 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		 *       -> King is there but can't be selected / isn't seen by FULL bitboard (solved)
 		 * - King has limited legal moves
 		 *     - King can castle and king could just capture other King? (solved, bitboard FULL was not updated correctly)
-		 * - Rookmasks doesn't see blockers / sees other rank
+		 * - Rookmasks doesn't see blockers / sees other rank (solved)
 		 *     - (a1 sees b2 - h2 as blockers, but not a7 and a7)
 		 *     - (magic numbers buggy?)
-		 * - Pawn captures are broken
-		 *     - Cannot check if en passant works as expected
+		 *   -> Solved: When Generating the Rookmask in PreGen, the total mask was generated wrong: Filemask was shifted by RankData, and Rankmask was shifted by Filedata
+		 * - Pawn captures are broken (solved)
+		 *     - Cannot check if en passant works as expected (solved, it does now)
+		 *
+		 * - Castleing works for White but not for Black
+		 *     - Can castle through pieces and can castle even though rook was moved
 		 */
 
 		/**

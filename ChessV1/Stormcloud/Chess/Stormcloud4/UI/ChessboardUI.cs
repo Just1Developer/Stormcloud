@@ -3,12 +3,71 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Net;
+using System.Threading.Tasks;
 using ChessUI;
 
 namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 {
 	internal class ChessboardUI : Panel
 	{
+		private bool VersusEngine = false, EnginePlaysWhite = false;
+
+		public static (ulong[], ulong[]) GetStartingPositionsDefault()
+		{
+			ulong[] White = new ulong[9];
+			ulong[] Black = new ulong[9];
+
+			White[INDEX_PAWN_BITBOARD] = 0x000000000000FF00UL;
+			White[INDEX_KNIGHT_BITBOARD] = 0x0000000000000042UL;
+			White[INDEX_BISHOP_BITBOARD] = 0x0000000000000024UL;
+			White[INDEX_ROOK_BITBOARD] = 0x0000000000000081UL;
+			White[INDEX_QUEEN_BITBOARD] = 0x0000000000000010UL;
+			White[INDEX_KING_BITBOARD] = 0x0000000000000008UL;
+			White[INDEX_FULL_BITBOARD] = 0x000000000000FFFFUL;
+			White[INDEX_CASTLE_BITBOARD] = 0x0000000000000022UL;
+			White[INDEX_EN_PASSANT_BITBOARD] = 0UL;
+
+			Black[INDEX_PAWN_BITBOARD] = 0x00FF000000000000UL;
+			Black[INDEX_KNIGHT_BITBOARD] = 0x4200000000000000UL;
+			Black[INDEX_BISHOP_BITBOARD] = 0x2400000000000000UL;
+			Black[INDEX_ROOK_BITBOARD] = 0x8100000000000000UL;
+			Black[INDEX_QUEEN_BITBOARD] = 0x1000000000000000UL;
+			Black[INDEX_KING_BITBOARD] = 0x0800000000000000UL;
+			Black[INDEX_FULL_BITBOARD] = 0xFFFF000000000000UL;
+			Black[INDEX_CASTLE_BITBOARD] = 0x2200000000000000UL;
+			Black[INDEX_EN_PASSANT_BITBOARD] = 0UL;
+
+			return (White, Black);
+		}
+		public static (ulong[], ulong[]) GetStartingPositionsRooks()
+		{
+			ulong[] White = new ulong[9];
+			ulong[] Black = new ulong[9];
+
+			White[INDEX_PAWN_BITBOARD] = 0x000000000000FF00UL;
+			White[INDEX_KNIGHT_BITBOARD] = 0x0000000000000000UL;
+			White[INDEX_BISHOP_BITBOARD] = 0x0000000000000000UL;
+			White[INDEX_ROOK_BITBOARD] = 0x00000000000000FFUL;
+			White[INDEX_QUEEN_BITBOARD] = 0x0000000000000000UL;
+			White[INDEX_KING_BITBOARD] = 0x0000000000000000UL;
+			White[INDEX_FULL_BITBOARD] = 0x000000000000FFFFUL;
+			White[INDEX_CASTLE_BITBOARD] = 0x0000000000000000UL;
+			White[INDEX_EN_PASSANT_BITBOARD] = 0UL;
+
+			Black[INDEX_PAWN_BITBOARD] = 0x00FF000000000000UL;
+			Black[INDEX_KNIGHT_BITBOARD] = 0x4200000000000000UL;
+			Black[INDEX_BISHOP_BITBOARD] = 0x2400000000000000UL;
+			Black[INDEX_ROOK_BITBOARD] = 0x8100000000000000UL;
+			Black[INDEX_QUEEN_BITBOARD] = 0x1000000000000000UL;
+			Black[INDEX_KING_BITBOARD] = 0x0800000000000000UL;
+			Black[INDEX_FULL_BITBOARD] = 0xFFFF000000000000UL;
+			Black[INDEX_CASTLE_BITBOARD] = 0x2200000000000000UL;
+			Black[INDEX_EN_PASSANT_BITBOARD] = 0UL;
+
+			return (White, Black);
+		}
+
+
 		private bool DisregardTurnsDebug = false;
 		private static bool Inited = false;
 
@@ -62,7 +121,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 			this.HighlightFieldColorLight = Brushes.PowderBlue;
 			this.HighlightFieldColorDark = Brushes.Turquoise;
 			this.CheckColor = Brushes.Red;
-			ResetBoard(!IsWhite);
+			ResetBoard(IsWhite);
 
 			this.MouseDown += OnMouseDown;
 			this.MouseUp += OnMouseUp;
@@ -86,7 +145,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 			Form1.self.tf_Result.Text = "";
 			Form1.self.tf_Turn.Text = $"Current Turn: " + (IsWhite ? "White" : "Black");
 
-			var defaultPos = Stormcloud4.GetStartingPositions();
+			var defaultPos = GetStartingPositionsDefault();
 			Boardstate_WhiteBitboards = defaultPos.Item1;
 			Boardstate_BlackBitboards = defaultPos.Item2;
 
@@ -94,6 +153,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 			LastMoveBitboard = 0;
 			BlockerBitboard = 0;
 			HighlightBitboard = 0;
+
+			this.IsPlayerWhite = IsWhite;
 
 			Refresh();
 		}
@@ -319,6 +380,11 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 			IsPlayerWhite = !IsPlayerWhite;
 			Form1.self.newTurn(IsPlayerWhite ? "White" : "Black");
 			Refresh();	// Generate all new legal moves + reset all other visible bitboards
+
+			if (!VersusEngine) return;
+
+			if (EnginePlaysWhite && IsPlayerWhite) Task.Run(() => PlayNextEngineMove().Wait());
+			else if (!EnginePlaysWhite && !IsPlayerWhite) Task.Run(() => PlayNextEngineMove().Wait());
 		}
 
 		#region Constants
@@ -408,16 +474,16 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 				else if ((unpacked.Item1 & myBitboards[INDEX_ROOK_BITBOARD]) != 0)
 				{
 					// If could castle that way before, cannot castle anymore now
-					if (unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_WHITE && (CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+					if (fromSquare == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_WHITE && (CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
 						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE);
 
-					else if (unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_WHITE && (CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+					else if (fromSquare == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_WHITE && (CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
 						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE);
 
-					else if (unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_BLACK && (CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+					else if (fromSquare == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_BLACK && (CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
 						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK);
 
-					else if (unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_BLACK && (CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+					else if (fromSquare == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_BLACK && (CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
 						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK);
 				}
 				XORBitboardOperations[(*OperationCount)++] = (data, unpacked_combined);
@@ -428,7 +494,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 			else if (data == MOVEDATA_PAWN_JUMPSTART)
 			{
 				XORBitboardOperations[(*OperationCount)++] = (INDEX_PAWN_BITBOARD, unpacked_combined);
-				XORBitboardOperations[(*OperationCount)++] = (INDEX_EN_PASSANT_BITBOARD, GetMedianBitboard(fromSquare, toSquare));
+				XORBitboardOperations[(*OperationCount)++] = (INDEX_EN_PASSANT_BITBOARD, GetMedianBitboard(fromSquare, toSquare) ^ myBitboards[INDEX_EN_PASSANT_BITBOARD]);
 				(*myOperationCount) = *OperationCount;
 			}
 			else
@@ -462,6 +528,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 					(*myOperationCount) = *OperationCount;
 					// En Passant Pawn from Opponent
 					byte pawnSquare = CombineSquareData(toSquare, fromSquare);
+					printf($"En passant capture, fromSquare: {String_square(fromSquare)}, toSquare: {String_square(toSquare)}, pawnSquare: {String_square(pawnSquare)}");
 					XORBitboardOperations[(*OperationCount)++] = (INDEX_PAWN_BITBOARD, 1UL << pawnSquare);
 				}
 				else if (data == MOVEDATA_PROMOTION_N)
@@ -562,6 +629,28 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 			return (byte)((squareFileData & 0b111) | (squareRankData & 0b111000));
 		}
 
+		Stormcloud4 Engine = new Stormcloud4();
+		public async Task PlayNextEngineMove()
+		{
+			int depth = 6;
+
+			ulong[] mine, opponent;
+			if (IsPlayerWhite)
+			{
+				mine = (ulong[]) Boardstate_WhiteBitboards.Clone();
+				opponent = (ulong[]) Boardstate_BlackBitboards.Clone();
+			}
+			else
+			{
+				mine = (ulong[]) Boardstate_BlackBitboards.Clone();
+				opponent = (ulong[]) Boardstate_WhiteBitboards.Clone();
+			}
+
+			var move = Engine.CalculateBestMove(mine, opponent, IsPlayerWhite, depth);
+			printf($"Playing move {Convert.ToString(move.Item1, 2)}, Score: {move.Item2}");
+
+			ApplyMove(move.Item1);
+		}
 
 		#endregion
 
@@ -603,7 +692,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 
 			int field = GetField(e.X, e.Y);
 
-			printf($"MouseDown >> Field: {String_square(field)}");
+			//printf($"MouseDown >> Field: {String_square(field)}");
 
 			if (!IsOwnPiece(field) && !DisregardTurnsDebug) return;
 
@@ -623,7 +712,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 		{
 			int field = GetField(e.X, e.Y);
 
-			printf($"MouseUp >> Field: {String_square(field)}");
+			//printf($"MouseUp >> Field: {String_square(field)}");
 
 			if (e.Button == MouseButtons.Right)
 			{

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 namespace ChessV1.Stormcloud.Chess.Stormcloud4
 {
 	// No longer To-Do Incorporate Castle and En Passant (both included now I think)
+	// => Engine (Move Gen) crashes when no King is on the board	
+	//    -> Added line if (*CurrentPieces == 0) return; to start of King Movegen for normal and capture only
 	partial class Stormcloud4
 	{
 
@@ -75,13 +77,13 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 				PackRookMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, myBitboardInverted, CompleteGamestate, moves, &move);
 				PackBishopMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, myBitboardInverted, CompleteGamestate, moves, &move);
 				PackKnightMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, myBitboardInverted, moves, &move);
-				PackPawnMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, CompleteGamestate, moves, &move, isWhite);
+				PackPawnMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, moves, &move, isWhite);
 				PackKingMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, myBitboardInverted, CompleteGamestate,
 					moves, &move, isWhite);
 			}
 			else
 			{
-				PackPawnMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, CompleteGamestate, moves, &move, isWhite);
+				PackPawnMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, moves, &move, isWhite);
 				PackKnightMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, myBitboardInverted, moves, &move);
 				PackBishopMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, myBitboardInverted, CompleteGamestate, moves, &move);
 				PackQueenMoves_CapturesOnly(&CurrentPieces, myBitboards, opponentBitboards, myBitboardInverted, CompleteGamestate, moves, &move);
@@ -180,6 +182,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		static unsafe void PackKingMoves(ulong* CurrentPieces, ulong[] myBitboards, ulong[] opponentBitboards, ulong myBitboardInverted, ulong CompleteGamestate, Span<ushort> moves, byte* move, bool isWhite)
 		{
 			*CurrentPieces = myBitboards[INDEX_KING_BITBOARD];
+			if ((*CurrentPieces) == 0) return;
+			*CurrentPieces = myBitboards[INDEX_KING_BITBOARD];
 			ulong moveBitboard = *CurrentPieces & (ulong)-(long)*CurrentPieces;
 			byte fromSquare = (byte)System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
 
@@ -200,10 +204,10 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		{
 			// Generate All Attacks of Opponent
 			ulong opponentAttacks = GetAllNonPawnAttackBitboard(opponentBitboards, combinedBitboard);
-			if(isWhite) ApplyAllPawnAttackBitboardWhite(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
-			else ApplyAllPawnAttackBitboardBlack(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
+			if(isWhite) ApplyAllPawnAttackBitboardBlack(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
+			else ApplyAllPawnAttackBitboardWhite(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
 
-			ulong KingMoves = MoveGen.GetKingMoves(fromSquare, myBitboardInverted, myBitboards[INDEX_CASTLE_BITBOARD]);
+			ulong KingMoves = MoveGen.GetKingMoves(fromSquare, myBitboardInverted);
 			MoveGen_PackMovesFromBitboard(KingMoves & ~opponentAttacks, moves, fromSquare, move, INDEX_KING_BITBOARD);
 
 			// All moves that would be castle castle moves (allowed)
@@ -222,10 +226,10 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			else
 			{
 				ulong shortCastle = CASTLE_SQUAREMASK_VULNERABLE_KINGSIDE_BLACK & castleOptions & CASTLE_SQUARES_MUST_BE_FREE_KINGSIDE_BLACK & myBitboardInverted;
-				if ((shortCastle & opponentAttacks) == 0 && shortCastle != 0)
+				if(shortCastle != 0) if ((shortCastle & opponentAttacks) == 0)
 					moves[(*move)++] = Pack(fromSquare, CASTLE_TO_SQUARE_KING_INDEX_KINGSIDE_BLACK, MOVEDATA_CASTLE_SHORT);
 				ulong longCastle = CASTLE_SQUAREMASK_VULNERABLE_QUEENSIDE_BLACK & castleOptions & CASTLE_SQUARES_MUST_BE_FREE_QUEENSIDE_BLACK & myBitboardInverted;
-				if ((longCastle & opponentAttacks) == 0 && longCastle != 0)
+				if(longCastle != 0) if ((longCastle & opponentAttacks) == 0)
 					moves[(*move)++] = Pack(fromSquare, CASTLE_TO_SQUARE_KING_INDEX_QUEENSIDE_BLACK, MOVEDATA_CASTLE_LONG);
 			}
 		}
@@ -362,33 +366,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 				}
 			}
 
-			// West Attack, if (NOT A-File AND opponent has piece on there)
-			if ((square & 0b111) != 7 && ((opponentBitboards[INDEX_FULL_BITBOARD] >> (square + 9)) & 1) == 1
-			                          && ((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square + 9)) & 1) == 1)
-			{
-				if (squareShift3 != 6) moves[(*move)++] = Pack(square, square + 9, INDEX_PAWN_BITBOARD);
-				else
-				{
-					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_Q);
-					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_R);
-					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_B);
-					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_N);
-				}
-			}
-
-			// East Attack, if (NOT H-File AND opponent has piece on there)
-			if ((square & 0b111) != 0 && ((opponentBitboards[INDEX_FULL_BITBOARD] >> (square + 7)) & 1) == 1
-			                          && ((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square + 7)) & 1) == 1)
-			{
-				if (squareShift3 != 6) moves[(*move)++] = Pack(square, square + 7, INDEX_PAWN_BITBOARD);
-				else
-				{
-					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_Q);
-					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_R);
-					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_B);
-					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_N);
-				}
-			}
+			GenerateAllPawnMovesWhite_CapturesOnly(opponentBitboards, moves, square, move);
 		}
 
 		static unsafe void GenerateAllPawnMovesBlack(ulong[] opponentBitboards, ulong CompleteGamestate, Span<ushort> moves, byte square, byte* move)
@@ -411,33 +389,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 				}
 			}
 
-			// West Attack, if (NOT A-File AND opponent has piece on there)
-			if ((square & 0b111) != 7 && ((opponentBitboards[INDEX_FULL_BITBOARD] >> (square - 7)) & 1) == 1
-			                          && ((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square - 7)) & 1) == 1)
-			{
-				if (squareShift3 != 1) moves[(*move)++] = Pack(square, square - 7, INDEX_PAWN_BITBOARD);
-				else
-				{
-					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_Q);
-					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_R);
-					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_B);
-					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_N);
-				}
-			}
-
-			// East Attack, if (NOT H-File AND opponent has piece on there)
-			if ((square & 0b111) != 0 && ((opponentBitboards[INDEX_FULL_BITBOARD] >> (square - 9)) & 1) == 1
-			                          && ((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square - 9)) & 1) == 1)
-			{
-				if (squareShift3 != 1) moves[(*move)++] = Pack(square, square - 9, INDEX_PAWN_BITBOARD);
-				else
-				{
-					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_Q);
-					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_R);
-					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_B);
-					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_N);
-				}
-			}
+			GenerateAllPawnMovesBlack_CapturesOnly(opponentBitboards, moves, square, move);
 		}
 
 		#endregion
@@ -505,7 +457,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			}
 		}
 
-		static unsafe void PackPawnMoves_CapturesOnly(ulong* CurrentPieces, ulong[] myBitboards, ulong[] opponentBitboards, ulong CompleteGamestate, Span<ushort> moves, byte* move, bool isWhite)
+		static unsafe void PackPawnMoves_CapturesOnly(ulong* CurrentPieces, ulong[] myBitboards, ulong[] opponentBitboards, Span<ushort> moves, byte* move, bool isWhite)
 		{
 			*CurrentPieces = myBitboards[INDEX_PAWN_BITBOARD];
 			while (*CurrentPieces != 0)
@@ -514,9 +466,9 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 				byte fromSquare = (byte)System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
 
 				if (isWhite)
-					GenerateAllPawnMovesWhite_CapturesOnly(opponentBitboards, CompleteGamestate, moves, fromSquare, move);
+					GenerateAllPawnMovesWhite_CapturesOnly(opponentBitboards, moves, fromSquare, move);
 				else
-					GenerateAllPawnMovesBlack_CapturesOnly(opponentBitboards, CompleteGamestate, moves, fromSquare, move);
+					GenerateAllPawnMovesBlack_CapturesOnly(opponentBitboards, moves, fromSquare, move);
 
 				*CurrentPieces ^= moveBitboard;
 			}
@@ -524,16 +476,17 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 		static unsafe void PackKingMoves_CapturesOnly(ulong* CurrentPieces, ulong[] myBitboards, ulong[] opponentBitboards, ulong myBitboardInverted, ulong CompleteGamestate, Span<ushort> moves, byte* move, bool isWhite)
 		{
+			if (*CurrentPieces == 0) return;
 			*CurrentPieces = myBitboards[INDEX_KING_BITBOARD];
 			ulong moveBitboard = *CurrentPieces & (ulong)-(long)*CurrentPieces;
 			byte fromSquare = (byte)System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
 
 			// Generate All Attacks of Opponent
 			ulong opponentAttacks = GetAllNonPawnAttackBitboard(opponentBitboards, CompleteGamestate);
-			if (isWhite) ApplyAllPawnAttackBitboardWhite(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
-			else ApplyAllPawnAttackBitboardBlack(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
+			if (isWhite) ApplyAllPawnAttackBitboardBlack(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);	// Opposite color because we are calculating opponent's moves
+			else ApplyAllPawnAttackBitboardWhite(opponentBitboards[INDEX_PAWN_BITBOARD], &opponentAttacks);
 
-			ulong KingMoves = MoveGen.GetKingMoves(fromSquare, myBitboardInverted, myBitboards[INDEX_CASTLE_BITBOARD]);
+			ulong KingMoves = MoveGen.GetKingMoves(fromSquare, myBitboardInverted);
 			MoveGen_PackMovesFromBitboard(KingMoves & ~opponentAttacks & opponentBitboards[INDEX_FULL_BITBOARD], moves, fromSquare, move, INDEX_KING_BITBOARD);
 
 			// Castle will never be a capture, so we can leave it out
@@ -545,67 +498,95 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 		#region Layer 2 | Captures Only
 
-		static unsafe void GenerateAllPawnMovesWhite_CapturesOnly(ulong[] opponentBitboards, ulong CompleteGamestate, Span<ushort> moves, byte square, byte* move)
+		static unsafe void GenerateAllPawnMovesWhite_CapturesOnly(ulong[] opponentBitboards, Span<ushort> moves, byte square, byte* move)
 		{
 			byte squareShift3 = (byte)(square >> 3);
 
 			// West Attack, if (NOT A-File AND opponent has piece on there)
-			if ((square & 0b111) != 7 && ((opponentBitboards[INDEX_FULL_BITBOARD] >> (square + 9)) & 1) == 1
-									  && ((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square + 9)) & 1) == 1)
+			if ((square & 0b111) != 7)
 			{
-				if (squareShift3 != 6) moves[(*move)++] = Pack(square, square + 9, INDEX_PAWN_BITBOARD);
-				else
+				if (((opponentBitboards[INDEX_FULL_BITBOARD] >> (square + 9)) & 1) == 1)
 				{
-					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_Q);
-					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_R);
-					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_B);
-					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_N);
+					if (squareShift3 != 6) moves[(*move)++] = Pack(square, square + 9, INDEX_PAWN_BITBOARD);
+					else
+					{
+						moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_Q);	// Is first move here so Auto-Queen, but remember to put something in the UI choose
+						moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_R);
+						moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_B);
+						moves[(*move)++] = Pack(square, square + 9, MOVEDATA_PROMOTION_N);
+					}
+				}
+				else if (((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square + 9)) & 1) == 1)
+				{
+					// En passant is never a promotion
+					moves[(*move)++] = Pack(square, square + 9, MOVEDATA_EN_PASSANT_CAPTURE);
 				}
 			}
 
 			// East Attack, if (NOT H-File AND opponent has piece on there)
-			if ((square & 0b111) != 0 && ((opponentBitboards[INDEX_FULL_BITBOARD] >> (square + 7)) & 1) == 1
-									  && ((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square + 7)) & 1) == 1)
+			if ((square & 0b111) != 0)
 			{
-				if (squareShift3 != 6) moves[(*move)++] = Pack(square, square + 7, INDEX_PAWN_BITBOARD);
-				else
+				if (((opponentBitboards[INDEX_FULL_BITBOARD] >> (square + 7)) & 1) == 1)
 				{
-					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_Q);
-					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_R);
-					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_B);
-					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_N);
+					if (squareShift3 != 6) moves[(*move)++] = Pack(square, square + 7, INDEX_PAWN_BITBOARD);
+					else
+					{
+						moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_Q);
+						moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_R);
+						moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_B);
+						moves[(*move)++] = Pack(square, square + 7, MOVEDATA_PROMOTION_N);
+					}
+				}
+				else if (((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square + 7)) & 1) == 1)
+				{
+					// En passant is never a promotion
+					moves[(*move)++] = Pack(square, square + 7, MOVEDATA_EN_PASSANT_CAPTURE);
 				}
 			}
 		}
 
-		static unsafe void GenerateAllPawnMovesBlack_CapturesOnly(ulong[] opponentBitboards, ulong CompleteGamestate, Span<ushort> moves, byte square, byte* move)
+		static unsafe void GenerateAllPawnMovesBlack_CapturesOnly(ulong[] opponentBitboards, Span<ushort> moves, byte square, byte* move)
 		{
 			byte squareShift3 = (byte)(square >> 3);
 			// West Attack, if (NOT A-File AND opponent has piece on there)
-			if ((square & 0b111) != 7 && ((opponentBitboards[INDEX_FULL_BITBOARD] >> (square - 7)) & 1) == 1
-									  && ((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square - 7)) & 1) == 1)
+			if ((square & 0b111) != 7)
 			{
-				if (squareShift3 != 1) moves[(*move)++] = Pack(square, square - 7, INDEX_PAWN_BITBOARD);
-				else
+				if (((opponentBitboards[INDEX_FULL_BITBOARD] >> (square - 7)) & 1) == 1)
 				{
-					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_Q);
-					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_R);
-					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_B);
-					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_N);
+					if (squareShift3 != 1) moves[(*move)++] = Pack(square, square - 7, INDEX_PAWN_BITBOARD);
+					else
+					{
+						moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_Q);
+						moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_R);
+						moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_B);
+						moves[(*move)++] = Pack(square, square - 7, MOVEDATA_PROMOTION_N);
+					}
+				}
+				else if (((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square - 7)) & 1) == 1)
+				{
+					// En passant is never a promotion
+					moves[(*move)++] = Pack(square, square - 7, MOVEDATA_EN_PASSANT_CAPTURE);
 				}
 			}
 
 			// East Attack, if (NOT H-File AND opponent has piece on there)
-			if ((square & 0b111) != 0 && ((opponentBitboards[INDEX_FULL_BITBOARD] >> (square - 9)) & 1) == 1
-									  && ((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square - 9)) & 1) == 1)
+			if ((square & 0b111) != 0)
 			{
-				if (squareShift3 != 1) moves[(*move)++] = Pack(square, square - 9, INDEX_PAWN_BITBOARD);
-				else
+				if (((opponentBitboards[INDEX_FULL_BITBOARD] >> (square - 9)) & 1) == 1)
 				{
-					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_Q);
-					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_R);
-					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_B);
-					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_N);
+					if (squareShift3 != 1) moves[(*move)++] = Pack(square, square - 9, INDEX_PAWN_BITBOARD);
+					else
+					{
+						moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_Q);
+						moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_R);
+						moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_B);
+						moves[(*move)++] = Pack(square, square - 9, MOVEDATA_PROMOTION_N);
+					}
+				}
+				else if (((opponentBitboards[INDEX_EN_PASSANT_BITBOARD] >> (square - 9)) & 1) == 1)
+				{
+					// En passant is never a promotion
+					moves[(*move)++] = Pack(square, square - 9, MOVEDATA_EN_PASSANT_CAPTURE);
 				}
 			}
 		}
@@ -633,78 +614,3 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		#endregion
 	}
 }
-
-
-
-/* Semi-old
- 
-			ulong CurrentPieces;
-			// Queens
-			PackQueenMoves(&CurrentPieces, myBitboards, myBitboardInverted, CompleteGamestate, moves, &move);
-
-			// Rooks
-			CurrentPieces = myBitboards[INDEX_ROOK_BITBOARD];
-			while (CurrentPieces != 0)
-			{
-				ulong moveBitboard = CurrentPieces & (ulong)-(long)CurrentPieces;
-				byte fromSquare = (byte)System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
-
-				ulong RookMoves = MoveGen.GetRookMoves(fromSquare, myBitboardInverted, CompleteGamestate);
-				MoveGen_PackMovesFromBitboard(RookMoves, moves, fromSquare, &move, INDEX_ROOK_BITBOARD);
-
-				CurrentPieces ^= moveBitboard;
-			}
-
-			// Bishops
-			CurrentPieces = myBitboards[INDEX_BISHOP_BITBOARD];
-			while (CurrentPieces != 0)
-			{
-				ulong moveBitboard = CurrentPieces & (ulong)-(long)CurrentPieces;
-				byte fromSquare = (byte)System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
-
-				ulong BishopMoves = MoveGen.GetBishopMoves(fromSquare, myBitboardInverted, CompleteGamestate);
-				MoveGen_PackMovesFromBitboard(BishopMoves, moves, fromSquare, &move, INDEX_BISHOP_BITBOARD);
-
-				CurrentPieces ^= moveBitboard;
-			}
-
-			// Knights
-			CurrentPieces = myBitboards[INDEX_KNIGHT_BITBOARD];
-			while (CurrentPieces != 0)
-			{
-				ulong moveBitboard = CurrentPieces & (ulong)-(long)CurrentPieces;
-				byte fromSquare = (byte)System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
-
-				ulong KnightMoves = MoveGen.GetKnightMoves(fromSquare, myBitboardInverted);
-				MoveGen_PackMovesFromBitboard(KnightMoves, moves, fromSquare, &move, INDEX_KING_BITBOARD);
-
-				CurrentPieces ^= moveBitboard;
-			}
-
-			// Pawns
-			CurrentPieces = myBitboards[INDEX_PAWN_BITBOARD];
-			while (CurrentPieces != 0)
-			{
-				ulong moveBitboard = CurrentPieces & (ulong)-(long)CurrentPieces;
-				byte fromSquare = (byte)System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
-
-				if (isWhite)
-					GenerateAllPawnMovesWhite(opponentBitboards, CompleteGamestate, moves, fromSquare, &move);
-				else
-					GenerateAllPawnMovesBlack(opponentBitboards, CompleteGamestate, moves, fromSquare, &move);
-
-				CurrentPieces ^= moveBitboard;
-			}
-
-			// King
-			{
-				CurrentPieces = myBitboards[INDEX_KING_BITBOARD];
-				ulong moveBitboard = CurrentPieces & (ulong)-(long)CurrentPieces;
-				byte fromSquare = (byte)System.Numerics.BitOperations.TrailingZeroCount(moveBitboard);
-
-				PackKingMovesAndCastleOptions(myBitboards, opponentBitboards, CompleteGamestate, myBitboardInverted,
-					moves, fromSquare, &move, isWhite);
-			}
-
- 
- */
