@@ -6,11 +6,15 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 	partial class Stormcloud4
 	{
 
-
 		public void Test_1(int FinalDepth)
 		{
 			// Lets get the best starting move without move sorting, quiesce search, killer heuristic, advanced evaluation or transposition table, so a slow version of the algorithm
 			(ulong[], ulong[]) pos = GetStartingPositions();
+
+			Log(String_square(0));
+			Log(String_square(7));
+			Log(String_square(56));
+			Log(String_square(63));
 
 			for (int depth = 2; depth <= FinalDepth; depth += 2)
 			{
@@ -20,8 +24,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 				Failsoft_AlphaBeta(pos.Item1, pos.Item2, true);
 				var best = Unpack(packed_Bestmove);
 				DateTime end = DateTime.Now;
-				Log($"Finished at {end}. Time: {((end - start).TotalSeconds >= 10 ? (end - start).TotalSeconds + " s" : (end - start).TotalSeconds + " ms")}");
-				Log($"Best Move: {String_square(GetMoveSquareFrom(packed_Bestmove))} to {String_square(GetMoveSquareTo(packed_Bestmove))} (Data: {Convert.ToString(best.Item3, 2)})");
+				Log($"Finished at {end}. Time: {((end - start).TotalSeconds >= 1.5 ? (end - start).TotalSeconds + " s" : (end - start).TotalMilliseconds + " ms")}");
+				Log($"Best Move: {String_square(GetMoveSquareFrom(packed_Bestmove))} to {String_square(GetMoveSquareTo(packed_Bestmove))} (Data: {Convert.ToString(best.Item3, 2)}) (Move: {Convert.ToString(packed_Bestmove, 2)})");
 			}
 
 			return;
@@ -53,8 +57,10 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			{
 				packed_Bestmove = 0;
 			}
-			// Todo Quiesce
-			if (depthRemaining == 0) return Evaluate(myBitboards, opponentBitboards, isWhite);
+
+			if (NotEnoughCheckmatingMaterial(myBitboards, opponentBitboards)) return 0;
+
+			if (depthRemaining == 0) return Failsoft_AlphaBeta_Quiesce(alpha, beta, ref myBitboards, ref opponentBitboards, isWhite, 0);
 
 			double HighestScore = double.NegativeInfinity;
 
@@ -63,17 +69,18 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			int moveCount = 0;
 
 			// Fill up moves
-			moveCount = GenerateAllMoves(myBitboards, opponentBitboards, moves, isWhite);
-			Span<(byte, ulong)> XORBitboardOperations = stackalloc (byte, ulong)[8]; // Max operations are 8, 1 for myFULL, 2 for myPIECE, 1 for EnPassant, 1 for my castle, and 2 for Opponent Full and Piece, and 1 for oppoent castle, hypothetically
+			if (isRoot) moveCount = GenerateAllMoves(myBitboards, opponentBitboards, moves, isWhite);
+			else moveCount = GenerateAllMoves(myBitboards, opponentBitboards, moves, isWhite);
+			// Todo generate only actually legal moves and add logic for No Moves (Checkmate) + In Check and No Moves + Not in check (stalemate)
 
-			// Todo remove en passant
+			Span<(byte, ulong)> XORBitboardOperations = stackalloc (byte, ulong)[9]; // Max operations are 9, 1 for castleoptions removal, 1 for myFULL, 2 for myPIECE, 1 for EnPassant, 1 for my castle, and 2 for Opponent Full and Piece, and 1 for oppoent castle, hypothetically
 
 			for (byte i = 0; i < moveCount; i++)
 			{
 				// Save operations in (byte bitboardIndex, ulong xor_operation)
 				byte OperationCount = 0, myOperationCount = 0;
 				
-				double score = GenerateXORoperations(XORBitboardOperations, &myOperationCount, &OperationCount, myBitboards, opponentBitboards, moves[i], isWhite, FinalDepth, depthRemaining);
+				double score = GenerateXORoperations(XORBitboardOperations, &myOperationCount, &OperationCount, myBitboards, opponentBitboards, moves[i], isWhite, -FinalDepth + depthRemaining);
 
 				if (score == 0)
 				{
@@ -119,18 +126,86 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			return HighestScore;
 		}
 
+		
+
+		internal unsafe double Failsoft_AlphaBeta_Quiesce(double alpha, double beta, ref ulong[] myBitboards, ref ulong[] opponentBitboards, bool isWhite, int QuiesceDepth)
+		{
+			if (NotEnoughCheckmatingMaterial(myBitboards, opponentBitboards)) return 0;
+			double HighestScore = double.NegativeInfinity;
+
+			// Somehow we need to save from and to, so we need to save
+			Span<ushort> moves = stackalloc ushort[218];    // Does this make sense? This is 218 * 8 bytes + overhead for each node (But when one finishes the memory is released, so there is always just 1 path, meaning at most 218*8*depth, with probably >= 1MB stack size available
+			
+			// Fill up moves
+			ulong combinedBoardstate = myBitboards[INDEX_FULL_BITBOARD] | opponentBitboards[INDEX_FULL_BITBOARD];
+			int moveCount = GenerateAllMoves_CapturesOnly(myBitboards, opponentBitboards, combinedBoardstate, moves, isWhite);
+			
+			if(moveCount == 0 || true) return Evaluate(myBitboards, opponentBitboards, combinedBoardstate, isWhite);
+
+			Span<(byte, ulong)> XORBitboardOperations = stackalloc (byte, ulong)[9]; // Max operations are 9, 1 for castleoptions removal, 1 for myFULL, 2 for myPIECE, 1 for EnPassant, 1 for my castle, and 2 for Opponent Full and Piece, and 1 for oppoent castle, hypothetically
+
+			for (byte i = 0; i < moveCount; i++)
+			{
+				// Save operations in (byte bitboardIndex, ulong xor_operation)
+				byte OperationCount = 0, myOperationCount = 0;
+				
+				double score = GenerateXORoperations(XORBitboardOperations, &myOperationCount, &OperationCount, myBitboards, opponentBitboards, moves[i], isWhite, -FinalDepth - QuiesceDepth); // Depth for Mx is usually FinalDepth + depthRemaining
+
+				if (score == 0)
+				{
+					// Not set. Other possibility is KingLoss where we skip additional eval
+
+					MakeMove(ref myBitboards, ref opponentBitboards, XORBitboardOperations, myOperationCount,
+						OperationCount);
+
+					score = -Failsoft_AlphaBeta_Quiesce(-beta, -alpha, ref myBitboards, ref opponentBitboards, !isWhite, QuiesceDepth+1);
+
+					// Unmake move, since this is just execution of XOR operations, we can execute it again
+					MakeMove(ref myBitboards, ref opponentBitboards, XORBitboardOperations, myOperationCount,
+						OperationCount);
+				}
+
+				// Make cutoffs / value updating
+				if (score >= beta)
+				{
+					// Todo if (!double.IsInfinity(score) && score < PositiveKingCaptureEvalValue && score > NegativeKingCaptureEvalValue) CC_ForcedMate = -1;  // Remove forced mate
+					// Beta Cutoff. This is a killer.
+					// Todo AddKiller(move, ref position, posKey);
+					return score;
+				}
+				if (score > HighestScore)
+				{
+					HighestScore = score;
+					if (score > alpha)
+					{
+						alpha = score;
+					}
+				}
+			}
+
+			return HighestScore;
+		}
+
+		
+
+		#region Helpers
+
+		#region DHL Helpers
+
 		// Pack and Unpack
 		static ushort Pack(byte FromSquare, int ToSquare, byte data)
 		{
-			return (ushort)((FromSquare << 12) | (ToSquare << 4) | (data & 0xF));
+			return (ushort)((FromSquare << 10) | (ToSquare << 4) | (data & 0xF));
 		}
 		static (ulong, ulong, byte) Unpack(ushort packedMove)
 		{
 			return (1UL << GetMoveSquareFrom(packedMove), 1UL << GetMoveSquareTo(packedMove), GetMoveData(packedMove));
 		}
 
+		#endregion
+
 		static unsafe int GenerateXORoperations(Span<(byte, ulong)> XORBitboardOperations, byte* myOperationCount, byte* OperationCount,
-			ulong[] myBitboards, ulong[] opponentBitboards, ushort move, bool isWhite, int FinalDepth, int depthRemaining)
+			ulong[] myBitboards, ulong[] opponentBitboards, ushort move, bool isWhite, int DepthCaptureValue)
 		{
 
 			// Define Variables for Data processing
@@ -147,7 +222,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			if ((unpacked.Item2 & opponentBitboards[INDEX_KING_BITBOARD]) != 0)
 			{
 
-				return ALGORITHM_CONSTANT_KING_CAPTUREVALUE - FinalDepth + depthRemaining;
+				return ALGORITHM_CONSTANT_KING_CAPTUREVALUE + DepthCaptureValue;
 
 				// Hypothetical XOR ops:
 				//XORBitboardOperations[OperationCount++] = (INDEX_KING_BITBOARD, unpacked.Item2);
@@ -162,6 +237,26 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
 			if (DataReferencesBitboard(data))
 			{
+				// Remove castle options if King/Rook
+				if ((unpacked.Item1 & myBitboards[INDEX_KING_BITBOARD]) != 0)
+				{
+					XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, myBitboards[INDEX_CASTLE_BITBOARD]);
+				}
+				else if ((unpacked.Item1 & myBitboards[INDEX_ROOK_BITBOARD]) != 0)
+				{
+					// If could castle that way before, cannot castle anymore now
+					if(unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_WHITE && (CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE);
+
+					else if(unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_WHITE && (CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE);
+
+					else if (unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_BLACK && (CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK);
+
+					else if (unpacked.Item1 == CASTLE_SQUARE_ROOK_PREV_INDEX_QUEENSIDE_BLACK && (CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK & myBitboards[INDEX_CASTLE_BITBOARD]) != 0)
+						XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK);
+				}
 				XORBitboardOperations[(*OperationCount)++] = (data, unpacked_combined);
 				XORBitboardOperations[(*OperationCount)++] = (INDEX_EN_PASSANT_BITBOARD, myBitboards[INDEX_EN_PASSANT_BITBOARD]);
 				(*myOperationCount) = *OperationCount;
@@ -183,6 +278,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 					int index = isWhite ? 0 : 2;
 					XORBitboardOperations[(*OperationCount)++] = (INDEX_KING_BITBOARD, CASTLE_XOR_MASKS_KING[index]);
 					XORBitboardOperations[(*OperationCount)++] = (INDEX_ROOK_BITBOARD, CASTLE_XOR_MASKS_ROOK[index]);
+					// King move is added to full bitboard already, now apply the rookmove as well
+					XORBitboardOperations[(*OperationCount)++] = (INDEX_FULL_BITBOARD, CASTLE_XOR_MASKS_ROOK[index]);
 					XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, myBitboards[INDEX_CASTLE_BITBOARD]);  // With whatever we have to set to 0 and restore to OG value
 					(*myOperationCount) = *OperationCount;
 				}
@@ -191,6 +288,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 					int index = isWhite ? 1 : 3;
 					XORBitboardOperations[(*OperationCount)++] = (INDEX_KING_BITBOARD, CASTLE_XOR_MASKS_KING[index]);
 					XORBitboardOperations[(*OperationCount)++] = (INDEX_ROOK_BITBOARD, CASTLE_XOR_MASKS_ROOK[index]);
+					// King move is added to full bitboard already, now apply the rookmove as well
+					XORBitboardOperations[(*OperationCount)++] = (INDEX_FULL_BITBOARD, CASTLE_XOR_MASKS_ROOK[index]);
 					XORBitboardOperations[(*OperationCount)++] = (INDEX_CASTLE_BITBOARD, myBitboards[INDEX_CASTLE_BITBOARD]);  // With whatever we have to set to 0 and restore to OG value
 					(*myOperationCount) = *OperationCount;
 				}
@@ -298,9 +397,11 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			return (byte) ((squareFileData & 0b111) | (squareRankData & 0b111000));
 		}
 
-		static byte GetMoveSquareFrom(ushort move) => (byte)(move >> 12);
+		static byte GetMoveSquareFrom(ushort move) => (byte)(move >> 10);
 		static byte GetMoveSquareTo(ushort move) => (byte)((move >> 4) & 0x3F);
 		static byte GetMoveData(ushort move) => (byte)(move & 0xF);
 		static bool DataReferencesBitboard(byte data) => (data & 0b1000) == 0;
+
+		#endregion
 	}
 }

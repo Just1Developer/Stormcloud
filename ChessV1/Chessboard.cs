@@ -14,6 +14,7 @@ namespace ChessUI
 		// Nvm it hella buggy; Imma leave it in but its hella buggy fr fr
 
 		private bool DisregardTurnsDebug = false;
+		private static bool UseEngine = false;
 
 		public Turn Turn { get; private set; } = Turn.White;
 		public ChessMode ChessMode { get; set; } = ChessMode.Normal;
@@ -56,9 +57,11 @@ namespace ChessUI
 
 		public Chessboard(int DisplaySize, bool IsWhite = true) // 0 = white, 1 = black
 		{
-			LocalEngine = new Stormcloud.Stormcloud3(false);
+			if(UseEngine) LocalEngine = new Stormcloud.Stormcloud3(false);
 			DoubleBuffered = true;
 			SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+
+			AutoSize = false;
 
 			this.Location = new Point(0, 0);
 			this.SuspendLayout();
@@ -322,14 +325,17 @@ namespace ChessUI
 			Refresh();
 			StormcloudPosition = ConvertToHexPositionArray(this.Pieces, Turn);
 			Form1.self.SetPosKey(ConvertToHexPositionArrayString(StormcloudPosition));
-			var bestmove = LocalEngine.Debug_StartEvaluationTestSingleThread(StormcloudPosition, Turn == Turn.White);
-			if (Turn == Turn.Black)
+			if (UseEngine)
 			{
-				MovePiece(63-bestmove[0], 63-bestmove[1]);
-			}
-			else if(Turn == Turn.White)
-			{
-				MovePiece(bestmove[0], bestmove[1]);
+				var bestmove = LocalEngine.Debug_StartEvaluationTestSingleThread(StormcloudPosition, Turn == Turn.White);
+				if (Turn == Turn.Black)
+				{
+					MovePiece(63-bestmove[0], 63-bestmove[1]);
+				}
+				else if(Turn == Turn.White)
+				{
+					MovePiece(bestmove[0], bestmove[1]);
+				}
 			}
 		}
 

@@ -20,7 +20,6 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
         // Moving Pieces
 
-        // Todo myCastleOptionsBitboard
         public static ulong GetKingMoves(int square, ulong myBitboardInverted, ulong myCastleOptionsBitboard)
             => KingMoves[square] & myBitboardInverted;
 
@@ -29,14 +28,14 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
         // Sliding Pieces
 
-        public static ulong GetQueenMoves(ulong myBitboard, ulong opponentBitboard, int square)
+        public static ulong GetQueenMoves(ulong myBitboard, ulong opponentBitboard, byte square)
             => GetQueenMoves(square, ~myBitboard, myBitboard | opponentBitboard);
-        public static ulong GetRookMoves(ulong myBitboard, ulong opponentBitboard, int square)
+        public static ulong GetRookMoves(ulong myBitboard, ulong opponentBitboard, byte square)
             => GetRookMoves(square, ~myBitboard, myBitboard | opponentBitboard);
-        public static ulong GetBishopMoves(ulong myBitboard, ulong opponentBitboard, int square)
+        public static ulong GetBishopMoves(ulong myBitboard, ulong opponentBitboard, byte square)
             => GetBishopMoves(square, ~myBitboard, myBitboard | opponentBitboard);
 
-        public static ulong GetQueenMoves(int square, ulong myBitboardInverted, ulong combinedBitboard)
+        public static ulong GetQueenMoves(byte square, ulong myBitboardInverted, ulong combinedBitboard)
         {
             ulong blockersRook = RookBlockerBitboard(square, combinedBitboard);
             ulong blockersBishop = BishopBlockerBitboard(square, combinedBitboard);
@@ -48,7 +47,9 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
             return moves;
         }
 
-        public static ulong GetRookMoves(int square, ulong myBitboardInverted, ulong combinedBitboard)
+        // Todo this is broken
+        // Todo Knight moves are broken too, generate Kingmoves 
+        public static ulong GetRookMoves(byte square, ulong myBitboardInverted, ulong combinedBitboard)
         {
             ulong blockers = RookBlockerBitboard(square, combinedBitboard);
             int hashRook = TranslateRook(square, blockers);
@@ -57,7 +58,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
             return moves;
         }
 
-        public static ulong GetBishopMoves(int square, ulong myBitboardInverted, ulong combinedBitboard)
+        public static ulong GetBishopMoves(byte square, ulong myBitboardInverted, ulong combinedBitboard)
         {
             ulong blockers = BishopBlockerBitboard(square, combinedBitboard);
             int hashBishop = TranslateBishop(square, blockers);
@@ -78,24 +79,25 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
             return board;
         }
 
-        internal static ulong RookBlockerBitboard(int square, ulong combinedBitboard)
+        internal static ulong RookBlockerBitboard(byte square, ulong combinedBitboard)
         {
 	        return combinedBitboard & RookFullBlockerMasks[square];
         }
 
-        internal static ulong BishopBlockerBitboard(int square, ulong combinedBitboard)
+        internal static ulong BishopBlockerBitboard(byte square, ulong combinedBitboard)
         {
 	        return combinedBitboard & BishopFullBlockerMasks[square];
         }
 
-        internal static int TranslateRook(int square, ulong BlockerBitboard)
+        internal static int TranslateRook(byte square, ulong BlockerBitboard)
         {
-            return (int) (BlockerBitboard * RookMagics[square]) >> (64-RBits[square]);
+            // Error-free: ((blockerPos * magic) >> (64-RBits[square]))
+            return (int) ((BlockerBitboard * RookMagics[square]) >> (64 - RBits[square]));
         }
 
-        internal static int TranslateBishop(int square, ulong BlockerBitboard)
+        internal static int TranslateBishop(byte square, ulong BlockerBitboard)
         {
-            return (int) (BlockerBitboard * RookMagics[square]) >> (64-RBits[square]);
+            return (int) ((BlockerBitboard * BishopMagics[square]) >> (64 - BBits[square]));
         }
 
         #endregion
@@ -178,17 +180,19 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
         private static void PreGenerateAllLegalRookMoves()
         {
-            void PreGenerateRookMoves(int square)
+            void PreGenerateRookMoves(byte square)
             {
                 ulong magic = RookMagics[square];
                 ulong[] moves = new ulong[(int)Math.Pow(2, RBits[square])];
-                ulong mask = (MASK_FILE_BLOCKER << (square & 0b111000) | MASK_RANK_BLOCKER << (square & 0b000111)) & ~(1UL << square);
+                ulong mask = ((MASK_FILE_BLOCKER << (square & 0b111000)) | (MASK_RANK_BLOCKER << (square & 0b000111))) & ~(1UL << square);
                 RookFullBlockerMasks[square] = mask;
                 var allBlockers = GetAllBlockerPositions(mask);
 
                 foreach (var blockerPos in allBlockers)
                 {
-	                int hash = (int) ((blockerPos * magic) >> (64-RBits[square]));
+	                //int hash = (int) ((blockerPos * magic) >> (64-RBits[square]));
+	                int hash = TranslateRook(square, blockerPos);
+	                if (hash < 0) System.Diagnostics.Debug.WriteLine($"negative rook hash: {hash}, square: {square}");
 	                moves[hash] = RookAttacks(square, blockerPos);
                 }
 
@@ -197,7 +201,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 
             Parallel.For(0, 64, (square) =>
             {
-                PreGenerateRookMoves(square);
+                PreGenerateRookMoves((byte) square);
             });
         }
 

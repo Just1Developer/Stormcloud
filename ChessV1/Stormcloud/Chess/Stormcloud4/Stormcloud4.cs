@@ -5,6 +5,20 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 	internal partial class Stormcloud4
 	{
 
+		/* Bug list
+		 * - Knight moves spawn kings on both squares (from/to) (solved)
+		 *     - (UI square with 2 pieces is not interactable) (solved)
+		 *     - King can castle through double square, but cancels out with king (solved)
+		 *       -> King is there but can't be selected / isn't seen by FULL bitboard (solved)
+		 * - King has limited legal moves
+		 *     - King can castle and king could just capture other King? (solved, bitboard FULL was not updated correctly)
+		 * - Rookmasks doesn't see blockers / sees other rank
+		 *     - (a1 sees b2 - h2 as blockers, but not a7 and a7)
+		 *     - (magic numbers buggy?)
+		 * - Pawn captures are broken
+		 *     - Cannot check if en passant works as expected
+		 */
+
 		/**
 		 * Some Links that carry core ideas for enhancing the Stormcloud Engine:
 		 * https://www.chessprogramming.org/Zobrist_Hashing
@@ -80,7 +94,13 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		private const ulong CASTLE_SQUAREMASK_VULNERABLE_KINGSIDE_WHITE = 0b00001110UL;
 		private const ulong CASTLE_SQUAREMASK_VULNERABLE_QUEENSIDE_WHITE = 0b00111000UL;
 		private const ulong CASTLE_SQUAREMASK_VULNERABLE_KINGSIDE_BLACK = 0x0E00000000000000UL; // 0b0000 1110 000...
-		private const ulong CASTLE_SQUAREMASK_VULNERABLE_QUEENSIDE_BLACK = 0x3700000000000000UL;    // 0b0011 1000 000...
+		private const ulong CASTLE_SQUAREMASK_VULNERABLE_QUEENSIDE_BLACK = 0x3800000000000000UL;    // 0b0011 1000 000...
+
+		// These Squares must be free
+		private const ulong CASTLE_SQUARES_MUST_BE_FREE_KINGSIDE_WHITE = 0b00000110UL;
+		private const ulong CASTLE_SQUARES_MUST_BE_FREE_QUEENSIDE_WHITE = 0b01110000UL;
+		private const ulong CASTLE_SQUARES_MUST_BE_FREE_KINGSIDE_BLACK = 0x0600000000000000UL; // 0b0000 0110 000...
+		private const ulong CASTLE_SQUARES_MUST_BE_FREE_QUEENSIDE_BLACK = 0x7000000000000000UL;    // 0b0011 0000 000...
 
 		// Masks for the King Position later
 		private const ulong CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE = 0b00000010UL;
@@ -125,6 +145,33 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 		#region Algorithm Constants
 
 		private const int ALGORITHM_CONSTANT_KING_CAPTUREVALUE = 999999999;
+		private const byte MIN_TOTAL_PIECES_ON_BOARD_FOR_MIDDLEGAME = 20;
+
+		#endregion
+
+		#region Evaluation
+
+		#region Piece Values (1st attempt, just to provide the general idea)
+
+		private const short PIECE_VALUE_PAWN_MIDDLEGAME = 20;	// 1
+		private const short PIECE_VALUE_KNIGHT_MIDDLEGAME = 65;	// 3.25
+		private const short PIECE_VALUE_BISHOP_MIDDLEGAME = 75;	// 3.75
+		private const short PIECE_VALUE_ROOK_MIDDLEGAME = 125;	// 6.25
+		private const short PIECE_VALUE_QUEEN_MIDDLEGAME = 240;	// 12
+
+		private const short PIECE_VALUE_PAWN_ENDGAME = 140;
+		private const short PIECE_VALUE_KNIGHT_ENDGAME = 65;
+		private const short PIECE_VALUE_BISHOP_ENDGAME = 85;
+		private const short PIECE_VALUE_ROOK_ENDGAME = 180;
+		private const short PIECE_VALUE_QUEEN_ENDGAME = 250;
+
+		#endregion
+
+		#region Evaluation Category Weights
+
+		private const double WEIGHT_EVAL_MATERIAL = 0.32;
+
+		#endregion
 
 		#endregion
 	}

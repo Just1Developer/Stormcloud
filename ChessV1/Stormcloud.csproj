@@ -35,5 +35,11 @@
       <DependentUpon>TicTacToeUI.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Stormcloud\Chess\Stormcloud4\UI\ChessboardUI.cs">
+      <SubType>Component</SubType>
+    </Compile>
+  </ItemGroup>
   
 </Project>
