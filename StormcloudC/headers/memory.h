@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include "constants.h"
 
-extern uint64** RookMoves;
-extern uint64** BishopMoves;
-extern uint64 KnightMoves[64];
-extern uint64 KingMoves[64];
+extern Bitboard** RookMoves;
+extern Bitboard** BishopMoves;
+extern Bitboard KnightMoves[64];
+extern Bitboard KingMoves[64];
 
 extern void allocateMagicTables();
 extern void freeMagicTables();

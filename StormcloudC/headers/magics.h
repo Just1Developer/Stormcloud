@@ -3,7 +3,7 @@
 
 #include "constants.h"
 
-uint64 RookMagics[64] = {
+Bitboard RookMagics[64] = {
     0x8000c004201382ULL,		// size: 4096
     0x440200210044000ULL,		// size: 2048
     0x2080100080082000ULL,		// size: 2048
@@ -70,7 +70,7 @@ uint64 RookMagics[64] = {
     0x6298002040840d02ULL,		// size: 4096
 };
 
-uint64 BishopMagics[64] = {
+Bitboard BishopMagics[64] = {
     0x4048100414404200ULL,           // size: 64
     0x5110112124208010ULL,           // size: 32
     0xb1411202042108ULL,             // size: 32

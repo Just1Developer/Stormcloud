@@ -328,7 +328,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4
 			else if (data == MOVEDATA_PAWN_JUMPSTART)
 			{
 				XORBitboardOperations[(*OperationCount)++] = (INDEX_PAWN_BITBOARD, unpacked_combined);
-				XORBitboardOperations[(*OperationCount)++] = (INDEX_EN_PASSANT_BITBOARD, GetMedianBitboard(fromSquare, toSquare));
+				XORBitboardOperations[(*OperationCount)++] = (INDEX_EN_PASSANT_BITBOARD, GetMedianBitboard(fromSquare, toSquare) | myBitboards[INDEX_EN_PASSANT_BITBOARD]);
 				(*myOperationCount) = *OperationCount;
 			}
 			else

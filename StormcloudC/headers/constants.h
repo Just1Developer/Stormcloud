@@ -12,7 +12,7 @@
 #define GET_RANK_OF_SQUARE (x) (x & BITMASK_FILE)
 */
 
-typedef unsigned long long uint64;
+typedef unsigned long long Bitboard;
 
 static short RookBits[64] = {
     12, 11, 11, 11, 11, 11, 11, 12,

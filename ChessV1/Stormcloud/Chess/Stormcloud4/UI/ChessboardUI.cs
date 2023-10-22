@@ -10,7 +10,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 {
 	internal class ChessboardUI : Panel
 	{
-		private bool VersusEngine = false, EnginePlaysWhite = false;
+		private bool VersusEngine = true, EnginePlaysWhite = false;
 
 		public static (ulong[], ulong[]) GetStartingPositionsDefault()
 		{
@@ -423,8 +423,8 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 		// Masks for the King Position later
 		private const ulong CASTLE_BITMASK_CASTLE_KINGSIDE_WHITE = 0b00000010UL;
 		private const ulong CASTLE_BITMASK_CASTLE_QUEENSIDE_WHITE = 0b00100000UL;
-		private const ulong CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK = 0x2000000000000000UL;
-		private const ulong CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK = 0x0200000000000000UL;
+		private const ulong CASTLE_BITMASK_CASTLE_KINGSIDE_BLACK = 0x0200000000000000UL;
+		private const ulong CASTLE_BITMASK_CASTLE_QUEENSIDE_BLACK = 0x2000000000000000UL;
 
 		// Squares for rook taking
 		private const byte CASTLE_SQUARE_ROOK_PREV_INDEX_KINGSIDE_WHITE = 0;
@@ -494,7 +494,7 @@ namespace ChessV1.Stormcloud.Chess.Stormcloud4.UI
 			else if (data == MOVEDATA_PAWN_JUMPSTART)
 			{
 				XORBitboardOperations[(*OperationCount)++] = (INDEX_PAWN_BITBOARD, unpacked_combined);
-				XORBitboardOperations[(*OperationCount)++] = (INDEX_EN_PASSANT_BITBOARD, GetMedianBitboard(fromSquare, toSquare) ^ myBitboards[INDEX_EN_PASSANT_BITBOARD]);
+				XORBitboardOperations[(*OperationCount)++] = (INDEX_EN_PASSANT_BITBOARD, GetMedianBitboard(fromSquare, toSquare) | myBitboards[INDEX_EN_PASSANT_BITBOARD]);
 				(*myOperationCount) = *OperationCount;
 			}
 			else
